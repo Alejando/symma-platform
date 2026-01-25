@@ -1,0 +1,69 @@
+import type { Patient, CreatePatientDto, UpdatePatientDto } from '@symma/shared-types';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
+
+async function fetchWithAuth(
+  url: string,
+  token: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Request failed' }));
+    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+  }
+
+  return response;
+}
+
+export async function getPatients(token: string, search?: string): Promise<Patient[]> {
+  const url = new URL(`${API_URL}/api/v1/patients`);
+  if (search) {
+    url.searchParams.set('search', search);
+  }
+  const response = await fetchWithAuth(url.toString(), token);
+  return response.json();
+}
+
+export async function getPatient(token: string, id: string): Promise<Patient> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/patients/${id}`, token);
+  return response.json();
+}
+
+export async function createPatient(
+  token: string,
+  data: CreatePatientDto
+): Promise<Patient> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/patients`, token, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return response.json();
+}
+
+export async function updatePatient(
+  token: string,
+  id: string,
+  data: UpdatePatientDto
+): Promise<Patient> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/patients/${id}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  return response.json();
+}
+
+export async function deletePatient(token: string, id: string): Promise<Patient> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/patients/${id}`, token, {
+    method: 'DELETE',
+  });
+  return response.json();
+}
