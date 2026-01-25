@@ -1,0 +1,171 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { getPatientRoutines } from '@/lib/api';
+import type { Routine } from '@symma/shared-types';
+
+import { use } from 'react';
+
+export default function PatientRoutinesPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const { data: session } = useSession();
+  const [routines, setRoutines] = useState<Routine[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadRoutines() {
+      if (session?.user?.accessToken) {
+        try {
+          const data = await getPatientRoutines(session.user.accessToken, id);
+          setRoutines(data);
+        } catch (error) {
+          console.error('Failed to load routines:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    }
+    loadRoutines();
+  }, [session, id]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0d9488]"></div>
+      </div>
+    );
+  }
+
+  const activeRoutines = routines.filter((r) => !r.endDate || new Date(r.endDate) > new Date());
+  const historyRoutines = routines.filter((r) => r.endDate && new Date(r.endDate) <= new Date());
+
+  return (
+    <div className="space-y-8 max-w-5xl mx-auto">
+      {/* Header Action */}
+
+
+      {/* Active Routine Section */}
+      <section>
+        <h2 className="text-lg font-semibold text-[#0d1b1a] mb-4">Active Routine</h2>
+        {activeRoutines.length > 0 ? (
+          <div className="grid gap-4">
+            {activeRoutines.map((routine) => (
+              <div
+                key={routine.id}
+                className="bg-white border border-[#e7f3f2] rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-[#0d1b1a] mb-1">{routine.name}</h3>
+                    <p className="text-sm text-gray-500">
+                      Started {new Date(routine.startDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide">
+                    Active
+                  </span>
+                </div>
+
+                {routine.therapistNotes && (
+                  <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100 italic">
+                    "{routine.therapistNotes}"
+                  </div>
+                )}
+
+                <div className="border-t border-[#e7f3f2] pt-4">
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Exercises</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {routine.items?.map((item) => (
+                      <span
+                        key={item.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-[#f0f9f9] text-[#0d9488] border border-[#e0f2f1]"
+                      >
+                        {item.exercise?.name}
+                        <span className="text-[#0d9488]/60 text-xs ml-1">
+                          {item.targetSets}x{item.targetRepetitions}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
+            <span className="material-symbols-outlined text-gray-300 text-4xl mb-2">assignment_late</span>
+            <p className="text-gray-500 font-medium">No active routine assigned</p>
+            <p className="text-sm text-gray-400 mt-1">Assign a new routine to get started</p>
+          </div>
+        )}
+      </section>
+
+      {/* History Section */}
+      {historyRoutines.length > 0 && (
+        <section>
+          <h2 className="text-lg font-semibold text-[#0d1b1a] mb-4">Routine History</h2>
+          <div className="bg-white border border-[#e7f3f2] rounded-xl overflow-hidden shadow-sm">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Routine Name
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Duration
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Exercises
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {historyRoutines.map((routine) => (
+                  <tr key={routine.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{routine.name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">
+                        {new Date(routine.startDate).toLocaleDateString()} -{' '}
+                        {routine.endDate ? new Date(routine.endDate).toLocaleDateString() : 'Present'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {routine.items?.slice(0, 3).map((item) => (
+                          <span key={item.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                            {item.exercise?.name}
+                          </span>
+                        ))}
+                        {(routine.items?.length || 0) > 3 && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                            +{routine.items!.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                        Completed
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,205 @@
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateRoutineDto } from './dto/create-routine.dto';
+import { UpdateRoutineDto } from './dto/update-routine.dto';
+
+@Injectable()
+export class RoutinesService {
+  constructor(private readonly prisma: PrismaService) { }
+
+  async create(therapistId: string, createRoutineDto: CreateRoutineDto) {
+    // Validate dates
+    const startDate = new Date(createRoutineDto.startDate);
+    if (createRoutineDto.endDate) {
+      const endDate = new Date(createRoutineDto.endDate);
+      if (startDate >= endDate) {
+        throw new BadRequestException('Start date must be before end date');
+      }
+    }
+
+    // Verify patient belongs to therapist
+    const patient = await this.prisma.patient.findFirst({
+      where: {
+        id: createRoutineDto.patientId,
+        therapistId,
+      },
+    });
+
+    if (!patient) {
+      throw new NotFoundException('Patient not found');
+    }
+
+    // Create routine with nested items using Prisma nested writes
+    return this.prisma.routine.create({
+      data: {
+        patientId: createRoutineDto.patientId,
+        name: createRoutineDto.name,
+        startDate,
+        endDate: createRoutineDto.endDate
+          ? new Date(createRoutineDto.endDate)
+          : null,
+        therapistNotes: createRoutineDto.therapistNotes,
+        items: {
+          create: createRoutineDto.items.map((item, index) => ({
+            exerciseId: item.exerciseId,
+            orderIndex: index,
+            targetRepetitions: item.targetRepetitions,
+            targetSets: item.targetSets,
+            holdTimeSeconds: item.holdTimeSeconds,
+          })),
+        },
+      },
+      include: {
+        items: {
+          include: { exercise: true },
+          orderBy: { orderIndex: 'asc' },
+        },
+        patient: true,
+      },
+    });
+  }
+
+  async findAll(therapistId: string) {
+    // Get all routines for patients owned by this therapist
+    return this.prisma.routine.findMany({
+      where: {
+        patient: { therapistId },
+      },
+      include: {
+        patient: {
+          select: { firstName: true, lastName: true },
+        },
+        items: {
+          include: { exercise: true },
+          orderBy: { orderIndex: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findAllByPatient(therapistId: string, patientId: string) {
+    // Verify patient belongs to therapist
+    const patient = await this.prisma.patient.findFirst({
+      where: {
+        id: patientId,
+        therapistId,
+      },
+    });
+
+    if (!patient) {
+      throw new NotFoundException('Patient not found');
+    }
+
+    return this.prisma.routine.findMany({
+      where: {
+        patientId,
+      },
+      include: {
+        items: {
+          include: { exercise: true },
+          orderBy: { orderIndex: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findOne(therapistId: string, id: string) {
+    const routine = await this.prisma.routine.findFirst({
+      where: {
+        id,
+        patient: { therapistId },
+      },
+      include: {
+        patient: true,
+        items: {
+          include: { exercise: true },
+          orderBy: { orderIndex: 'asc' },
+        },
+      },
+    });
+
+    if (!routine) {
+      throw new NotFoundException('Routine not found');
+    }
+
+    return routine;
+  }
+
+  async update(
+    therapistId: string,
+    id: string,
+    updateRoutineDto: UpdateRoutineDto,
+  ) {
+    // Verify ownership
+    await this.findOne(therapistId, id);
+
+    // Validate dates if both provided
+    if (updateRoutineDto.startDate && updateRoutineDto.endDate) {
+      const startDate = new Date(updateRoutineDto.startDate);
+      const endDate = new Date(updateRoutineDto.endDate);
+      if (startDate >= endDate) {
+        throw new BadRequestException('Start date must be before end date');
+      }
+    }
+
+    // Build update data
+    const updateData: Record<string, unknown> = {};
+
+    if (updateRoutineDto.name) updateData.name = updateRoutineDto.name;
+    if (updateRoutineDto.startDate)
+      updateData.startDate = new Date(updateRoutineDto.startDate);
+    if (updateRoutineDto.endDate)
+      updateData.endDate = new Date(updateRoutineDto.endDate);
+    if (updateRoutineDto.therapistNotes !== undefined)
+      updateData.therapistNotes = updateRoutineDto.therapistNotes;
+
+    // If items are provided, replace all items with new ones
+    if (updateRoutineDto.items) {
+      // Delete existing items and create new ones in a transaction
+      await this.prisma.$transaction([
+        this.prisma.routineItem.deleteMany({ where: { routineId: id } }),
+        ...updateRoutineDto.items.map((item, index) =>
+          this.prisma.routineItem.create({
+            data: {
+              routineId: id,
+              exerciseId: item.exerciseId,
+              orderIndex: index,
+              targetRepetitions: item.targetRepetitions,
+              targetSets: item.targetSets,
+              holdTimeSeconds: item.holdTimeSeconds,
+            },
+          }),
+        ),
+      ]);
+    }
+
+    // Update routine itself
+    return this.prisma.routine.update({
+      where: { id },
+      data: updateData,
+      include: {
+        items: {
+          include: { exercise: true },
+          orderBy: { orderIndex: 'asc' },
+        },
+        patient: true,
+      },
+    });
+  }
+
+  async remove(therapistId: string, id: string) {
+    // Verify ownership
+    await this.findOne(therapistId, id);
+
+    // Delete routine (items will cascade delete)
+    return this.prisma.routine.delete({
+      where: { id },
+    });
+  }
+}

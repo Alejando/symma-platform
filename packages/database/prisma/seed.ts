@@ -42,6 +42,52 @@ async function main(): Promise<void> {
   });
 
   console.log(`✅ Admin user created: ${admin.email}`);
+
+  // Create exercise catalog
+  const exercises = [
+    {
+      keyName: 'exercise_smile_stretch',
+      name: 'Smile Stretch',
+      description: 'Gently pull the corners of the mouth towards the ears, hold, and release. Focus on relaxation.',
+      type: 'AR_TRACKING' as const,
+      category: 'CORE' as const,
+      defaultConfig: { threshold: 0.5, holdTime: 5 },
+    },
+    {
+      keyName: 'exercise_jaw_release',
+      name: 'Jaw Release',
+      description: 'Open the mouth wide to relax the jaw muscles, then slowly close. Repeat several times.',
+      type: 'RELAXATION' as const,
+      category: 'COOLDOWN' as const,
+      defaultConfig: { threshold: 0.3, holdTime: 3 },
+    },
+    {
+      keyName: 'exercise_brow_raise',
+      name: 'Brow Raise',
+      description: 'Raise the eyebrows as high as possible, hold, and relax. Focus on symmetry.',
+      type: 'AR_TRACKING' as const,
+      category: 'CORE' as const,
+      defaultConfig: { threshold: 0.6, holdTime: 5 },
+    },
+    {
+      keyName: 'exercise_eye_squeeze',
+      name: 'Eye Squeeze',
+      description: 'Close the eyes tightly, hold for a few seconds, then release. Helps strengthen eyelid muscles.',
+      type: 'MANUAL' as const,
+      category: 'WARMUP' as const,
+      defaultConfig: { threshold: 0.4, holdTime: 3 },
+    },
+  ];
+
+  for (const exercise of exercises) {
+    await prisma.exercise.upsert({
+      where: { keyName: exercise.keyName },
+      update: exercise,
+      create: exercise,
+    });
+  }
+
+  console.log(`✅ Exercise catalog created: ${exercises.length} exercises`);
   console.log('🎉 Seeding completed!');
 }
 

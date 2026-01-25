@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { Patient } from '@symma/shared-types';
 
 interface PatientTableProps {
@@ -76,19 +77,21 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
               <tr key={patient.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-[#0d9488]/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-[#0d9488] font-bold text-sm">
-                        {getInitials(patient.firstName, patient.lastName)}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {patient.firstName} {patient.lastName}
-                      </p>
-                      {patient.phoneNumber && (
-                        <p className="text-xs text-gray-500">{patient.phoneNumber}</p>
-                      )}
-                    </div>
+                    <Link href={`/dashboard/patients/${patient.id}`} className="group flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-[#0d9488]/20 flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105">
+                        <span className="text-[#0d9488] font-bold text-sm">
+                          {getInitials(patient.firstName, patient.lastName)}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 group-hover:text-[#0d9488] transition-colors">
+                          {patient.firstName} {patient.lastName}
+                        </p>
+                        {patient.phoneNumber && (
+                          <p className="text-xs text-gray-500">{patient.phoneNumber}</p>
+                        )}
+                      </div>
+                    </Link>
                   </div>
                 </td>
                 <td className="px-6 py-4">
@@ -155,9 +158,11 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="font-medium text-gray-900">
-                      {patient.firstName} {patient.lastName}
-                    </h3>
+                    <Link href={`/dashboard/patients/${patient.id}`}>
+                      <h3 className="font-medium text-gray-900 hover:text-[#0d9488] transition-colors">
+                        {patient.firstName} {patient.lastName}
+                      </h3>
+                    </Link>
                     <p className="text-sm text-gray-500 truncate">{patient.email}</p>
                   </div>
                   <span

@@ -15,11 +15,15 @@ import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../auth/types';
+import { RoutinesService } from '../routines/routines.service';
 
 @Controller('patients')
 @UseGuards(JwtAuthGuard)
 export class PatientsController {
-  constructor(private readonly patientsService: PatientsService) { }
+  constructor(
+    private readonly patientsService: PatientsService,
+    private readonly routinesService: RoutinesService,
+  ) { }
 
   @Post()
   create(
@@ -40,6 +44,11 @@ export class PatientsController {
   @Get(':id')
   findOne(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.patientsService.findOne(req.user.userId, id);
+  }
+
+  @Get(':id/routines')
+  getPatientRoutines(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.routinesService.findAllByPatient(req.user.userId, id);
   }
 
   @Patch(':id')

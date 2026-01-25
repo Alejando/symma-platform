@@ -13,6 +13,7 @@ interface SidebarProps {
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
   { href: '/dashboard/patients', label: 'Patients', icon: 'group' },
+  // Routines moved to patient profile
   { href: '/dashboard/calendar', label: 'Calendar', icon: 'calendar_month' },
   { href: '/dashboard/analytics', label: 'Analytics', icon: 'analytics' },
   { href: '/dashboard/settings', label: 'Settings', icon: 'settings' },
@@ -98,8 +99,8 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
                 href={item.href}
                 onClick={() => setIsOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${isActive(item.href)
-                    ? 'bg-[#0d9488]/10 text-[#0d9488]'
-                    : 'hover:bg-gray-50 text-gray-600'
+                  ? 'bg-[#0d9488]/10 text-[#0d9488]'
+                  : 'hover:bg-gray-50 text-gray-600'
                   }`}
               >
                 <span

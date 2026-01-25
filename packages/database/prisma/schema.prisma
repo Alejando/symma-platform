@@ -60,8 +60,61 @@ model Patient {
   createdAt              DateTime      @default(now()) @map("created_at")
   updatedAt              DateTime      @updatedAt @map("updated_at")
   therapist              Therapist     @relation(fields: [therapistId], references: [id])
+  routines               Routine[]
 
   @@map("patients")
+}
+
+// ===========================================
+// Rehabilitation Engine Models
+// ===========================================
+
+model Exercise {
+  id                    String           @id @default(uuid())
+  keyName               String           @unique @map("key_name")
+  name                  String
+  description           String?
+  type                  ExerciseType
+  category              ExerciseCategory
+  assetAnimationUrl     String?          @map("asset_animation_url")
+  assetTutorialVideoUrl String?          @map("asset_tutorial_video_url")
+  defaultConfig         Json?            @map("default_config")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  routineItems          RoutineItem[]
+
+  @@map("exercises")
+}
+
+model Routine {
+  id             String        @id @default(uuid())
+  patientId      String        @map("patient_id")
+  name           String
+  startDate      DateTime      @map("start_date")
+  endDate        DateTime?     @map("end_date")
+  isActive       Boolean       @default(true) @map("is_active")
+  therapistNotes String?       @map("therapist_notes")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  patient        Patient       @relation(fields: [patientId], references: [id])
+  items          RoutineItem[]
+
+  @@map("routines")
+}
+
+model RoutineItem {
+  id                     String   @id @default(uuid())
+  routineId              String   @map("routine_id")
+  exerciseId             String   @map("exercise_id")
+  orderIndex             Int      @map("order_index")
+  targetRepetitions      Int      @map("target_repetitions")
+  targetSets             Int      @map("target_sets")
+  holdTimeSeconds        Int      @map("hold_time_seconds")
+  successThreshold       Float?   @map("success_threshold")
+  restBetweenSetsSeconds Int?     @map("rest_between_sets_seconds")
+  routine                Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercise               Exercise @relation(fields: [exerciseId], references: [id])
+
+  @@map("routine_items")
 }
 
 // ===========================================
@@ -83,4 +136,16 @@ enum PatientStatus {
   ACTIVE
   INACTIVE
   ARCHIVED
+}
+
+enum ExerciseType {
+  AR_TRACKING
+  MANUAL
+  RELAXATION
+}
+
+enum ExerciseCategory {
+  WARMUP
+  CORE
+  COOLDOWN
 }

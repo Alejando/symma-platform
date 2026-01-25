@@ -1,4 +1,4 @@
-import type { Patient, CreatePatientDto, UpdatePatientDto } from '@symma/shared-types';
+import type { Patient, CreatePatientDto, UpdatePatientDto, Exercise, CreateRoutineDto, Routine } from '@symma/shared-types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
 
@@ -65,5 +65,26 @@ export async function deletePatient(token: string, id: string): Promise<Patient>
   const response = await fetchWithAuth(`${API_URL}/api/v1/patients/${id}`, token, {
     method: 'DELETE',
   });
+  return response.json();
+}
+
+export async function getExercises(token: string): Promise<Exercise[]> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/exercises`, token);
+  return response.json();
+}
+
+export async function createRoutine(
+  token: string,
+  data: CreateRoutineDto
+): Promise<Routine> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/routines`, token, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return response.json();
+}
+
+export async function getPatientRoutines(token: string, patientId: string): Promise<Routine[]> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/patients/${patientId}/routines`, token);
   return response.json();
 }

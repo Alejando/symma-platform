@@ -81,3 +81,67 @@ export interface ApiError {
   message: string | string[];
   error?: string;
 }
+
+// ==========================================
+// Routine Types
+// ==========================================
+
+export type ExerciseType = 'AR_TRACKING' | 'MANUAL' | 'RELAXATION';
+
+export type ExerciseCategory = 'WARMUP' | 'CORE' | 'COOLDOWN';
+
+export interface Exercise {
+  id: string;
+  keyName: string;
+  name: string;
+  description?: string;
+  type: ExerciseType;
+  category: ExerciseCategory;
+  assetAnimationUrl?: string;
+  assetTutorialVideoUrl?: string;
+  defaultConfig?: { threshold?: number; holdTime?: number };
+  createdAt: string;
+}
+
+export interface RoutineItem {
+  id: string;
+  routineId: string;
+  exerciseId: string;
+  orderIndex: number;
+  targetRepetitions: number;
+  targetSets: number;
+  holdTimeSeconds: number;
+  successThreshold?: number;
+  restBetweenSetsSeconds?: number;
+  exercise?: Exercise;
+}
+
+export interface Routine {
+  id: string;
+  patientId: string;
+  name: string;
+  startDate: string;
+  endDate?: string;
+  isActive: boolean;
+  therapistNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+  patient?: Patient;
+  items?: RoutineItem[];
+}
+
+export interface CreateRoutineItemDto {
+  exerciseId: string;
+  targetRepetitions: number;
+  targetSets: number;
+  holdTimeSeconds: number;
+}
+
+export interface CreateRoutineDto {
+  patientId: string;
+  name: string;
+  startDate: string;
+  endDate?: string;
+  therapistNotes?: string;
+  items: CreateRoutineItemDto[];
+}

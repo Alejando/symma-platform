@@ -1,0 +1,136 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { getPatient } from '@/lib/api';
+import type { Patient } from '@symma/shared-types';
+
+import { use } from 'react';
+
+export default function PatientOverviewPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const { data: session } = useSession();
+  const [patient, setPatient] = useState<Patient | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadPatient() {
+      if (session?.user?.accessToken) {
+        try {
+          const data = await getPatient(session.user.accessToken, id);
+          setPatient(data);
+        } catch (error) {
+          console.error('Failed to load patient:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    }
+    loadPatient();
+  }, [session, id]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0d9488]"></div>
+      </div>
+    );
+  }
+
+  if (!patient) {
+    return <div className="text-gray-500">Patient details not found.</div>;
+  }
+
+  const InfoCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="bg-white border border-[#e7f3f2] rounded-xl p-6 shadow-sm">
+      <h3 className="text-lg font-semibold text-[#0d1b1a] mb-4 flex items-center gap-2">
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+
+  const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <div className="mb-3 last:mb-0">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+      <div className="text-gray-900 font-medium">{value || '-'}</div>
+    </div>
+  );
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+      {/* Personal Information */}
+      <InfoCard title="Personal Information">
+        <div className="grid grid-cols-2 gap-4">
+          <LabelValue label="First Name" value={patient.firstName} />
+          <LabelValue label="Last Name" value={patient.lastName} />
+          <LabelValue label="Email" value={patient.email} />
+          <LabelValue label="Phone" value={patient.phoneNumber} />
+          <LabelValue
+            label="Date of Birth"
+            value={new Date(patient.dateOfBirth).toLocaleDateString()}
+          />
+          <LabelValue label="Gender" value={<span className="capitalize">{patient.gender?.toLowerCase()}</span>} />
+        </div>
+      </InfoCard>
+
+      {/* Emergency Contact */}
+      <InfoCard title="Emergency Contact">
+        <div className="space-y-4">
+          <div className="bg-red-50 p-4 rounded-lg border border-red-100 flex items-start gap-3">
+            <span className="material-symbols-outlined text-red-500 mt-0.5">contact_emergency</span>
+            <div>
+              <LabelValue label="Name" value={patient.emergencyContactName} />
+              <div className="h-2"></div>
+              <LabelValue label="Phone" value={patient.emergencyContactPhone} />
+            </div>
+          </div>
+          {!patient.emergencyContactName && (
+            <p className="text-sm text-gray-500 italic">No emergency contact listed.</p>
+          )}
+        </div>
+      </InfoCard>
+
+      {/* Clinical Details */}
+      <InfoCard title="Clinical Details">
+        <div className="space-y-4">
+          <LabelValue label="Primary Diagnosis" value={patient.diagnosis} />
+          <LabelValue
+            label="Initial Paralysis Degree"
+            value={
+              patient.initialParalysisDegree
+                ? `Grade ${patient.initialParalysisDegree}`
+                : undefined
+            }
+          />
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Clinical Notes</p>
+            <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 text-sm text-gray-700 min-h-[80px]">
+              {patient.clinicalNotes || 'No notes available.'}
+            </div>
+          </div>
+        </div>
+      </InfoCard>
+
+      {/* Activity Summary (Placeholder) */}
+      <InfoCard title="Quick Stats">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-[#0d9488]/5 p-4 rounded-lg text-center">
+            <span className="material-symbols-outlined text-[#0d9488] text-2xl mb-1">check_circle</span>
+            <p className="text-2xl font-bold text-[#0d1b1a]">85%</p>
+            <p className="text-xs text-gray-500 font-medium uppercase">Adherence</p>
+          </div>
+          <div className="bg-[#0d9488]/5 p-4 rounded-lg text-center">
+            <span className="material-symbols-outlined text-[#0d9488] text-2xl mb-1">fitness_center</span>
+            <p className="text-2xl font-bold text-[#0d1b1a]">12</p>
+            <p className="text-xs text-gray-500 font-medium uppercase">Sessions</p>
+          </div>
+        </div>
+      </InfoCard>
+    </div>
+  );
+}
