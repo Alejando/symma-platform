@@ -44,15 +44,18 @@ export default function NewRoutinePage() {
       targetRepetitions: 10,
       targetSets: 3,
       holdTimeSeconds: exercise.defaultConfig?.holdTime || 5,
+      restBetweenSetsSeconds: exercise.defaultConfig?.restTime || 60,
     };
     setItems((prev) => [...prev, newItem]);
   };
 
-  const handleSubmit = async (data: CreateRoutineDto) => {
+  const handleSubmit = async (data: CreateRoutineDto | { name?: string }) => {
     if (!session?.user?.accessToken) return;
+    // In create mode, we always have the full CreateRoutineDto
+    const createData = data as CreateRoutineDto;
     setSaving(true);
     try {
-      await createRoutine(session.user.accessToken, data);
+      await createRoutine(session.user.accessToken, createData);
       router.push('/dashboard/routines'); // Or wherever appropriate
     } catch (error) {
       console.error('Failed to create routine:', error);

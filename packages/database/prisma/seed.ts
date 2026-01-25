@@ -119,7 +119,7 @@ async function main(): Promise<void> {
       patientId: patient.id,
       name: 'Facial Recovery Phase 1',
       startDate: new Date(),
-      isActive: true,
+      status: 'ACTIVE',
       therapistNotes: 'Focus on slow movements.',
       items: {
         create: [

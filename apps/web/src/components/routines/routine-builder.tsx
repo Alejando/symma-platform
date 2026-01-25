@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import type { Exercise, Patient, CreateRoutineDto } from '@symma/shared-types';
+import { useState, useEffect } from 'react';
+import type { Exercise, Patient, CreateRoutineDto, Routine, UpdateRoutineDto } from '@symma/shared-types';
 
 export type BuilderItem = {
   id: string;
@@ -17,9 +17,13 @@ interface RoutineBuilderProps {
   preSelectedPatientId?: string;
   items: BuilderItem[];
   onItemsChange: (items: BuilderItem[]) => void;
-  onSubmit: (data: CreateRoutineDto) => void;
+  onSubmit: (data: CreateRoutineDto | UpdateRoutineDto) => void;
   onCancel?: () => void;
   loading?: boolean;
+  // Edit mode props
+  mode?: 'create' | 'edit';
+  initialData?: Routine;
+  isLocked?: boolean;
 }
 
 export function RoutineBuilder({
@@ -29,25 +33,51 @@ export function RoutineBuilder({
   onItemsChange,
   onSubmit,
   onCancel,
-  loading = false
+  loading = false,
+  mode = 'create',
+  initialData,
+  isLocked = false,
 }: RoutineBuilderProps) {
-  const [name, setName] = useState('New Routine');
-  const [patientId, setPatientId] = useState(preSelectedPatientId || patients[0]?.id || '');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState('');
+  const [name, setName] = useState(initialData?.name || 'New Routine');
+  const [patientId, setPatientId] = useState(preSelectedPatientId || initialData?.patientId || patients[0]?.id || '');
+  const [startDate, setStartDate] = useState(
+    initialData?.startDate
+      ? new Date(initialData.startDate).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0]
+  );
+  const [endDate, setEndDate] = useState(
+    initialData?.endDate
+      ? new Date(initialData.endDate).toISOString().split('T')[0]
+      : ''
+  );
+  const [therapistNotes, setTherapistNotes] = useState(initialData?.therapistNotes || '');
+
+  // Update state when initialData changes (for edit mode)
+  useEffect(() => {
+    if (initialData) {
+      setName(initialData.name);
+      setPatientId(initialData.patientId);
+      setStartDate(new Date(initialData.startDate).toISOString().split('T')[0]);
+      setEndDate(initialData.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : '');
+      setTherapistNotes(initialData.therapistNotes || '');
+    }
+  }, [initialData]);
 
   // Keep these handlers here or pass them? Logic is here, state update via prop.
   const handleRemoveItem = (itemId: string) => {
+    if (isLocked) return;
     onItemsChange(items.filter((item) => item.id !== itemId));
   };
 
   const handleUpdateItem = (itemId: string, field: keyof BuilderItem, value: number) => {
+    if (isLocked) return;
     onItemsChange(
       items.map((item) => (item.id === itemId ? { ...item, [field]: value } : item))
     );
   };
 
   const moveItem = (index: number, direction: 'up' | 'down') => {
+    if (isLocked) return;
     const newItems = [...items];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
 
@@ -60,20 +90,44 @@ export function RoutineBuilder({
   const handleSubmit = () => {
     if (!patientId || !name || items.length === 0) return;
 
-    const routineDto: CreateRoutineDto = {
-      patientId,
-      name,
-      startDate,
-      endDate: endDate || undefined,
-      items: items.map((item) => ({
-        exerciseId: item.exercise.id,
-        targetRepetitions: item.targetRepetitions,
-        targetSets: item.targetSets,
-        holdTimeSeconds: item.holdTimeSeconds,
-        restBetweenSetsSeconds: item.restBetweenSetsSeconds,
-      })),
-    };
-    onSubmit(routineDto);
+    if (mode === 'edit') {
+      // For edit mode, only send metadata if locked, or full data if unlocked
+      const updateDto: UpdateRoutineDto = {
+        name,
+        startDate,
+        endDate: endDate || undefined,
+        therapistNotes: therapistNotes || undefined,
+      };
+
+      // Only include items if not locked (routine has no sessions)
+      if (!isLocked) {
+        updateDto.items = items.map((item) => ({
+          exerciseId: item.exercise.id,
+          targetRepetitions: item.targetRepetitions,
+          targetSets: item.targetSets,
+          holdTimeSeconds: item.holdTimeSeconds,
+          restBetweenSetsSeconds: item.restBetweenSetsSeconds,
+        }));
+      }
+
+      onSubmit(updateDto);
+    } else {
+      const routineDto: CreateRoutineDto = {
+        patientId,
+        name,
+        startDate,
+        endDate: endDate || undefined,
+        therapistNotes: therapistNotes || undefined,
+        items: items.map((item) => ({
+          exerciseId: item.exercise.id,
+          targetRepetitions: item.targetRepetitions,
+          targetSets: item.targetSets,
+          holdTimeSeconds: item.holdTimeSeconds,
+          restBetweenSetsSeconds: item.restBetweenSetsSeconds,
+        })),
+      };
+      onSubmit(routineDto);
+    }
   };
 
   return (
@@ -82,8 +136,8 @@ export function RoutineBuilder({
       <div className="px-8 py-6 flex flex-col md:flex-row md:items-start justify-between bg-white border-b border-slate-200 shadow-sm shrink-0 gap-4">
         <div className="flex flex-col gap-2 w-full max-w-xl">
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#0d9488]/10 text-[#0d9488]">
-              Draft
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${mode === 'edit' ? 'bg-blue-100 text-blue-700' : 'bg-[#0d9488]/10 text-[#0d9488]'}`}>
+              {mode === 'edit' ? (isLocked ? 'Locked' : 'Edit') : 'Draft'}
             </span>
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-500">Patient:</span>
@@ -155,6 +209,16 @@ export function RoutineBuilder({
       {/* Builder Area */}
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-4xl mx-auto space-y-4">
+          {/* Locked Alert */}
+          {isLocked && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3">
+              <span className="material-symbols-outlined text-amber-600">lock</span>
+              <div>
+                <p className="text-sm font-medium text-amber-800">Routine has sessions</p>
+                <p className="text-xs text-amber-700">Exercises are locked to preserve historical data. Clone this routine to make changes.</p>
+              </div>
+            </div>
+          )}
           {items.length === 0 ? (
             <div className="border-2 border-dashed border-slate-300 rounded-xl p-12 flex flex-col items-center justify-center text-center">
               <div className="bg-slate-100 p-4 rounded-full mb-4">
@@ -209,63 +273,69 @@ export function RoutineBuilder({
                     <div className="flex-1 min-w-[80px]">
                       <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Sets</label>
                       <input
-                        className="w-full h-10 rounded-md border-slate-200 bg-slate-50 text-slate-900 text-center font-medium focus:border-[#0d9488] focus:ring-[#0d9488]"
+                        className={`w-full h-10 rounded-md border-slate-200 text-slate-900 text-center font-medium focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
                         type="number"
                         min="1"
                         value={item.targetSets}
                         onChange={(e) => handleUpdateItem(item.id, 'targetSets', parseInt(e.target.value) || 0)}
+                        disabled={isLocked}
                       />
                     </div>
                     <div className="flex-1 min-w-[80px]">
                       <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Reps</label>
                       <input
-                        className="w-full h-10 rounded-md border-slate-200 bg-slate-50 text-slate-900 text-center font-medium focus:border-[#0d9488] focus:ring-[#0d9488]"
+                        className={`w-full h-10 rounded-md border-slate-200 text-slate-900 text-center font-medium focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
                         type="number"
                         min="1"
                         value={item.targetRepetitions}
                         onChange={(e) => handleUpdateItem(item.id, 'targetRepetitions', parseInt(e.target.value) || 0)}
+                        disabled={isLocked}
                       />
                     </div>
                     <div className="flex-1 min-w-[80px]">
                       <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Hold (s)</label>
                       <input
-                        className="w-full h-10 rounded-md border-slate-200 bg-slate-50 text-slate-900 text-center font-medium focus:border-[#0d9488] focus:ring-[#0d9488]"
+                        className={`w-full h-10 rounded-md border-slate-200 text-slate-900 text-center font-medium focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
                         type="number"
                         min="0"
                         value={item.holdTimeSeconds}
                         onChange={(e) => handleUpdateItem(item.id, 'holdTimeSeconds', parseInt(e.target.value) || 0)}
+                        disabled={isLocked}
                       />
                     </div>
                     <div className="flex-1 min-w-[80px]">
                       <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Rest (s)</label>
                       <input
-                        className="w-full h-10 rounded-md border-slate-200 bg-slate-50 text-slate-900 text-center font-medium focus:border-[#0d9488] focus:ring-[#0d9488]"
+                        className={`w-full h-10 rounded-md border-slate-200 text-slate-900 text-center font-medium focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
                         type="number"
                         min="0"
                         value={item.restBetweenSetsSeconds}
                         onChange={(e) => handleUpdateItem(item.id, 'restBetweenSetsSeconds', parseInt(e.target.value) || 0)}
+                        disabled={isLocked}
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <button
-                    onClick={() => handleRemoveItem(item.id)}
-                    className="text-slate-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50"
-                    title="Remove exercise"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">delete</span>
-                  </button>
-                  <div className="hidden md:flex flex-col gap-1">
-                    <button onClick={() => moveItem(index, 'up')} disabled={index === 0} className="text-slate-300 hover:text-slate-600 disabled:opacity-30">
-                      <span className="material-symbols-outlined text-lg">arrow_upward</span>
+                {!isLocked && (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => handleRemoveItem(item.id)}
+                      className="text-slate-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50"
+                      title="Remove exercise"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">delete</span>
                     </button>
-                    <button onClick={() => moveItem(index, 'down')} disabled={index === items.length - 1} className="text-slate-300 hover:text-slate-600 disabled:opacity-30">
-                      <span className="material-symbols-outlined text-lg">arrow_downward</span>
-                    </button>
+                    <div className="hidden md:flex flex-col gap-1">
+                      <button onClick={() => moveItem(index, 'up')} disabled={index === 0} className="text-slate-300 hover:text-slate-600 disabled:opacity-30">
+                        <span className="material-symbols-outlined text-lg">arrow_upward</span>
+                      </button>
+                      <button onClick={() => moveItem(index, 'down')} disabled={index === items.length - 1} className="text-slate-300 hover:text-slate-600 disabled:opacity-30">
+                        <span className="material-symbols-outlined text-lg">arrow_downward</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ))
           )}

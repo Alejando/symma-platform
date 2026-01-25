@@ -120,3 +120,36 @@ export async function deleteExercise(token: string, id: string): Promise<Exercis
   });
   return response.json();
 }
+
+// Routine Lifecycle Functions
+
+export async function getRoutine(token: string, routineId: string): Promise<Routine> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}`, token);
+  return response.json();
+}
+
+export async function updateRoutine(
+  token: string,
+  routineId: string,
+  data: Partial<{ name: string; startDate: string; endDate: string; therapistNotes: string; items: { exerciseId: string; targetRepetitions: number; targetSets: number; holdTimeSeconds: number; restBetweenSetsSeconds?: number; }[] }>
+): Promise<Routine> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}`, token, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+  return response.json();
+}
+
+export async function deleteRoutine(token: string, routineId: string): Promise<Routine> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}`, token, {
+    method: 'DELETE',
+  });
+  return response.json();
+}
+
+export async function cloneRoutine(token: string, routineId: string): Promise<Routine> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}/clone`, token, {
+    method: 'POST',
+  });
+  return response.json();
+}

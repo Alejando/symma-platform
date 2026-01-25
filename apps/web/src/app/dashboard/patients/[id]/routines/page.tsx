@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { getPatientRoutines } from '@/lib/api';
+import { getPatientRoutines, cloneRoutine, deleteRoutine } from '@/lib/api';
 import type { Routine } from '@symma/shared-types';
 
 import { use } from 'react';
@@ -15,24 +16,57 @@ export default function PatientRoutinesPage({
 }) {
   const { id } = use(params);
   const { data: session } = useSession();
+  const router = useRouter();
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadRoutines() {
-      if (session?.user?.accessToken) {
-        try {
-          const data = await getPatientRoutines(session.user.accessToken, id);
-          setRoutines(data);
-        } catch (error) {
-          console.error('Failed to load routines:', error);
-        } finally {
-          setLoading(false);
-        }
+  async function loadRoutines() {
+    if (session?.user?.accessToken) {
+      try {
+        const data = await getPatientRoutines(session.user.accessToken, id);
+        setRoutines(data);
+      } catch (error) {
+        console.error('Failed to load routines:', error);
+      } finally {
+        setLoading(false);
       }
     }
+  }
+
+  useEffect(() => {
     loadRoutines();
   }, [session, id]);
+
+  const handleClone = async (routineId: string) => {
+    if (!session?.user?.accessToken) return;
+    setActionLoading(routineId);
+    try {
+      const cloned = await cloneRoutine(session.user.accessToken, routineId);
+      // Navigate to the edit page for the new cloned routine
+      router.push(`/dashboard/patients/${id}/routines/${cloned.id}/edit`);
+    } catch (error) {
+      console.error('Failed to clone routine:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDelete = async (routineId: string, routineName: string) => {
+    if (!session?.user?.accessToken) return;
+    if (!confirm(`Are you sure you want to delete "${routineName}"?`)) return;
+
+    setActionLoading(routineId);
+    try {
+      await deleteRoutine(session.user.accessToken, routineId);
+      // Refresh the list
+      await loadRoutines();
+    } catch (error) {
+      console.error('Failed to delete routine:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -42,8 +76,8 @@ export default function PatientRoutinesPage({
     );
   }
 
-  const activeRoutines = routines.filter((r) => !r.endDate || new Date(r.endDate) > new Date());
-  const historyRoutines = routines.filter((r) => r.endDate && new Date(r.endDate) <= new Date());
+  const activeRoutines = routines.filter((r) => r.status === 'ACTIVE' && (!r.endDate || new Date(r.endDate) > new Date()));
+  const historyRoutines = routines.filter((r) => r.status === 'ARCHIVED' || (r.endDate && new Date(r.endDate) <= new Date()));
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
@@ -102,6 +136,33 @@ export default function PatientRoutinesPage({
                       </span>
                     ))}
                   </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="border-t border-[#e7f3f2] pt-4 mt-4 flex items-center gap-3">
+                  <Link
+                    href={`/dashboard/patients/${id}/routines/${routine.id}/edit`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                    Edit
+                  </Link>
+                  <button
+                    onClick={() => handleClone(routine.id)}
+                    disabled={actionLoading === routine.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">content_copy</span>
+                    Clone
+                  </button>
+                  <button
+                    onClick={() => handleDelete(routine.id, routine.name)}
+                    disabled={actionLoading === routine.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 ml-auto"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}

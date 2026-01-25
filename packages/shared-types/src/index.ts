@@ -118,18 +118,21 @@ export interface RoutineItem {
   exercise?: Exercise;
 }
 
+export type RoutineStatus = 'ACTIVE' | 'ARCHIVED';
+
 export interface Routine {
   id: string;
   patientId: string;
   name: string;
   startDate: string;
   endDate?: string;
-  isActive: boolean;
+  status: RoutineStatus;
   therapistNotes?: string;
   createdAt: string;
   updatedAt: string;
   patient?: Patient;
   items?: RoutineItem[];
+  sessionsCount?: number;
 }
 
 export interface CreateRoutineItemDto {
@@ -147,4 +150,12 @@ export interface CreateRoutineDto {
   endDate?: string;
   therapistNotes?: string;
   items: CreateRoutineItemDto[];
+}
+
+export interface UpdateRoutineDto {
+  name?: string;
+  startDate?: string;
+  endDate?: string;
+  therapistNotes?: string;
+  items?: CreateRoutineItemDto[];
 }

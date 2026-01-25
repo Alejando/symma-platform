@@ -5,36 +5,55 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ExerciseCatalog } from '@/components/routines/exercise-catalog';
 import { RoutineBuilder, type BuilderItem } from '@/components/routines/routine-builder';
-import type { Exercise, Patient, CreateRoutineDto } from '@symma/shared-types';
-import { getExercises, getPatient, createRoutine } from '@/lib/api';
+import type { Exercise, Patient, Routine, UpdateRoutineDto } from '@symma/shared-types';
+import { getExercises, getPatient, getRoutine, updateRoutine } from '@/lib/api';
 
 import { use } from 'react';
 
-export default function NewPatientRoutinePage({
+export default function EditRoutinePage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string; routineId: string }>;
 }) {
-  const { id } = use(params);
+  const { id: patientId, routineId } = use(params);
   const { data: session } = useSession();
   const router = useRouter();
 
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [routine, setRoutine] = useState<Routine | null>(null);
   const [items, setItems] = useState<BuilderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Determine if routine is locked (has sessions)
+  const isLocked = (routine?.sessionsCount ?? 0) > 0;
 
   useEffect(() => {
     async function fetchData() {
       if (!session?.user?.accessToken) return;
       try {
-        const [fetchedExercises, fetchedPatient] = await Promise.all([
+        const [fetchedExercises, fetchedPatient, fetchedRoutine] = await Promise.all([
           getExercises(session.user.accessToken),
-          getPatient(session.user.accessToken, id),
+          getPatient(session.user.accessToken, patientId),
+          getRoutine(session.user.accessToken, routineId),
         ]);
         setExercises(fetchedExercises);
         setPatient(fetchedPatient);
+        setRoutine(fetchedRoutine);
+
+        // Convert routine items to builder items
+        if (fetchedRoutine.items) {
+          const builderItems: BuilderItem[] = fetchedRoutine.items.map((item) => ({
+            id: item.id,
+            exercise: item.exercise!,
+            targetRepetitions: item.targetRepetitions,
+            targetSets: item.targetSets,
+            holdTimeSeconds: item.holdTimeSeconds,
+            restBetweenSetsSeconds: item.restBetweenSetsSeconds,
+          }));
+          setItems(builderItems);
+        }
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
@@ -42,9 +61,10 @@ export default function NewPatientRoutinePage({
       }
     }
     fetchData();
-  }, [session?.user?.accessToken, id]);
+  }, [session?.user?.accessToken, patientId, routineId]);
 
   const handleAddExercise = (exercise: Exercise) => {
+    if (isLocked) return; // Block adding exercises if locked
     const newItem: BuilderItem = {
       id: crypto.randomUUID(),
       exercise,
@@ -56,20 +76,14 @@ export default function NewPatientRoutinePage({
     setItems((prev) => [...prev, newItem]);
   };
 
-  const handleSubmit = async (data: CreateRoutineDto | { name?: string }) => {
+  const handleSubmit = async (data: UpdateRoutineDto) => {
     if (!session?.user?.accessToken) return;
-    // In create mode, we always have the full CreateRoutineDto
-    const createData = data as CreateRoutineDto;
     setSaving(true);
     try {
-      // Ensure the routine is created for the correct patient
-      await createRoutine(session.user.accessToken, {
-        ...createData,
-        patientId: id,
-      });
-      router.push(`/dashboard/patients/${id}/routines`);
+      await updateRoutine(session.user.accessToken, routineId, data);
+      router.push(`/dashboard/patients/${patientId}/routines`);
     } catch (error) {
-      console.error('Failed to create routine:', error);
+      console.error('Failed to update routine:', error);
     } finally {
       setSaving(false);
     }
@@ -83,28 +97,31 @@ export default function NewPatientRoutinePage({
     );
   }
 
-  // We wrap the single patient in an array for compatibility with the existing RoutineBuilder
-  // component which might expect a list of selectables, but we pre-select or force this one.
   const patientsList = patient ? [patient] : [];
 
   return (
     <div className="flex bg-white h-[calc(100vh-140px)] border border-[#e7f3f2] rounded-xl overflow-hidden">
-      {/* Exercise Catalog Sidebar */}
-      <ExerciseCatalog
-        exercises={exercises}
-        onAddExercise={handleAddExercise}
-      />
+      {/* Exercise Catalog Sidebar - hidden when locked */}
+      {!isLocked && (
+        <ExerciseCatalog
+          exercises={exercises}
+          onAddExercise={handleAddExercise}
+        />
+      )}
 
       {/* Main Builder Area */}
       <div className="flex-1 min-w-0">
         <RoutineBuilder
           patients={patientsList}
-          preSelectedPatientId={id}
+          preSelectedPatientId={patientId}
           items={items}
           onItemsChange={setItems}
           onSubmit={handleSubmit}
           loading={saving}
-          onCancel={() => router.push(`/dashboard/patients/${id}/routines`)}
+          onCancel={() => router.push(`/dashboard/patients/${patientId}/routines`)}
+          mode="edit"
+          initialData={routine || undefined}
+          isLocked={isLocked}
         />
       </div>
     </div>

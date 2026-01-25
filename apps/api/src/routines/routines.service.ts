@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRoutineDto } from './dto/create-routine.dto';
@@ -122,6 +123,9 @@ export class RoutinesService {
           include: { exercise: true },
           orderBy: { orderIndex: 'asc' },
         },
+        _count: {
+          select: { sessions: true },
+        },
       },
     });
 
@@ -129,7 +133,12 @@ export class RoutinesService {
       throw new NotFoundException('Routine not found');
     }
 
-    return routine;
+    // Transform _count to sessionsCount for frontend compatibility
+    return {
+      ...routine,
+      sessionsCount: routine._count.sessions,
+      _count: undefined,
+    };
   }
 
   async update(
@@ -140,6 +149,18 @@ export class RoutinesService {
     // Verify ownership
     await this.findOne(therapistId, id);
 
+    // Check if routine has sessions (data integrity guard)
+    const sessionCount = await this.prisma.session.count({
+      where: { routineId: id },
+    });
+
+    // If routine has sessions, block changes to items (exercises)
+    if (sessionCount > 0 && updateRoutineDto.items) {
+      throw new ForbiddenException(
+        'Cannot modify exercises for a routine with existing sessions. Clone the routine to make changes.',
+      );
+    }
+
     // Validate dates if both provided
     if (updateRoutineDto.startDate && updateRoutineDto.endDate) {
       const startDate = new Date(updateRoutineDto.startDate);
@@ -149,7 +170,7 @@ export class RoutinesService {
       }
     }
 
-    // Build update data
+    // Build update data (metadata only if locked)
     const updateData: Record<string, unknown> = {};
 
     if (updateRoutineDto.name) updateData.name = updateRoutineDto.name;
@@ -160,7 +181,7 @@ export class RoutinesService {
     if (updateRoutineDto.therapistNotes !== undefined)
       updateData.therapistNotes = updateRoutineDto.therapistNotes;
 
-    // If items are provided, replace all items with new ones
+    // If items are provided (and allowed), replace all items with new ones
     if (updateRoutineDto.items) {
       // Delete existing items and create new ones in a transaction
       await this.prisma.$transaction([
@@ -197,11 +218,58 @@ export class RoutinesService {
 
   async remove(therapistId: string, id: string) {
     // Verify ownership
-    await this.findOne(therapistId, id);
+    const routine = await this.findOne(therapistId, id);
 
-    // Delete routine (items will cascade delete)
+    // Check if routine has sessions
+    const sessionCount = await this.prisma.session.count({
+      where: { routineId: id },
+    });
+
+    if (sessionCount > 0) {
+      // Soft delete: Archive the routine to preserve historical data
+      return this.prisma.routine.update({
+        where: { id },
+        data: { status: 'ARCHIVED' },
+      });
+    }
+
+    // Hard delete: No sessions, safe to remove completely
     return this.prisma.routine.delete({
       where: { id },
+    });
+  }
+
+  async clone(therapistId: string, id: string) {
+    // Fetch original routine with items
+    const original = await this.findOne(therapistId, id);
+
+    // Create a deep copy with new ID and reset stats
+    return this.prisma.routine.create({
+      data: {
+        patientId: original.patientId,
+        name: `${original.name} (Copy)`,
+        startDate: new Date(), // Reset to today
+        endDate: null,
+        status: 'ACTIVE',
+        therapistNotes: original.therapistNotes,
+        items: {
+          create: original.items.map((item, index) => ({
+            exerciseId: item.exerciseId,
+            orderIndex: index,
+            targetRepetitions: item.targetRepetitions,
+            targetSets: item.targetSets,
+            holdTimeSeconds: item.holdTimeSeconds,
+            restBetweenSetsSeconds: item.restBetweenSetsSeconds,
+          })),
+        },
+      },
+      include: {
+        items: {
+          include: { exercise: true },
+          orderBy: { orderIndex: 'asc' },
+        },
+        patient: true,
+      },
     });
   }
 }

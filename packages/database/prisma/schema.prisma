@@ -91,7 +91,7 @@ model Routine {
   name           String
   startDate      DateTime      @map("start_date")
   endDate        DateTime?     @map("end_date")
-  isActive       Boolean       @default(true) @map("is_active")
+  status         RoutineStatus @default(ACTIVE)
   therapistNotes String?       @map("therapist_notes")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
@@ -149,6 +149,11 @@ enum ExerciseCategory {
   WARMUP
   CORE
   COOLDOWN
+}
+
+enum RoutineStatus {
+  ACTIVE
+  ARCHIVED
 }
 
 model Session {

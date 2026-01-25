@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Patch,
+  Put,
   Param,
   Delete,
   UseGuards,
@@ -38,7 +39,7 @@ export class RoutinesController {
     return this.routinesService.findOne(req.user.userId, id);
   }
 
-  @Patch(':id')
+  @Put(':id')
   update(
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
@@ -50,5 +51,10 @@ export class RoutinesController {
   @Delete(':id')
   remove(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.routinesService.remove(req.user.userId, id);
+  }
+
+  @Post(':id/clone')
+  clone(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.routinesService.clone(req.user.userId, id);
   }
 }

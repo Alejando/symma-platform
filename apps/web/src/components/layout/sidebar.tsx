@@ -15,9 +15,10 @@ const navItems = [
   { href: '/dashboard/patients', label: 'Patients', icon: 'group' },
   { href: '/dashboard/exercises', label: 'Exercises', icon: 'fitness_center' },
   // Routines moved to patient profile
-  { href: '/dashboard/calendar', label: 'Calendar', icon: 'calendar_month' },
-  { href: '/dashboard/analytics', label: 'Analytics', icon: 'analytics' },
-  { href: '/dashboard/settings', label: 'Settings', icon: 'settings' },
+  // TODO: Enable when implemented
+  // { href: '/dashboard/calendar', label: 'Calendar', icon: 'calendar_month' },
+  // { href: '/dashboard/analytics', label: 'Analytics', icon: 'analytics' },
+  // { href: '/dashboard/settings', label: 'Settings', icon: 'settings' },
 ];
 
 export function Sidebar({ userName, userRole }: SidebarProps) {

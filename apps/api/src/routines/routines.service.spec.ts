@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RoutinesService } from './routines.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 
 describe('RoutinesService', () => {
   let service: RoutinesService;
@@ -24,9 +24,10 @@ describe('RoutinesService', () => {
     name: 'Morning Therapy',
     startDate: new Date('2024-01-01'),
     endDate: new Date('2024-03-01'),
-    isActive: true,
+    status: 'ACTIVE',
     items: [],
     patient: mockPatient,
+    _count: { sessions: 0 },
   };
 
   const mockPrismaService = {
@@ -43,6 +44,9 @@ describe('RoutinesService', () => {
     routineItem: {
       deleteMany: jest.fn(),
       create: jest.fn(),
+    },
+    session: {
+      count: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -161,4 +165,111 @@ describe('RoutinesService', () => {
       );
     });
   });
+
+  describe('update - Session Guarded', () => {
+    it('should allow full update when routine has no sessions', async () => {
+      mockPrismaService.routine.findFirst.mockResolvedValue(mockRoutine);
+      mockPrismaService.session.count.mockResolvedValue(0);
+      mockPrismaService.$transaction.mockResolvedValue([]);
+      mockPrismaService.routine.update.mockResolvedValue(mockRoutine);
+
+      const updateDto = {
+        name: 'Updated Name',
+        items: [{ exerciseId: 'ex-1', targetRepetitions: 20, targetSets: 3, holdTimeSeconds: 5 }],
+      };
+
+      await expect(service.update(therapistId, routineId, updateDto)).resolves.toBeDefined();
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
+    });
+
+    it('should reject item changes when routine has sessions', async () => {
+      mockPrismaService.routine.findFirst.mockResolvedValue(mockRoutine);
+      mockPrismaService.session.count.mockResolvedValue(5);
+
+      const updateDto = {
+        items: [{ exerciseId: 'ex-1', targetRepetitions: 20, targetSets: 3, holdTimeSeconds: 5 }],
+      };
+
+      await expect(service.update(therapistId, routineId, updateDto)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should allow metadata changes when routine has sessions', async () => {
+      mockPrismaService.routine.findFirst.mockResolvedValue(mockRoutine);
+      mockPrismaService.session.count.mockResolvedValue(5);
+      mockPrismaService.routine.update.mockResolvedValue({ ...mockRoutine, name: 'New Name' });
+
+      const updateDto = { name: 'New Name', therapistNotes: 'Updated notes' };
+
+      await expect(service.update(therapistId, routineId, updateDto)).resolves.toBeDefined();
+      expect(mockPrismaService.routine.update).toHaveBeenCalled();
+    });
+  });
+
+  describe('remove - Soft/Hard Delete', () => {
+    it('should hard delete when routine has no sessions', async () => {
+      mockPrismaService.routine.findFirst.mockResolvedValue(mockRoutine);
+      mockPrismaService.session.count.mockResolvedValue(0);
+      mockPrismaService.routine.delete.mockResolvedValue(mockRoutine);
+
+      await service.remove(therapistId, routineId);
+
+      expect(mockPrismaService.routine.delete).toHaveBeenCalledWith({ where: { id: routineId } });
+      expect(mockPrismaService.routine.update).not.toHaveBeenCalled();
+    });
+
+    it('should soft delete (archive) when routine has sessions', async () => {
+      mockPrismaService.routine.findFirst.mockResolvedValue(mockRoutine);
+      mockPrismaService.session.count.mockResolvedValue(10);
+      mockPrismaService.routine.update.mockResolvedValue({ ...mockRoutine, status: 'ARCHIVED' });
+
+      await service.remove(therapistId, routineId);
+
+      expect(mockPrismaService.routine.update).toHaveBeenCalledWith({
+        where: { id: routineId },
+        data: { status: 'ARCHIVED' },
+      });
+      expect(mockPrismaService.routine.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('clone', () => {
+    it('should create a deep copy with new ID and reset dates', async () => {
+      const routineWithItems = {
+        ...mockRoutine,
+        items: [
+          { exerciseId: 'ex-1', targetRepetitions: 10, targetSets: 3, holdTimeSeconds: 5, restBetweenSetsSeconds: 60 },
+        ],
+      };
+      mockPrismaService.routine.findFirst.mockResolvedValue(routineWithItems);
+      mockPrismaService.routine.create.mockResolvedValue({
+        ...routineWithItems,
+        id: 'new-routine-id',
+        name: 'Morning Therapy (Copy)',
+        startDate: new Date(),
+        status: 'ACTIVE',
+      });
+
+      const result = await service.clone(therapistId, routineId);
+
+      expect(mockPrismaService.routine.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          patientId,
+          name: 'Morning Therapy (Copy)',
+          startDate: expect.any(Date),
+          endDate: null,
+          status: 'ACTIVE',
+          items: {
+            create: expect.arrayContaining([
+              expect.objectContaining({ exerciseId: 'ex-1' }),
+            ]),
+          },
+        }),
+        include: expect.any(Object),
+      });
+      expect(result.name).toBe('Morning Therapy (Copy)');
+    });
+  });
 });
+
