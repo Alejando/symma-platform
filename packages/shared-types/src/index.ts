@@ -99,7 +99,7 @@ export interface Exercise {
   category: ExerciseCategory;
   assetAnimationUrl?: string;
   assetTutorialVideoUrl?: string;
-  defaultConfig?: { threshold?: number; holdTime?: number };
+  defaultConfig?: { threshold?: number; holdTime?: number; restTime?: number };
   createdAt: string;
 }
 
@@ -112,7 +112,9 @@ export interface RoutineItem {
   targetSets: number;
   holdTimeSeconds: number;
   successThreshold?: number;
-  restBetweenSetsSeconds?: number;
+  restBetweenSetsSeconds: number; // It is required in DB now (defaulted), but checking how API returns it. 
+  // Wait, DB has @default(60), so it is INT. 
+  // Prisma Client return type matches DB.
   exercise?: Exercise;
 }
 
@@ -135,6 +137,7 @@ export interface CreateRoutineItemDto {
   targetRepetitions: number;
   targetSets: number;
   holdTimeSeconds: number;
+  restBetweenSetsSeconds?: number;
 }
 
 export interface CreateRoutineDto {

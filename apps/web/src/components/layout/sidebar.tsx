@@ -13,6 +13,7 @@ interface SidebarProps {
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
   { href: '/dashboard/patients', label: 'Patients', icon: 'group' },
+  { href: '/dashboard/exercises', label: 'Exercises', icon: 'fitness_center' },
   // Routines moved to patient profile
   { href: '/dashboard/calendar', label: 'Calendar', icon: 'calendar_month' },
   { href: '/dashboard/analytics', label: 'Analytics', icon: 'analytics' },

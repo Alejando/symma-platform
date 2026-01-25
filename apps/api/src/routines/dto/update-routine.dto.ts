@@ -28,7 +28,14 @@ export class UpdateRoutineItemDto {
 
   @IsInt()
   @Min(0)
+  @IsInt()
+  @Min(0)
   holdTimeSeconds: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  restBetweenSetsSeconds?: number;
 }
 
 export class UpdateRoutineDto extends PartialType(

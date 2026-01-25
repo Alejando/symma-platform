@@ -9,6 +9,7 @@ export type BuilderItem = {
   targetRepetitions: number;
   targetSets: number;
   holdTimeSeconds: number;
+  restBetweenSetsSeconds: number;
 };
 
 interface RoutineBuilderProps {
@@ -69,6 +70,7 @@ export function RoutineBuilder({
         targetRepetitions: item.targetRepetitions,
         targetSets: item.targetSets,
         holdTimeSeconds: item.holdTimeSeconds,
+        restBetweenSetsSeconds: item.restBetweenSetsSeconds,
       })),
     };
     onSubmit(routineDto);
@@ -232,6 +234,16 @@ export function RoutineBuilder({
                         min="0"
                         value={item.holdTimeSeconds}
                         onChange={(e) => handleUpdateItem(item.id, 'holdTimeSeconds', parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-[80px]">
+                      <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Rest (s)</label>
+                      <input
+                        className="w-full h-10 rounded-md border-slate-200 bg-slate-50 text-slate-900 text-center font-medium focus:border-[#0d9488] focus:ring-[#0d9488]"
+                        type="number"
+                        min="0"
+                        value={item.restBetweenSetsSeconds}
+                        onChange={(e) => handleUpdateItem(item.id, 'restBetweenSetsSeconds', parseInt(e.target.value) || 0)}
                       />
                     </div>
                   </div>

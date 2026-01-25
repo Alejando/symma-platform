@@ -16,4 +16,23 @@ export class ExercisesService {
       where: { id },
     });
   }
+
+  async create(data: any) {
+    return this.prisma.exercise.create({
+      data,
+    });
+  }
+
+  async update(id: string, data: any) {
+    return this.prisma.exercise.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async remove(id: string) {
+    return this.prisma.exercise.delete({
+      where: { id },
+    });
+  }
 }

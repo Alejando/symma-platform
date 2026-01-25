@@ -111,7 +111,7 @@ model RoutineItem {
   targetSets             Int      @map("target_sets")
   holdTimeSeconds        Int      @map("hold_time_seconds")
   successThreshold       Float?   @map("success_threshold")
-  restBetweenSetsSeconds Int?     @map("rest_between_sets_seconds")
+  restBetweenSetsSeconds Int      @default(60) @map("rest_between_sets_seconds")
   routine                Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
   exercise               Exercise @relation(fields: [exerciseId], references: [id])
 

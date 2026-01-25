@@ -98,3 +98,25 @@ export async function getRoutineHistory(token: string, routineId: string): Promi
   const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}/history`, token);
   return response.json();
 }
+export async function createExercise(token: string, data: any): Promise<Exercise> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/exercises`, token, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return response.json();
+}
+
+export async function updateExercise(token: string, id: string, data: any): Promise<Exercise> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/exercises/${id}`, token, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  return response.json();
+}
+
+export async function deleteExercise(token: string, id: string): Promise<Exercise> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/exercises/${id}`, token, {
+    method: 'DELETE',
+  });
+  return response.json();
+}

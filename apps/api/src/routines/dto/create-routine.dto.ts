@@ -27,6 +27,11 @@ export class CreateRoutineItemDto {
   @IsInt()
   @Min(0)
   holdTimeSeconds: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  restBetweenSetsSeconds?: number;
 }
 
 export class CreateRoutineDto {

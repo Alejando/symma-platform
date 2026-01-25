@@ -51,6 +51,7 @@ export default function NewPatientRoutinePage({
       targetRepetitions: 10,
       targetSets: 3,
       holdTimeSeconds: exercise.defaultConfig?.holdTime || 5,
+      restBetweenSetsSeconds: exercise.defaultConfig?.restTime || 60,
     };
     setItems((prev) => [...prev, newItem]);
   };

@@ -51,7 +51,7 @@ async function main(): Promise<void> {
       description: 'Gently pull the corners of the mouth towards the ears, hold, and release. Focus on relaxation.',
       type: 'AR_TRACKING' as const,
       category: 'CORE' as const,
-      defaultConfig: { threshold: 0.5, holdTime: 5 },
+      defaultConfig: { threshold: 0.5, holdTime: 5, restTime: 60 },
     },
     {
       keyName: 'exercise_jaw_release',
@@ -59,7 +59,7 @@ async function main(): Promise<void> {
       description: 'Open the mouth wide to relax the jaw muscles, then slowly close. Repeat several times.',
       type: 'RELAXATION' as const,
       category: 'COOLDOWN' as const,
-      defaultConfig: { threshold: 0.3, holdTime: 3 },
+      defaultConfig: { threshold: 0.3, holdTime: 3, restTime: 60 },
     },
     {
       keyName: 'exercise_brow_raise',
@@ -67,7 +67,7 @@ async function main(): Promise<void> {
       description: 'Raise the eyebrows as high as possible, hold, and relax. Focus on symmetry.',
       type: 'AR_TRACKING' as const,
       category: 'CORE' as const,
-      defaultConfig: { threshold: 0.6, holdTime: 5 },
+      defaultConfig: { threshold: 0.6, holdTime: 5, restTime: 60 },
     },
     {
       keyName: 'exercise_eye_squeeze',
@@ -75,7 +75,7 @@ async function main(): Promise<void> {
       description: 'Close the eyes tightly, hold for a few seconds, then release. Helps strengthen eyelid muscles.',
       type: 'MANUAL' as const,
       category: 'WARMUP' as const,
-      defaultConfig: { threshold: 0.4, holdTime: 3 },
+      defaultConfig: { threshold: 0.4, holdTime: 3, restTime: 60 },
     },
   ];
 
@@ -129,6 +129,7 @@ async function main(): Promise<void> {
             targetRepetitions: 10,
             targetSets: 3,
             holdTimeSeconds: 5,
+            restBetweenSetsSeconds: 60,
           },
           {
             exerciseId: createdExercises[2].id, // Brow Raise
@@ -136,6 +137,7 @@ async function main(): Promise<void> {
             targetRepetitions: 10,
             targetSets: 3,
             holdTimeSeconds: 5,
+            restBetweenSetsSeconds: 60,
           },
         ],
       },

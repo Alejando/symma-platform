@@ -70,8 +70,8 @@ describe('RoutinesService', () => {
       startDate: '2024-01-01',
       endDate: '2024-03-01',
       items: [
-        { exerciseId: 'ex-1', targetRepetitions: 10, targetSets: 3, holdTimeSeconds: 5 },
-        { exerciseId: 'ex-2', targetRepetitions: 8, targetSets: 2, holdTimeSeconds: 3 },
+        { exerciseId: 'ex-1', targetRepetitions: 10, targetSets: 3, holdTimeSeconds: 5, restBetweenSetsSeconds: 60 },
+        { exerciseId: 'ex-2', targetRepetitions: 8, targetSets: 2, holdTimeSeconds: 3, restBetweenSetsSeconds: 45 },
         { exerciseId: 'ex-3', targetRepetitions: 12, targetSets: 4, holdTimeSeconds: 0 },
       ],
     };
