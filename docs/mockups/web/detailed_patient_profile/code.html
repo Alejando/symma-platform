@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Symma - Patient Profile</title>
+<!-- Fonts and Icons -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "primary-dark": "#0a7a70",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#182c2a",
+                        "text-main": "#0d1b1a",
+                        "text-secondary": "#4c9a93",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for clean look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-main dark:text-white font-display min-h-screen flex flex-col overflow-x-hidden">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-gray-200 dark:border-gray-800 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-md px-4 sm:px-10 py-3">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-text-main dark:text-white">
+<div class="size-8 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl">medical_services</span>
+</div>
+<h2 class="text-xl font-bold leading-tight tracking-tight">Symma</h2>
+</div>
+<div class="hidden md:flex items-center gap-1 rounded-lg bg-gray-100 dark:bg-gray-800 p-1">
+<span class="material-symbols-outlined text-gray-400 pl-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-64 placeholder-gray-500 text-text-main dark:text-white" placeholder="Search patients, reports..."/>
+</div>
+</div>
+<div class="flex flex-1 justify-end gap-6 items-center">
+<nav class="hidden lg:flex items-center gap-6">
+<a class="text-text-main dark:text-gray-300 text-sm font-medium hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-primary text-sm font-bold border-b-2 border-primary pb-0.5" href="#">Patients</a>
+<a class="text-text-main dark:text-gray-300 text-sm font-medium hover:text-primary transition-colors" href="#">Appointments</a>
+<a class="text-text-main dark:text-gray-300 text-sm font-medium hover:text-primary transition-colors" href="#">Reports</a>
+</nav>
+<div class="flex items-center gap-3 border-l border-gray-200 dark:border-gray-700 pl-6">
+<button class="p-2 text-gray-500 hover:text-primary rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-9 border-2 border-gray-100 dark:border-gray-700 cursor-pointer" data-alt="Doctor profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBxqInxKj4CuLliNo0_nQpGMNnXAe97y-KbhZM0sbpLuf1ZRkwX1R-cfCgfqPa0rgKpYxXyv8CcY7zYDGsA6ba0iJTpD96r7iP3yEXHOZwktQM-EaAeksVhtqU-aSE9T5Tp0oq9QrwB5N_1R5heerwFDwsS0YqeQnqfSgtxndbhYHl0tG4ArEKj48DO5Ij9haalbX417aRrRVuch6K9AB-HXAsrCEk66Ll43reFChTuiThegVzWT1bndtp75DvS8aM1K2UgWiWU5J4");'>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 w-full max-w-[1400px] mx-auto px-4 sm:px-8 py-8">
+<!-- Breadcrumbs & Actions -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+<div class="flex items-center text-sm text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined text-lg mr-1">arrow_back</span>
+<a class="hover:underline" href="#">Back to Patients List</a>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-text-main dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+                    Edit Profile
+                </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-text-main dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                    Export
+                </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg text-sm font-medium transition-colors shadow-md shadow-primary/20">
+<span class="material-symbols-outlined text-[18px]">add_notes</span>
+                    Add Clinical Note
+                </button>
+</div>
+</div>
+<!-- Header / Patient Basic Info -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 mb-6">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+<div class="flex items-start gap-5">
+<div class="relative">
+<div class="size-20 rounded-full bg-gray-200 dark:bg-gray-700 bg-cover bg-center border-4 border-white dark:border-gray-600 shadow-sm" data-alt="Patient Sarah Jenkins profile photo" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB-YfIetuG4SwIgvyRHGUhp0lL-zbMH25r-YLplOnWMMHbc5iyaQADuZfcv-EtE7rWssDkDJEp9D7Yb2MfsMxEYppMmhO0jUc2stbOGXnagY42TRCFT80jeiKeaJ0dXbyZJpI447R7_IroX-O_LHPBdnkEGyj5l2fcIDS2KBgLbdd6kmm8cq6MGJth3Fp41Q9bARbbhpf-mTXoRoMe5MVDNEMa24zV8yJkXcsGTRmaXlMhqwGRnb-lVCn6qlCh8NAJEaQtyFnrF13c');">
+</div>
+<div class="absolute bottom-0 right-0 size-5 bg-green-500 border-2 border-white dark:border-surface-dark rounded-full"></div>
+</div>
+<div>
+<div class="flex flex-wrap items-center gap-3 mb-1">
+<h1 class="text-2xl font-bold text-text-main dark:text-white">Sarah Jenkins</h1>
+<span class="px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold border border-blue-100 dark:border-blue-800">
+                                #PT-4920
+                            </span>
+<span class="px-2.5 py-0.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-semibold border border-green-100 dark:border-green-800 flex items-center gap-1">
+<span class="size-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                Active Treatment
+                            </span>
+</div>
+<p class="text-gray-500 dark:text-gray-400 text-sm mb-3">42 Years Old • Female • Last visit: 2 days ago</p>
+<div class="flex flex-wrap gap-2">
+<span class="inline-flex items-center gap-1 px-3 py-1 rounded-md bg-primary/10 text-primary text-sm font-medium">
+<span class="material-symbols-outlined text-[16px]">diagnosis</span>
+                                Bell's Palsy (Right Side)
+                            </span>
+</div>
+</div>
+</div>
+<div class="flex gap-8 lg:border-l lg:border-gray-100 lg:dark:border-gray-700 lg:pl-8">
+<div class="text-center">
+<p class="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mb-1">Total Sessions</p>
+<p class="text-2xl font-bold text-text-main dark:text-white">12</p>
+</div>
+<div class="text-center">
+<p class="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mb-1">Progress</p>
+<p class="text-2xl font-bold text-green-600">+18%</p>
+</div>
+<div class="text-center">
+<p class="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mb-1">Next Appt</p>
+<p class="text-2xl font-bold text-primary">Nov 14</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Content Grid: Left Sidebar & Main Content -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Left Column: Patient Details & Static Data -->
+<div class="lg:col-span-4 flex flex-col gap-6">
+<!-- Clinical Status Card -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+<div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/5 flex justify-between items-center">
+<h3 class="font-bold text-text-main dark:text-white">Clinical Status</h3>
+<span class="material-symbols-outlined text-gray-400">vital_signs</span>
+</div>
+<div class="p-5">
+<div class="mb-5">
+<div class="flex justify-between items-end mb-2">
+<span class="text-sm font-medium text-gray-600 dark:text-gray-300">Paralysis Grade</span>
+<span class="text-sm font-bold text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded border border-orange-100 dark:border-orange-800">Grade 3</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 mb-1">
+<div class="bg-gradient-to-r from-green-500 via-yellow-400 to-orange-500 h-3 rounded-full" style="width: 50%"></div>
+</div>
+<p class="text-xs text-gray-500 dark:text-gray-400 text-right">Moderate Dysfunction</p>
+</div>
+<div class="grid grid-cols-1 gap-4">
+<div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+<p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Primary Symptoms</p>
+<p class="text-sm font-medium text-text-main dark:text-white">Right-sided facial weakness, difficulty closing right eye.</p>
+</div>
+<div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+<p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Current Protocol</p>
+<p class="text-sm font-medium text-text-main dark:text-white">Neuromuscular Retraining (NMR), Massage Therapy.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Personal Info Card -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+<div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/5 flex justify-between items-center">
+<h3 class="font-bold text-text-main dark:text-white">Personal Details</h3>
+<button class="text-primary hover:text-primary-dark text-xs font-semibold">EDIT</button>
+</div>
+<div class="divide-y divide-gray-100 dark:divide-gray-800">
+<div class="p-4 flex flex-col gap-1">
+<span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Date of Birth</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-gray-400 text-sm">calendar_month</span>
+<span class="text-sm font-medium text-text-main dark:text-white">Oct 12, 1985</span>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-1">
+<span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Contact Phone</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-gray-400 text-sm">call</span>
+<span class="text-sm font-medium text-text-main dark:text-white">+1 (555) 012-3456</span>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-1">
+<span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Emergency Contact</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-gray-400 text-sm">emergency_home</span>
+<span class="text-sm font-medium text-text-main dark:text-white">Mark Jenkins (Husband)</span>
+</div>
+<span class="text-xs text-gray-500 ml-6">555-0123</span>
+</div>
+<div class="p-4 flex flex-col gap-1">
+<span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Insurance</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-gray-400 text-sm">verified_user</span>
+<span class="text-sm font-medium text-text-main dark:text-white">Blue Cross / Blue Shield</span>
+</div>
+<span class="text-xs text-gray-500 ml-6">ID: XJ9200192</span>
+</div>
+</div>
+</div>
+<!-- Recent Activity/Notes Snippet -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+<div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/5 flex justify-between items-center">
+<h3 class="font-bold text-text-main dark:text-white">Latest Note</h3>
+<button class="text-primary hover:text-primary-dark text-xs font-semibold">VIEW ALL</button>
+</div>
+<div class="p-5">
+<p class="text-xs text-gray-400 mb-2">Nov 08, 2023 by Dr. Ray</p>
+<p class="text-sm text-gray-600 dark:text-gray-300 italic">"Patient reports improved sensation in the cheek area. Range of motion exercises showed a 5% increase in lip corner excursion compared to last week."</p>
+</div>
+</div>
+</div>
+<!-- Right Column: Progress Analytics & Snapshots -->
+<div class="lg:col-span-8 flex flex-col gap-6">
+<!-- Analytics Card -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
+<div class="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+<div>
+<h3 class="font-bold text-lg text-text-main dark:text-white">Facial Symmetry Progression</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400">House-Brackmann Scale Analysis over time</p>
+</div>
+<div class="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+<button class="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-surface-dark shadow-sm text-text-main dark:text-white">3 Months</button>
+<button class="px-3 py-1.5 text-xs font-medium rounded-md text-gray-500 hover:text-text-main dark:text-gray-400 dark:hover:text-white transition-colors">6 Months</button>
+<button class="px-3 py-1.5 text-xs font-medium rounded-md text-gray-500 hover:text-text-main dark:text-gray-400 dark:hover:text-white transition-colors">1 Year</button>
+</div>
+</div>
+<div class="p-6">
+<div class="flex items-end gap-3 mb-6">
+<div>
+<span class="text-4xl font-bold text-text-main dark:text-white tracking-tight">78%</span>
+<span class="text-sm font-medium text-gray-500 dark:text-gray-400 ml-1">Symmetry Score</span>
+</div>
+<div class="mb-1.5 flex items-center text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-md text-sm font-semibold">
+<span class="material-symbols-outlined text-sm mr-0.5">trending_up</span>
+                                +12% since start
+                            </div>
+</div>
+<!-- Chart Area -->
+<div class="w-full h-[300px] relative">
+<!-- SVG Chart Visualization -->
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 800 300">
+<defs>
+<lineargradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#0d968b" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#0d968b" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<!-- Grid Lines -->
+<g class="stroke-gray-100 dark:stroke-gray-700" stroke-dasharray="4,4" stroke-width="1">
+<line x1="0" x2="800" y1="250" y2="250"></line>
+<line x1="0" x2="800" y1="200" y2="200"></line>
+<line x1="0" x2="800" y1="150" y2="150"></line>
+<line x1="0" x2="800" y1="100" y2="100"></line>
+<line x1="0" x2="800" y1="50" y2="50"></line>
+</g>
+<!-- Area Path -->
+<path d="M0,250 
+                                         L0,200 
+                                         C50,190 100,185 150,180
+                                         C200,175 250,160 300,140
+                                         C350,120 400,130 450,110
+                                         C500,90 550,100 600,80
+                                         C650,60 700,70 750,55
+                                         L800,50
+                                         L800,300 L0,300 Z" fill="url(#chartGradient)"></path>
+<!-- Line Path -->
+<path class="drop-shadow-sm" d="M0,200 
+                                         C50,190 100,185 150,180
+                                         C200,175 250,160 300,140
+                                         C350,120 400,130 450,110
+                                         C500,90 550,100 600,80
+                                         C650,60 700,70 750,55
+                                         L800,50" fill="none" stroke="#0d968b" stroke-linecap="round" stroke-width="3"></path>
+<!-- Data Points -->
+<circle cx="0" cy="200" fill="white" r="4" stroke="#0d968b" stroke-width="2"></circle>
+<circle cx="150" cy="180" fill="white" r="4" stroke="#0d968b" stroke-width="2"></circle>
+<circle cx="300" cy="140" fill="white" r="4" stroke="#0d968b" stroke-width="2"></circle>
+<circle cx="450" cy="110" fill="white" r="4" stroke="#0d968b" stroke-width="2"></circle>
+<circle cx="600" cy="80" fill="white" r="4" stroke="#0d968b" stroke-width="2"></circle>
+<circle cx="800" cy="50" fill="#0d968b" r="6" stroke="white" stroke-width="2"></circle>
+</svg>
+<!-- X Axis Labels -->
+<div class="flex justify-between mt-2 text-xs text-gray-400 font-medium">
+<span>Week 1</span>
+<span>Week 2</span>
+<span>Week 4</span>
+<span>Week 6</span>
+<span>Week 8</span>
+<span>Week 10</span>
+<span>Week 12</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Recovery Snapshots Gallery -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+<div class="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+<div>
+<h3 class="font-bold text-lg text-text-main dark:text-white">Recovery Snapshots</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400">Milestone photos from treatment sessions</p>
+</div>
+<button class="text-primary hover:text-primary-dark text-sm font-medium flex items-center gap-1">
+                            View Gallery
+                            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+<div class="p-6">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<!-- Week 1 Snapshot -->
+<div class="group relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer shadow-sm hover:shadow-md transition-shadow">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="Patient face week 1 showing asymmetry" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCfkay84Gj1dJXgYAu0QOVIzmXZbs0TTGfRUbrKgsC4rC03HJ0GagHYTKTWWM8b2ZftX7oSMpEbg13XEW0a3nwnC61JVGRaqjhdHb6lQoEnODwdx_-sGwky1ODVVrM-lfUK3jjoHc0XaFn3JpjOnAhlbRCNQ5en4HfjGMhKSGFHjAPhtrZ2sLG6uMx12-gDZFS3IBhwUS5DCS6GaSZIc2DG1BKzngPyV4ZQvT_go62SXv1BXOOFaHxaLf3UAat6FIWNmmjbnGGbtXw');">
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-60"></div>
+<div class="absolute bottom-3 left-3 text-white">
+<p class="text-sm font-bold">Week 1</p>
+<p class="text-xs text-white/80">Initial Assessment</p>
+</div>
+<div class="absolute top-3 right-3 bg-black/40 backdrop-blur-sm rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-sm block">visibility</span>
+</div>
+</div>
+<!-- Week 4 Snapshot -->
+<div class="group relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer shadow-sm hover:shadow-md transition-shadow">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="Patient face week 4 showing slight improvement" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAAOvMl3yb3Q_4OlYMtZS4BPjOVY0DA-g7ms7k1mFUkJrI5Y16y56X6gAWSvPmDa2heZ0Yl6j0Ib6hm19Z1KeNT0Mz0BALQJjqZjJpTRGFTut5mg8kPI5PkaEJRHgqljUuYb03KwCDKYetGaedFb-QB-BZTr1tz_7mIixpCqIgdQZrGsf4wCg3_Edpemnxzsilc6sbDuZ9m1Nysr1RxtceT4TBeW-vSIO5SoJgE5IbWG3eALg6x_gXUah4pkIlxhntrl5KfDrcy9ak');">
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-60"></div>
+<div class="absolute bottom-3 left-3 text-white">
+<p class="text-sm font-bold">Week 4</p>
+<p class="text-xs text-white/80">Grade 4 to 3</p>
+</div>
+<div class="absolute top-3 right-3 bg-black/40 backdrop-blur-sm rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-sm block">visibility</span>
+</div>
+</div>
+<!-- Week 8 Snapshot -->
+<div class="group relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer shadow-sm hover:shadow-md transition-shadow">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="Patient face week 8 showing good symmetry" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBdi1gMogz4bhjXLX-d4iX-mpFClYbY9kZMN67lwwBJ3WQJsynJPfFdZn-0XcdcpLnyc9glFALmsGUF1iWCApdkCzXV870tw3sHzTo-wRLMukZxchSm07vV5QgGQdk8ry41JcSoricU85VPmpLtaoxTSa51xDXBBRg3v-c6vwk5FAXsSZgp2GEWKjs97ntlOIjR--hAqKmXjgGbtHT4R-3P-tXwlwJJ_93nGd52-uXPc5pnQdSwEIDbbe1r85wdRRdvCqzZ23neKJk');">
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-60"></div>
+<div class="absolute bottom-3 left-3 text-white">
+<p class="text-sm font-bold">Week 8</p>
+<p class="text-xs text-white/80">Noticeable Gain</p>
+</div>
+<div class="absolute top-3 right-3 bg-black/40 backdrop-blur-sm rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-sm block">visibility</span>
+</div>
+</div>
+<!-- Add New Snapshot -->
+<div class="aspect-[3/4] rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group">
+<div class="size-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-2 group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-gray-500 group-hover:text-white">add_a_photo</span>
+</div>
+<p class="text-sm font-medium text-gray-500 group-hover:text-primary">Add Snapshot</p>
+<p class="text-xs text-gray-400">Week 12</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Tabs for additional content (simulated) -->
+<div class="border-b border-gray-200 dark:border-gray-800">
+<nav aria-label="Tabs" class="-mb-px flex space-x-8">
+<a class="border-primary text-primary whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium" href="#">Detailed Reports</a>
+<a class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium" href="#">Medication History</a>
+<a class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium" href="#">Exercises Plan</a>
+</nav>
+</div>
+<div class="bg-white dark:bg-surface-dark p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm text-center py-12">
+<div class="inline-flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-800 rounded-full mb-4">
+<span class="material-symbols-outlined text-gray-400 text-3xl">folder_open</span>
+</div>
+<h3 class="text-text-main dark:text-white font-medium mb-1">No reports selected</h3>
+<p class="text-gray-500 text-sm">Select a specific date or category above to view detailed clinical logs.</p>
+</div>
+</div>
+</div>
+</main>
+</body></html>

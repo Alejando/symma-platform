@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Routine Builder - Symma</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit browsers */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: #94a3b8;
+        }
+        .form-input-clean:focus {
+            box-shadow: none;
+            border-color: #0d968b;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display min-h-screen flex flex-col overflow-hidden">
+<!-- Top Navigation -->
+<header class="flex shrink-0 items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1a2e2c] px-6 py-3 shadow-sm z-20">
+<div class="flex items-center gap-4 text-[#0d1b1a] dark:text-white">
+<div class="size-8 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M39.475 21.6262C40.358 21.4363 40.6863 21.5589 40.7581 21.5934C40.7876 21.655 40.8547 21.857 40.8082 22.3336C40.7408 23.0255 40.4502 24.0046 39.8572 25.2301C38.6799 27.6631 36.5085 30.6631 33.5858 33.5858C30.6631 36.5085 27.6632 38.6799 25.2301 39.8572C24.0046 40.4502 23.0255 40.7407 22.3336 40.8082C21.8571 40.8547 21.6551 40.7875 21.5934 40.7581C21.5589 40.6863 21.4363 40.358 21.6262 39.475C21.8562 38.4054 22.4689 36.9657 23.5038 35.2817C24.7575 33.2417 26.5497 30.9744 28.7621 28.762C30.9744 26.5497 33.2417 24.7574 35.2817 23.5037C36.9657 22.4689 38.4054 21.8562 39.475 21.6262ZM4.41189 29.2403L18.7597 43.5881C19.8813 44.7097 21.4027 44.9179 22.7217 44.7893C24.0585 44.659 25.5148 44.1631 26.9723 43.4579C29.9052 42.0387 33.2618 39.5667 36.4142 36.4142C39.5667 33.2618 42.0387 29.9052 43.4579 26.9723C44.1631 25.5148 44.659 24.0585 44.7893 22.7217C44.9179 21.4027 44.7097 19.8813 43.5881 18.7597L29.2403 4.41187C27.8527 3.02428 25.8765 3.02573 24.2861 3.36776C22.6081 3.72863 20.7334 4.58419 18.8396 5.74801C16.4978 7.18716 13.9881 9.18353 11.5858 11.5858C9.18354 13.988 7.18717 16.4978 5.74802 18.8396C4.58421 20.7334 3.72865 22.6081 3.36778 24.2861C3.02574 25.8765 3.02429 27.8527 4.41189 29.2403Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-xl font-bold leading-tight tracking-tight">Symma</h2>
+</div>
+<div class="hidden md:flex flex-1 justify-center gap-8">
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary text-sm font-medium transition-colors" href="#">Dashboard</a>
+<a class="text-primary text-sm font-medium border-b-2 border-primary" href="#">Patients</a>
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary text-sm font-medium transition-colors" href="#">Library</a>
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary text-sm font-medium transition-colors" href="#">Settings</a>
+</div>
+<div class="flex items-center gap-4">
+<div class="size-9 rounded-full bg-slate-200 dark:bg-slate-700 bg-center bg-cover border border-slate-300 dark:border-slate-600" data-alt="Therapist profile picture showing a smiling woman" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCAKUrgDJ6hEhkObv3Csj-0d3pN-7MELOAg3V2bpa1rkRj_2ptZ3v7hiC_4cTMB8r7FxHxTyd0FZObelOwmebCCw1g_UQ9WCVQisGeShFjCuoLcioJnpoSsdI2ytR34nDHwqRHCH9QLrLATovfV6BaV0De9IUGupMgt7SzYz03lVHksLDqx9LP8_Gqell3KPiMf3Nw3CZD-jlQq3BjfxXGyd5VMS66JMI1cnfPMm5VKhwlEVYcO7g9o8dudCTK9KY2ywqo4lfvywhs");'></div>
+</div>
+</header>
+<!-- Main Content Area -->
+<div class="flex flex-1 overflow-hidden">
+<!-- Left Sidebar: Exercise Catalog -->
+<aside class="w-full md:w-[380px] flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1a2e2c] z-10 shrink-0">
+<div class="p-4 border-b border-slate-100 dark:border-slate-800">
+<h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Exercise Catalog</h3>
+<!-- Search -->
+<div class="relative mb-3">
+<span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</span>
+<input class="w-full py-2 pl-10 pr-4 text-sm text-slate-700 bg-slate-50 dark:bg-[#152322] border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-slate-400 transition-shadow" placeholder="Search exercises..." type="text"/>
+</div>
+<!-- Chips Filter -->
+<div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+<button class="px-3 py-1 text-xs font-medium text-white bg-primary rounded-full shrink-0">All</button>
+<button class="px-3 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full shrink-0 transition-colors">Facial</button>
+<button class="px-3 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full shrink-0 transition-colors">Neck</button>
+<button class="px-3 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full shrink-0 transition-colors">Shoulders</button>
+</div>
+</div>
+<!-- Exercise List -->
+<div class="flex-1 overflow-y-auto p-4 space-y-3">
+<!-- Item 1 -->
+<div class="group flex items-center gap-3 p-2 bg-white dark:bg-[#1a2e2c] border border-slate-200 dark:border-slate-700 rounded-lg hover:border-primary/50 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all">
+<div class="h-12 w-12 rounded-md bg-slate-100 dark:bg-slate-800 bg-center bg-cover shrink-0" data-alt="Thumbnail of a person performing a smile stretching exercise" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAaEp7fUFaSpGXBRPy6YCwlOEIALgy0wa6uemfTSrCx0DGIfNyOfuG40kcI4arL_WtwW3eSJjzwLHH_gd0BwfL92LhhoSwWSlweaqjEVtRZ-tk1KwtFrxqEgLtU2MGWtY_-35Nys1IEccbx8KnFFYMk04xfx0gvzI5bBF9FUYEihRC-8ZepacEv8v64Sr6MHZwJY0YvZEQouSvdd3OmwB72VDqmXXi1JI0tnGbc30IOWHEowLz3Wf7wFN4CrJunVeuf9H5fXiRuduQ');"></div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">Smile Stretch</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">Facial • Mobility</p>
+</div>
+<button class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+</button>
+</div>
+<!-- Item 2 -->
+<div class="group flex items-center gap-3 p-2 bg-white dark:bg-[#1a2e2c] border border-slate-200 dark:border-slate-700 rounded-lg hover:border-primary/50 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all">
+<div class="h-12 w-12 rounded-md bg-slate-100 dark:bg-slate-800 bg-center bg-cover shrink-0" data-alt="Thumbnail of a person doing a jaw release movement" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCWtKKpCe-tKqTWDtBpWYaYUwIK5uHghRr1I4m6AMhwZq7RC_PMBPVkDqKGOW9ylAVcQG86Nba0szqbYtN04HHyj4NSoLuTQ9ouCnqAGdtpKUWR36ff_oKBOq61d_cIVXsCrd1ixAiwU37z3UR32iWxMeWqEQcaj3GQgQ3bBYhASx9Clp55URiZdAh8Deva6gsYUTrW8rB-trADiErYPAXuEjq4U0sBJBlxPuivPghq3ZzwHYQpQhqjA8UI07A4_MUS0edjpzI4XWA');"></div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">Jaw Release</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">Facial • Relaxation</p>
+</div>
+<button class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+</button>
+</div>
+<!-- Item 3 -->
+<div class="group flex items-center gap-3 p-2 bg-white dark:bg-[#1a2e2c] border border-slate-200 dark:border-slate-700 rounded-lg hover:border-primary/50 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all">
+<div class="h-12 w-12 rounded-md bg-slate-100 dark:bg-slate-800 bg-center bg-cover shrink-0" data-alt="Thumbnail showing neck rotation exercise" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDK0-nrZWEb82oGrY6G-Vl2i1dFzBuFNr63jIIoa74V-pKVQYq-2Fv-YWgWqHkkmlxAE55hurWgjEOABD9dotJ6bNDE1k31Kso8pI0Y86q3WZYee1olfGTOz89U1d6BtMSbi30YzhDUHRn9XPxJGlJ1KrpbzVa1rs-kYbv-tke-SCj0JXp_1k_WsXO60T3rCgVaMCoQ-IXY3iLaVvRS9Ob57zAewdEkqQukDU0CfGohAlfAHovR-gzNkuSlGF2KEr9MoQ7vHaxSGK0');"></div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">Neck Rotation</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">Neck • Range of Motion</p>
+</div>
+<button class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+</button>
+</div>
+<!-- Item 4 -->
+<div class="group flex items-center gap-3 p-2 bg-white dark:bg-[#1a2e2c] border border-slate-200 dark:border-slate-700 rounded-lg hover:border-primary/50 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all">
+<div class="h-12 w-12 rounded-md bg-slate-100 dark:bg-slate-800 bg-center bg-cover shrink-0" data-alt="Thumbnail of a yawning motion" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCnVVY9WhsJze6aXxJTtDeITq8y06A3RX3j3pQkz_QC-n21IArRUFegH6e5UGo9bmCNMOdYU7GCA3oC0JifoBBJYzVxA4CaN2XkWqYcmco6NBmYTrTK15U0JzqiBjsTPZq9sS1NUskOOxSQQGgo81ay-znhK5mj2OVve3dhCS3GGpEmy6lENIdo9aUB04uiWO5Te3AI7VPJ0WvnfGQEy2rQ6xdrEPf15nbbv8S45AyZ7MEIB7vhqlhYVDKoHBCrEKro4DCysfHpYfo');"></div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">Yawn Movement</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">Facial • Stretch</p>
+</div>
+<button class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+</button>
+</div>
+<!-- Item 5 -->
+<div class="group flex items-center gap-3 p-2 bg-white dark:bg-[#1a2e2c] border border-slate-200 dark:border-slate-700 rounded-lg hover:border-primary/50 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all">
+<div class="h-12 w-12 rounded-md bg-slate-100 dark:bg-slate-800 bg-center bg-cover shrink-0" data-alt="Thumbnail of shoulder shrug exercise" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAIBGOz8IV8dn7yT9zPcpxgYFrmD2qkyqpCBuyApGALNQMHgs1Z82va5zZXn6PbOae7RkK9KMlhoZoim9dKlvY1erRSaacPiJeJWkG94pdysDI9P7zrtWn-PIpkR0Gu9-q2T1lwDcaBKrkjsvCV1VjKqdXjgo1EEswPiLKnZNAlYzaijTQtv4QzVl9a-v5Go6UpLOnMzgLwCQ8UK_tVmc72TMwCyOxNkjXVszVIgIv6VrgmlHDXNsXPGkZrTknDyGiR2pM6LYfEw7k');"></div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">Shoulder Shrugs</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">Shoulders • Strength</p>
+</div>
+<button class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+</button>
+</div>
+</div>
+</aside>
+<!-- Main Workspace: Routine Builder -->
+<main class="flex-1 flex flex-col bg-background-light dark:bg-background-dark relative overflow-hidden">
+<!-- Workspace Header -->
+<div class="px-8 py-6 flex items-start justify-between bg-white dark:bg-[#1a2e2c] border-b border-slate-200 dark:border-slate-800 shadow-sm shrink-0">
+<div class="flex flex-col gap-2 w-full max-w-xl">
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary">Draft</span>
+<p class="text-sm text-slate-500 dark:text-slate-400">Patient: <span class="font-medium text-slate-800 dark:text-slate-200">John Doe</span></p>
+</div>
+<input class="text-3xl font-bold text-slate-900 dark:text-white bg-transparent border-0 border-b border-transparent hover:border-slate-300 focus:border-primary focus:ring-0 p-0 transition-colors placeholder-slate-300 w-full" placeholder="Routine Name" type="text" value="Morning Facial Therapy"/>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-sm text-slate-500 dark:text-slate-400 mr-2">Est. Duration: <span class="font-bold text-slate-900 dark:text-white">~5 mins</span></span>
+<button class="flex items-center justify-center h-10 px-6 rounded-lg bg-primary text-white text-sm font-bold shadow-sm hover:bg-[#0b847a] focus:ring-2 focus:ring-primary/20 transition-all">
+                        Save Routine
+                    </button>
+</div>
+</div>
+<!-- Builder Area -->
+<div class="flex-1 overflow-y-auto p-8">
+<div class="max-w-4xl mx-auto space-y-4">
+<!-- Empty State Placeholder (Hidden for this filled state example, but good to have structurally) -->
+<!-- 
+                    <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-12 flex flex-col items-center justify-center text-center">
+                        <div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-full mb-4">
+                            <span class="material-symbols-outlined text-slate-400 text-4xl">drag_indicator</span>
+                        </div>
+                        <h4 class="text-lg font-medium text-slate-900 dark:text-white">Start Building</h4>
+                        <p class="text-slate-500 dark:text-slate-400 mt-1">Drag exercises here from the catalog</p>
+                    </div> 
+                    -->
+<!-- Routine Step 1 -->
+<div class="bg-white dark:bg-[#1a2e2c] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 flex items-start gap-4 group transition-all hover:shadow-md">
+<div class="flex flex-col items-center gap-2 mt-1 cursor-grab active:cursor-grabbing text-slate-400 hover:text-primary">
+<span class="material-symbols-outlined">drag_indicator</span>
+<span class="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5">01</span>
+</div>
+<div class="size-16 rounded-lg bg-slate-100 dark:bg-slate-800 bg-center bg-cover border border-slate-100 dark:border-slate-700 shrink-0" data-alt="Small thumbnail of the smile stretch exercise" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDSGkfo-dTTQSy6gvkIQ-exFD9dQ0zciVdJxQZuWFRSD7bHuafLuElrvpUb_cmOJ1Ytk0Ud85dURz4jUYmhkwx8EnDbH1I3fs3e_cNkEEfIYbhVNcpSMSv4nZYQzNyY9cNTRrtGI7mrP1fyrw4OMV2jJrNl-Y1gV3jDH1AW4dJnDRmoq35ABTbBNuWri1jqrAsY8ddy2ByrU3-bb-wMQk4JezE_vtVOOeifdDgtUbYvs8C9-41jVwzHEwVNL2vixez0eMO2tOWmYCo');"></div>
+<div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
+<div class="lg:col-span-5 flex flex-col justify-center">
+<h4 class="text-lg font-bold text-slate-900 dark:text-white">Smile Stretch</h4>
+<p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">Gently pull the corners of the mouth towards the ears, hold, and release. Focus on relaxation.</p>
+</div>
+<div class="lg:col-span-7 flex items-center gap-4">
+<div class="flex-1">
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Sets</label>
+<input class="w-full h-10 rounded-md border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#152322] text-slate-900 dark:text-white text-center font-medium focus:border-primary focus:ring-primary form-input-clean" type="number" value="3"/>
+</div>
+<div class="flex-1">
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Reps</label>
+<input class="w-full h-10 rounded-md border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#152322] text-slate-900 dark:text-white text-center font-medium focus:border-primary focus:ring-primary form-input-clean" type="number" value="10"/>
+</div>
+<div class="flex-1">
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Hold (s)</label>
+<input class="w-full h-10 rounded-md border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#152322] text-slate-900 dark:text-white text-center font-medium focus:border-primary focus:ring-primary form-input-clean" type="number" value="5"/>
+</div>
+</div>
+</div>
+<button class="mt-1 text-slate-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+<!-- Routine Step 2 -->
+<div class="bg-white dark:bg-[#1a2e2c] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 flex items-start gap-4 group transition-all hover:shadow-md">
+<div class="flex flex-col items-center gap-2 mt-1 cursor-grab active:cursor-grabbing text-slate-400 hover:text-primary">
+<span class="material-symbols-outlined">drag_indicator</span>
+<span class="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5">02</span>
+</div>
+<div class="size-16 rounded-lg bg-slate-100 dark:bg-slate-800 bg-center bg-cover border border-slate-100 dark:border-slate-700 shrink-0" data-alt="Small thumbnail of the yawn movement exercise" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAEJCgtQWnlpW9XmtO3AKDZXpXi62mRu6Op9Tjre6duqAJ441hfhBEcxKYeu5Jnf0ekgJgI7Ar-xKcXVCyk1wXgCieks-P29L237JwOS3OmKuX68Z2tbmX5e5HY1FHSPLlyRtcg4np6VoTJ41iSnSi9FmBp33i1Bw2cehnpNcOCJPympyxrJFnfsRtmg5AxMCU1cTJPiFY7z30dWYsbxze8TEhYUDLNl0YtAyFm2Px2I8cHKXCfZdQOWsGPs4c8PTTW6OnlzeVg930');"></div>
+<div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
+<div class="lg:col-span-5 flex flex-col justify-center">
+<h4 class="text-lg font-bold text-slate-900 dark:text-white">Yawn Movement</h4>
+<p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">Simulate a yawn to stretch the jaw muscles fully open. Do not overextend.</p>
+</div>
+<div class="lg:col-span-7 flex items-center gap-4">
+<div class="flex-1">
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Sets</label>
+<input class="w-full h-10 rounded-md border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#152322] text-slate-900 dark:text-white text-center font-medium focus:border-primary focus:ring-primary form-input-clean" type="number" value="2"/>
+</div>
+<div class="flex-1">
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Reps</label>
+<input class="w-full h-10 rounded-md border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#152322] text-slate-900 dark:text-white text-center font-medium focus:border-primary focus:ring-primary form-input-clean" type="number" value="5"/>
+</div>
+<div class="flex-1">
+<label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">Hold (s)</label>
+<input class="w-full h-10 rounded-md border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#152322] text-slate-900 dark:text-white text-center font-medium focus:border-primary focus:ring-primary form-input-clean" type="number" value="0"/>
+</div>
+</div>
+</div>
+<button class="mt-1 text-slate-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+<!-- Ghost/Drop Area Hint -->
+<div class="h-2 rounded-full bg-primary/10 w-full mt-2"></div>
+</div>
+</div>
+<!-- Sticky Bottom Action Bar (Optional, for easy access on smaller desktop heights) -->
+<div class="bg-white/80 dark:bg-[#1a2e2c]/90 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 p-4 flex justify-between items-center shrink-0">
+<div class="text-xs text-slate-400">
+<span class="material-symbols-outlined text-sm align-middle mr-1">info</span>
+                    Autosaved 2 minutes ago
+                </div>
+<div class="flex gap-3">
+<button class="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-primary transition-colors">
+                        Preview Routine
+                    </button>
+<button class="px-4 py-2 text-sm font-bold text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">send</span>
+                        Assign to Patient
+                    </button>
+</div>
+</div>
+</main>
+</div>
+</body></html>

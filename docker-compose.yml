@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  # Base de datos principal
+  postgres:
+    container_name: symma_db
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-symma_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-symma_password}
+      POSTGRES_DB: ${POSTGRES_DB:-symma_db}
+    ports:
+      - "${POSTGRES_PORT:-5440}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - symma_net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-symma_admin}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  symma_net:
+    driver: bridge
+
+volumes:
+  postgres_data:

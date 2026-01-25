@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================
+// Core Entities - Sprint 0 Foundation
+// Based on Technical Brief ERD
+// ===========================================
+
+model Clinic {
+  id           String      @id @default(uuid())
+  name         String
+  address      String?
+  contactPhone String?     @map("contact_phone")
+  billingInfo  String?     @map("billing_info")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  therapists   Therapist[]
+
+  @@map("clinics")
+}
+
+model Therapist {
+  id           String    @id @default(uuid())
+  clinicId     String    @map("clinic_id")
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  firstName    String    @map("first_name")
+  lastName     String    @map("last_name")
+  role         Role      @default(THERAPIST)
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  clinic       Clinic    @relation(fields: [clinicId], references: [id])
+  patients     Patient[]
+
+  @@map("therapists")
+}
+
+model Patient {
+  id                     String        @id @default(uuid())
+  therapistId            String        @map("therapist_id")
+  firstName              String        @map("first_name")
+  lastName               String        @map("last_name")
+  dateOfBirth            DateTime?     @map("date_of_birth")
+  gender                 Gender?
+  phoneNumber            String?       @map("phone_number")
+  email                  String?
+  status                 PatientStatus @default(ACTIVE)
+  diagnosis              String?
+  initialParalysisDegree Int?          @map("initial_paralysis_degree")
+  clinicalNotes          String?       @map("clinical_notes")
+  emergencyContactName   String?       @map("emergency_contact_name")
+  emergencyContactPhone  String?       @map("emergency_contact_phone")
+  authPinHash            String?       @map("auth_pin_hash")
+  avatarUrl              String?       @map("avatar_url")
+  createdAt              DateTime      @default(now()) @map("created_at")
+  updatedAt              DateTime      @updatedAt @map("updated_at")
+  therapist              Therapist     @relation(fields: [therapistId], references: [id])
+
+  @@map("patients")
+}
+
+// ===========================================
+// Enums
+// ===========================================
+
+enum Role {
+  ADMIN
+  THERAPIST
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum PatientStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}

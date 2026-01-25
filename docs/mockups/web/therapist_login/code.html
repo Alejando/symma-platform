@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Therapist Login - Symma</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased min-h-screen flex flex-col items-center justify-center p-4">
+<div class="layout-container flex w-full justify-center">
+<!-- Central Login Card -->
+<div class="w-full max-w-[440px] flex flex-col bg-white dark:bg-[#152322] rounded-xl shadow-xl border border-slate-100 dark:border-[#2d4a46] overflow-hidden">
+<!-- Brand / Header Section -->
+<div class="px-8 pt-10 pb-6 flex flex-col items-center text-center gap-4">
+<!-- Logo mark -->
+<div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-2">
+<span class="material-symbols-outlined text-[28px]">medical_services</span>
+</div>
+<!-- Page Heading Component Adaptation -->
+<div class="flex flex-col gap-2">
+<p class="text-[#0d1b1a] dark:text-white tracking-tight text-[28px] font-bold leading-tight">Welcome back</p>
+<p class="text-[#4c9a93] dark:text-[#8cbkb9] text-sm font-normal leading-normal max-w-[280px] mx-auto">Enter your credentials to access the Symma patient portal.</p>
+</div>
+</div>
+<!-- Form Section -->
+<div class="px-8 pb-10 flex flex-col gap-5">
+<!-- Email TextField Component Adaptation -->
+<div class="flex flex-col gap-1.5">
+<label class="flex flex-col min-w-40 flex-1">
+<p class="text-[#0d1b1a] dark:text-slate-200 text-sm font-medium leading-normal pb-2">Email address</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d1b1a] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-[#cfe7e5] dark:border-[#2d4a46] bg-[#f8fcfb] dark:bg-[#0d1b1a] focus:border-primary h-12 placeholder:text-[#4c9a93]/70 p-[15px] text-base font-normal leading-normal transition-all" placeholder="name@clinic.com" type="email" value=""/>
+</label>
+</div>
+<!-- Password TextField Component Adaptation -->
+<div class="flex flex-col gap-1.5">
+<label class="flex flex-col min-w-40 flex-1">
+<div class="flex justify-between items-center pb-2">
+<p class="text-[#0d1b1a] dark:text-slate-200 text-sm font-medium leading-normal">Password</p>
+<a class="text-xs font-semibold text-primary hover:text-[#0b857a] transition-colors" href="#">Forgot password?</a>
+</div>
+<div class="relative flex w-full flex-1 items-stretch rounded-lg group">
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d1b1a] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-[#cfe7e5] dark:border-[#2d4a46] bg-[#f8fcfb] dark:bg-[#0d1b1a] focus:border-primary h-12 placeholder:text-[#4c9a93]/70 p-[15px] pr-12 text-base font-normal leading-normal transition-all" placeholder="Enter your password" type="password" value=""/>
+<div class="absolute right-0 top-0 bottom-0 flex items-center pr-3 cursor-pointer text-[#4c9a93] hover:text-primary transition-colors">
+<span class="material-symbols-outlined" style="font-size: 20px;">visibility_off</span>
+</div>
+</div>
+</label>
+</div>
+<!-- SingleButton Component Adaptation -->
+<div class="pt-2">
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-4 bg-primary hover:bg-[#0b857a] text-white text-sm font-bold leading-normal tracking-[0.015em] transition-all shadow-md shadow-primary/20">
+<span class="truncate">Sign In</span>
+</button>
+</div>
+<!-- Footer Sign Up Link -->
+<div class="flex items-center justify-center gap-1.5 pt-2">
+<span class="text-sm text-slate-500 dark:text-slate-400">Don't have an account?</span>
+<a class="text-sm font-bold text-primary hover:text-[#0b857a] transition-colors" href="#">Join the network</a>
+</div>
+</div>
+<!-- Aesthetic Bottom Border -->
+<div class="h-1.5 w-full bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-50"></div>
+</div>
+<!-- Background Elements for Atmosphere -->
+<div class="fixed top-0 left-0 w-full h-full -z-10 overflow-hidden pointer-events-none">
+<!-- Abstract background shape -->
+<div class="absolute -top-[10%] -left-[5%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[100px]" data-alt="Soft teal gradient background blob top left"></div>
+<div class="absolute top-[20%] -right-[5%] w-[30%] h-[30%] rounded-full bg-primary/5 blur-[80px]" data-alt="Soft teal gradient background blob right"></div>
+</div>
+</div>
+</body></html>

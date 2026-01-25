@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Therapist Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#0d968b",
+              "background-light": "#f6f8f8",
+              "background-dark": "#102220",
+              "alert": "#E11D48",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.375rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#0d1b1a] dark:text-gray-100 antialiased overflow-hidden">
+<div class="flex h-screen w-full">
+<!-- Sidebar -->
+<aside class="w-64 flex-shrink-0 border-r border-[#e7f3f2] dark:border-[#1e3a36] bg-white dark:bg-[#102220] flex flex-col justify-between">
+<div class="flex flex-col gap-4 p-6">
+<div class="flex flex-col mb-4">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-primary text-3xl">medical_services</span>
+<h1 class="text-[#0d1b1a] dark:text-white text-xl font-bold leading-normal tracking-tight">Symma</h1>
+</div>
+<p class="text-[#4c9a93] dark:text-[#6fbdb6] text-xs font-medium uppercase tracking-wider pl-10">Therapist Portal</p>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary dark:text-[#4c9a93] transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="text-sm font-semibold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[#1a3330] text-gray-600 dark:text-gray-300 transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">group</span>
+<span class="text-sm font-medium">Patients</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[#1a3330] text-gray-600 dark:text-gray-300 transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">calendar_month</span>
+<span class="text-sm font-medium">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[#1a3330] text-gray-600 dark:text-gray-300 transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">analytics</span>
+<span class="text-sm font-medium">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[#1a3330] text-gray-600 dark:text-gray-300 transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+</div>
+<div class="p-6 border-t border-[#e7f3f2] dark:border-[#1e3a36]">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 text-gray-600 dark:text-gray-400 hover:text-red-600 transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-red-600 transition-colors">logout</span>
+<span class="text-sm font-medium">Log Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col overflow-hidden relative">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between border-b border-[#e7f3f2] dark:border-[#1e3a36] bg-white dark:bg-[#102220] px-8 py-4 h-18 shrink-0">
+<div class="w-full max-w-md">
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-gray-400 group-focus-within:text-primary transition-colors">search</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg leading-5 bg-gray-50 dark:bg-[#1a3330] text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm transition duration-150 ease-in-out" placeholder="Search patients, appointments..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="relative p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:text-gray-500 transition duration-150 ease-in-out rounded-full hover:bg-gray-100 dark:hover:bg-[#1e3a36]">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-alert ring-2 ring-white dark:ring-[#102220]"></span>
+</button>
+<div class="flex items-center gap-3 pl-6 border-l border-gray-200 dark:border-gray-700">
+<div class="text-right hidden sm:block">
+<p class="text-sm font-semibold text-gray-900 dark:text-white leading-none">Dr. Sarah Smith</p>
+<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Lead Physiotherapist</p>
+</div>
+<div class="h-10 w-10 rounded-full bg-cover bg-center ring-2 ring-primary/20" data-alt="Doctor profile portrait" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB0UZNv_hi3PqiyNEYe2tqH7LBXwOsLcdQFkstqXXrvV4XcE9ERE4Ky7H217RzuxBTSiHvPVSNZyA_FPZUCHPkmdFkiPRX7LjuT9fLNHL-FCcTANL3xkoc0ZLm0TRbYLfU0ob7OEX6efEVyfkA5c9bVjU8pgTqbtO97svgfsOE8w8KsLbrAQ1EqDSULhmiey1pMMwTGvNDsR-RKfx4NeZavkFhu2OLge9GAhlALBppIgfRXYoujXeTj7tp9MDw2qKbnL59N5ab9vVY');">
+</div>
+</div>
+</div>
+</header>
+<!-- Scrollable Content Area -->
+<div class="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark p-8">
+<div class="max-w-[1200px] mx-auto flex flex-col gap-8 pb-10">
+<!-- Page Heading -->
+<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+<div>
+<h2 class="text-3xl font-bold text-[#0d1b1a] dark:text-white tracking-tight">Good Morning, Dr. Smith</h2>
+<p class="text-[#4c9a93] dark:text-[#6fbdb6] mt-1 font-medium">Here's what's happening with your patients today.</p>
+</div>
+<div class="flex items-center gap-2 text-gray-500 dark:text-gray-400 bg-white dark:bg-[#1a3330] px-4 py-2 rounded-lg border border-[#e7f3f2] dark:border-[#1e3a36] shadow-sm">
+<span class="material-symbols-outlined text-sm">calendar_today</span>
+<span class="text-sm font-medium">Tuesday, Oct 24th, 2023</span>
+</div>
+</div>
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Active Patients -->
+<div class="bg-white dark:bg-[#1e3a36] rounded-xl p-6 border border-[#e7f3f2] dark:border-[#2d4f4a] shadow-sm flex flex-col justify-between h-32 relative overflow-hidden group">
+<div class="absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-primary/5 to-transparent"></div>
+<div class="flex justify-between items-start z-10">
+<div>
+<p class="text-sm font-medium text-gray-500 dark:text-gray-400">Active Patients</p>
+<h3 class="text-3xl font-bold text-[#0d1b1a] dark:text-white mt-2">42</h3>
+</div>
+<span class="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 dark:bg-green-900/30 dark:text-green-400">
+<span class="material-symbols-outlined text-sm">trending_up</span> +4%
+                            </span>
+</div>
+<p class="text-xs text-gray-400 dark:text-gray-500 mt-auto z-10">vs. last month</p>
+</div>
+<!-- Alerts (Red) -->
+<div class="bg-white dark:bg-[#1e3a36] rounded-xl p-6 border border-red-100 dark:border-red-900/30 shadow-sm flex flex-col justify-between h-32 relative overflow-hidden ring-1 ring-alert/10">
+<div class="absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-alert/5 to-transparent"></div>
+<div class="flex justify-between items-start z-10">
+<div>
+<p class="text-sm font-medium text-gray-500 dark:text-gray-400">Compliance Alerts</p>
+<h3 class="text-3xl font-bold text-alert mt-2">3 <span class="text-base font-normal text-gray-400 dark:text-gray-500">Patients</span></h3>
+</div>
+<div class="h-8 w-8 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-alert">
+<span class="material-symbols-outlined">warning</span>
+</div>
+</div>
+<p class="text-xs text-alert font-medium mt-auto z-10 flex items-center gap-1">
+                             Action Required
+                        </p>
+</div>
+<!-- Avg Efficacy -->
+<div class="bg-white dark:bg-[#1e3a36] rounded-xl p-6 border border-[#e7f3f2] dark:border-[#2d4f4a] shadow-sm flex flex-col justify-between h-32 relative overflow-hidden">
+<div class="absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-primary/5 to-transparent"></div>
+<div class="flex justify-between items-start z-10">
+<div>
+<p class="text-sm font-medium text-gray-500 dark:text-gray-400">Avg. Efficacy Score</p>
+<h3 class="text-3xl font-bold text-[#0d1b1a] dark:text-white mt-2">88%</h3>
+</div>
+<div class="radial-progress text-primary text-xs font-bold" style="--value:88; --size:2rem;"></div> <!-- Simplified placeholder for chart -->
+<span class="bg-primary/10 text-primary text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1 dark:bg-primary/20 dark:text-primary-300">
+<span class="material-symbols-outlined text-sm">show_chart</span> +2%
+                            </span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 mt-auto">
+<div class="bg-primary h-1.5 rounded-full" style="width: 88%"></div>
+</div>
+</div>
+</div>
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
+<!-- Left Column: Recent Activity (Takes up 2 cols) -->
+<div class="lg:col-span-2 flex flex-col gap-6">
+<div class="bg-white dark:bg-[#1e3a36] rounded-xl border border-[#e7f3f2] dark:border-[#2d4f4a] shadow-sm flex-1 flex flex-col">
+<div class="px-6 py-5 border-b border-[#e7f3f2] dark:border-[#2d4f4a] flex items-center justify-between">
+<h3 class="font-bold text-lg text-[#0d1b1a] dark:text-white">Recent Activity</h3>
+<button class="text-sm text-primary font-medium hover:underline">View All</button>
+</div>
+<div class="p-0">
+<!-- Item 1 -->
+<div class="flex gap-4 p-5 border-b border-[#f0f7f6] dark:border-[#2d4f4a] hover:bg-[#fcfdfd] dark:hover:bg-[#25423e] transition-colors">
+<div class="relative">
+<div class="h-10 w-10 rounded-full bg-gray-200 bg-cover bg-center" data-alt="Patient portrait male" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBTaj_zv_gnT0yViIav2Ww9HONz9JHDvfQA5d9iG9X9Vw3BA0WBo74m_QJKMq9OvZKM9jReieO6HD7gPaqAQ4wibFhjkmEWW8rEs19Cp-09RA58jeHWMC7pFr35xof2lfore4M5w3_hPVZguB2aoglkdH3J7jZW5NG_OpCIP6SeWAyHydPPjDgy8pIurIUotsjHG0M0qYP7FOW7B1gaUpJ3yCtblcEBdHcte97SOB-omT3AwQXK_lsvdZPi59t2-8i7Fxm1OZaQ0kk');"></div>
+<div class="absolute -bottom-1 -right-1 bg-green-500 border-2 border-white dark:border-[#1e3a36] w-4 h-4 rounded-full"></div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="text-sm font-semibold text-[#0d1b1a] dark:text-white">John Doe</h4>
+<span class="text-xs text-gray-400">10 min ago</span>
+</div>
+<p class="text-sm text-gray-600 dark:text-gray-300 mt-1">Completed exercise set: <span class="font-medium">Rotator Cuff Strengthening</span>.</p>
+<div class="mt-2 flex gap-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                                High Compliance
+                                            </span>
+</div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex gap-4 p-5 border-b border-[#f0f7f6] dark:border-[#2d4f4a] hover:bg-[#fcfdfd] dark:hover:bg-[#25423e] transition-colors bg-red-50/30 dark:bg-red-900/5">
+<div class="relative">
+<div class="h-10 w-10 rounded-full bg-gray-200 bg-cover bg-center" data-alt="Patient portrait female" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDzPp6uIQkSWL7xTWrPxEQMoMZsKJQe4UAgoDx4olNo712L07YSzEQHUaIsa3ZlEFtcWz7i4Wd1a4hv_SpNAGRJTlrQcw356CLrtZ9fParaXJisj6bh2Db9OdTGQui9EBmeqSLuAVXC7kRsiTiabaNVXU4h_iEPLmQQ_prHkcjKIgVwfA6O0rwIlr1lmpKKu__52gUfQq97P856TJwe3RvJZj08h_qW3Bz5_tqeEwslRTJZe3K5ViZJ6CIq3j42lIZfiOdruoMVgg8');"></div>
+<div class="absolute -bottom-1 -right-1 bg-alert border-2 border-white dark:border-[#1e3a36] w-4 h-4 rounded-full flex items-center justify-center">
+<span class="text-[8px] text-white font-bold">!</span>
+</div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="text-sm font-semibold text-[#0d1b1a] dark:text-white">Jane Smith</h4>
+<span class="text-xs text-gray-400">2 hours ago</span>
+</div>
+<p class="text-sm text-gray-600 dark:text-gray-300 mt-1">Missed scheduled session. System generated an alert.</p>
+<div class="mt-2 flex gap-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-alert dark:bg-red-900/30 dark:text-red-400">
+                                                Non-Compliance
+                                            </span>
+<button class="text-xs font-medium text-primary hover:text-primary/80 underline">Contact Patient</button>
+</div>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="flex gap-4 p-5 border-b border-[#f0f7f6] dark:border-[#2d4f4a] hover:bg-[#fcfdfd] dark:hover:bg-[#25423e] transition-colors">
+<div class="relative">
+<div class="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">description</span>
+</div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="text-sm font-semibold text-[#0d1b1a] dark:text-white">System</h4>
+<span class="text-xs text-gray-400">Yesterday</span>
+</div>
+<p class="text-sm text-gray-600 dark:text-gray-300 mt-1">Weekly progress report generated for <span class="font-medium">Group A (Post-Op)</span>.</p>
+<div class="mt-2">
+<button class="text-xs font-medium text-primary border border-primary/30 rounded px-2 py-1 hover:bg-primary/5">View Report</button>
+</div>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="flex gap-4 p-5 hover:bg-[#fcfdfd] dark:hover:bg-[#25423e] transition-colors">
+<div class="relative">
+<div class="h-10 w-10 rounded-full bg-gray-200 bg-cover bg-center" data-alt="Patient portrait male older" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBLivTjaCb1DhvhMpmz3vAd4UQO7MuJ1elykySIz_cRE0KIGNfJbURPwWLKzvRC1eJos8fsFwH2C-OaGIPRWz9KeYjWnn-rOmXr_6AsoTnlJ9ZCf9_CeGVWrgh1SGimnd7L4vjRy0oD2oUHfkz_QslJvxQMJQgnapBm3KKCZnxRcamb0alGpU2eEb921mR9LySVxnVBnWdgsYoWf_b2hBOYRaLNV8i9Jp7obOVfyt325DmR3WBus3wN9Q4PiWmdUe4S8oRV5YRPYFk');"></div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="text-sm font-semibold text-[#0d1b1a] dark:text-white">Robert Fox</h4>
+<span class="text-xs text-gray-400">Yesterday</span>
+</div>
+<p class="text-sm text-gray-600 dark:text-gray-300 mt-1">Uploaded new pain diary entry. Severity level: 4/10.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Quick Actions & Upcoming -->
+<div class="flex flex-col gap-6">
+<!-- Quick Actions -->
+<div class="bg-white dark:bg-[#1e3a36] rounded-xl border border-[#e7f3f2] dark:border-[#2d4f4a] shadow-sm p-6">
+<h3 class="font-bold text-lg text-[#0d1b1a] dark:text-white mb-4">Quick Actions</h3>
+<div class="grid grid-cols-2 gap-3">
+<button class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border border-[#e7f3f2] dark:border-[#2d4f4a] hover:border-primary/50 hover:bg-primary/5 transition-all group h-24">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">person_add</span>
+<span class="text-xs font-medium text-gray-700 dark:text-gray-300">Add Patient</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border border-[#e7f3f2] dark:border-[#2d4f4a] hover:border-primary/50 hover:bg-primary/5 transition-all group h-24">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">calendar_add_on</span>
+<span class="text-xs font-medium text-gray-700 dark:text-gray-300">Schedule</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border border-[#e7f3f2] dark:border-[#2d4f4a] hover:border-primary/50 hover:bg-primary/5 transition-all group h-24">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">monitor_heart</span>
+<span class="text-xs font-medium text-gray-700 dark:text-gray-300">Log Vitals</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border border-[#e7f3f2] dark:border-[#2d4f4a] hover:border-primary/50 hover:bg-primary/5 transition-all group h-24">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">mail</span>
+<span class="text-xs font-medium text-gray-700 dark:text-gray-300">Message</span>
+</button>
+</div>
+</div>
+<!-- Upcoming Appointments -->
+<div class="bg-white dark:bg-[#1e3a36] rounded-xl border border-[#e7f3f2] dark:border-[#2d4f4a] shadow-sm flex-1">
+<div class="px-6 py-4 border-b border-[#e7f3f2] dark:border-[#2d4f4a] flex items-center justify-between">
+<h3 class="font-bold text-lg text-[#0d1b1a] dark:text-white">Upcoming</h3>
+<button class="p-1 hover:bg-gray-100 dark:hover:bg-[#25423e] rounded">
+<span class="material-symbols-outlined text-gray-400 text-xl">more_horiz</span>
+</button>
+</div>
+<div class="p-4 flex flex-col gap-3">
+<!-- Appt 1 -->
+<div class="flex items-center gap-3 p-3 rounded-lg bg-background-light dark:bg-[#152e2a]">
+<div class="bg-white dark:bg-[#1e3a36] rounded-md p-2 flex flex-col items-center min-w-[3.5rem] shadow-sm">
+<span class="text-xs font-bold text-primary uppercase">Today</span>
+<span class="text-lg font-bold text-[#0d1b1a] dark:text-white">14:00</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold text-[#0d1b1a] dark:text-white truncate">Initial Assessment</p>
+<p class="text-xs text-gray-500 dark:text-gray-400 truncate">Liam Wilson • Room 302</p>
+</div>
+</div>
+<!-- Appt 2 -->
+<div class="flex items-center gap-3 p-3 rounded-lg hover:bg-background-light dark:hover:bg-[#152e2a] transition-colors border border-transparent hover:border-[#e7f3f2]">
+<div class="bg-gray-50 dark:bg-[#1a3330] rounded-md p-2 flex flex-col items-center min-w-[3.5rem] border border-gray-100 dark:border-gray-700">
+<span class="text-xs font-medium text-gray-500 uppercase">Today</span>
+<span class="text-lg font-bold text-gray-700 dark:text-gray-300">15:30</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold text-[#0d1b1a] dark:text-white truncate">Manual Therapy</p>
+<p class="text-xs text-gray-500 dark:text-gray-400 truncate">Emma Davis • Room 304</p>
+</div>
+</div>
+<!-- Appt 3 -->
+<div class="flex items-center gap-3 p-3 rounded-lg hover:bg-background-light dark:hover:bg-[#152e2a] transition-colors border border-transparent hover:border-[#e7f3f2]">
+<div class="bg-gray-50 dark:bg-[#1a3330] rounded-md p-2 flex flex-col items-center min-w-[3.5rem] border border-gray-100 dark:border-gray-700">
+<span class="text-xs font-medium text-gray-500 uppercase">Tmrw</span>
+<span class="text-lg font-bold text-gray-700 dark:text-gray-300">09:00</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold text-[#0d1b1a] dark:text-white truncate">Post-op Checkup</p>
+<p class="text-xs text-gray-500 dark:text-gray-400 truncate">Noah Brown • Room 301</p>
+</div>
+</div>
+</div>
+<div class="px-4 pb-4">
+<button class="w-full py-2 text-sm text-center text-primary font-medium hover:bg-primary/5 rounded-lg transition-colors">
+                                    View Full Calendar
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
