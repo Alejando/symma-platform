@@ -67,9 +67,18 @@ export default function PatientRoutinesPage({
                       Started {new Date(routine.startDate).toLocaleDateString()}
                     </p>
                   </div>
-                  <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide">
-                    Active
-                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide">
+                      Active
+                    </span>
+                    <Link
+                      href={`/dashboard/patients/${id}/routines/${routine.id}`}
+                      className="text-sm text-[#0d9488] hover:text-[#0f766e] font-medium flex items-center gap-1"
+                    >
+                      View Analytics
+                      <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                    </Link>
+                  </div>
                 </div>
 
                 {routine.therapistNotes && (
@@ -132,7 +141,11 @@ export default function PatientRoutinesPage({
                 {historyRoutines.map((routine) => (
                   <tr key={routine.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{routine.name}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        <Link href={`/dashboard/patients/${id}/routines/${routine.id}`} className="hover:text-[#0d9488] hover:underline">
+                          {routine.name}
+                        </Link>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500">

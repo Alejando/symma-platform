@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Patient, CreatePatientDto, UpdatePatientDto, Gender } from '@symma/shared-types';
 
@@ -45,6 +45,59 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
     emergencyContactPhone: patient?.emergencyContactPhone || '',
   });
 
+  // Helper to format phone number for display: xxx-xxx-xxxx
+  const formatPhoneDisplay = (value: string) => {
+    if (!value) return '';
+    // Strip all non-digits
+    const digits = value.replace(/\D/g, '');
+    // If it has +52 prefix (12 digits starting with 52), strip it for display
+    let coreDigits = digits;
+    if (digits.startsWith('52') && digits.length > 10) {
+      coreDigits = digits.substring(2);
+    }
+
+    // Limit to 10 digits
+    coreDigits = coreDigits.slice(0, 10);
+
+    // Format
+    if (coreDigits.length === 0) return '';
+    if (coreDigits.length <= 3) return coreDigits;
+    if (coreDigits.length <= 6) return `${coreDigits.slice(0, 3)}-${coreDigits.slice(3)}`;
+    return `${coreDigits.slice(0, 3)}-${coreDigits.slice(3, 6)}-${coreDigits.slice(6)}`;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    // Remove all non-digits to get raw input, then re-format
+    // To handle deletion properly, we might want to just strip non-digits first
+    // But simple approach: just re-format the input string
+    const formatted = formatPhoneDisplay(value);
+    setFormData((prev) => ({ ...prev, [name]: formatted }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  // Sync state with prop when patient object changes
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        firstName: patient?.firstName || '',
+        lastName: patient?.lastName || '',
+        email: patient?.email || '',
+        dateOfBirth: patient?.dateOfBirth ? new Date(patient.dateOfBirth).toISOString().split('T')[0] : '',
+        gender: patient?.gender || '',
+        phoneNumber: formatPhoneDisplay(patient?.phoneNumber || ''),
+        diagnosis: patient?.diagnosis || '',
+        initialParalysisDegree: patient?.initialParalysisDegree?.toString() || '',
+        clinicalNotes: patient?.clinicalNotes || '',
+        emergencyContactName: patient?.emergencyContactName || '',
+        emergencyContactPhone: formatPhoneDisplay(patient?.emergencyContactPhone || ''),
+      });
+      setErrors({});
+    }
+  }, [patient, isOpen]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -64,6 +117,20 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
     }
     if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
 
+    // Validate phone length if present
+    if (formData.phoneNumber) {
+      const digits = formData.phoneNumber.replace(/\D/g, '');
+      if (digits.length !== 10) {
+        newErrors.phoneNumber = 'Phone number must be 10 digits';
+      }
+    }
+    if (formData.emergencyContactPhone) {
+      const digits = formData.emergencyContactPhone.replace(/\D/g, '');
+      if (digits.length !== 10) {
+        newErrors.emergencyContactPhone = 'Phone number must be 10 digits';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -74,13 +141,20 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
 
     setLoading(true);
     try {
+      // Helper to add +52 prefix
+      const formatPhoneForSave = (phone: string) => {
+        if (!phone) return undefined;
+        const digits = phone.replace(/\D/g, '');
+        return `+52${digits}`;
+      };
+
       const data: CreatePatientDto = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         email: formData.email.trim(),
         dateOfBirth: formData.dateOfBirth,
         ...(formData.gender && { gender: formData.gender as Gender }),
-        ...(formData.phoneNumber && { phoneNumber: formData.phoneNumber.trim() }),
+        ...(formData.phoneNumber && { phoneNumber: formatPhoneForSave(formData.phoneNumber) }),
         ...(formData.diagnosis && { diagnosis: formData.diagnosis.trim() }),
         ...(formData.initialParalysisDegree && {
           initialParalysisDegree: parseInt(formData.initialParalysisDegree),
@@ -90,7 +164,7 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
           emergencyContactName: formData.emergencyContactName.trim(),
         }),
         ...(formData.emergencyContactPhone && {
-          emergencyContactPhone: formData.emergencyContactPhone.trim(),
+          emergencyContactPhone: formatPhoneForSave(formData.emergencyContactPhone),
         }),
       };
 
@@ -239,10 +313,14 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
                   type="tel"
                   name="phoneNumber"
                   value={formData.phoneNumber}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
-                  placeholder="+52 55 1234 5678"
+                  onChange={handlePhoneChange}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] ${errors.phoneNumber ? 'border-red-300' : 'border-gray-200'
+                    }`}
+                  placeholder="xxx-xxx-xxxx"
                 />
+                {errors.phoneNumber && (
+                  <p className="text-red-500 text-xs mt-1">{errors.phoneNumber}</p>
+                )}
               </div>
             </div>
           </div>
@@ -330,10 +408,14 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
                   type="tel"
                   name="emergencyContactPhone"
                   value={formData.emergencyContactPhone}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
-                  placeholder="+52 55 1234 5678"
+                  onChange={handlePhoneChange}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] ${errors.emergencyContactPhone ? 'border-red-300' : 'border-gray-200'
+                    }`}
+                  placeholder="xxx-xxx-xxxx"
                 />
+                {errors.emergencyContactPhone && (
+                  <p className="text-red-500 text-xs mt-1">{errors.emergencyContactPhone}</p>
+                )}
               </div>
             </div>
           </div>

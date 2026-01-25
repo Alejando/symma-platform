@@ -1,37 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { getPatient } from '@/lib/api';
-import type { Patient } from '@symma/shared-types';
-
 import { use } from 'react';
 
-export default function PatientOverviewPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
-  const { data: session } = useSession();
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [loading, setLoading] = useState(true);
+import { usePatient } from "@/components/patients/patient-context";
+import { formatPhoneNumber } from "@/lib/utils";
 
-  useEffect(() => {
-    async function loadPatient() {
-      if (session?.user?.accessToken) {
-        try {
-          const data = await getPatient(session.user.accessToken, id);
-          setPatient(data);
-        } catch (error) {
-          console.error('Failed to load patient:', error);
-        } finally {
-          setLoading(false);
-        }
-      }
-    }
-    loadPatient();
-  }, [session, id]);
+export default function PatientOverviewPage() {
+  const { patient, loading } = usePatient();
 
   if (loading) {
     return (
@@ -69,7 +44,7 @@ export default function PatientOverviewPage({
           <LabelValue label="First Name" value={patient.firstName} />
           <LabelValue label="Last Name" value={patient.lastName} />
           <LabelValue label="Email" value={patient.email} />
-          <LabelValue label="Phone" value={patient.phoneNumber} />
+          <LabelValue label="Phone" value={formatPhoneNumber(patient.phoneNumber)} />
           <LabelValue
             label="Date of Birth"
             value={new Date(patient.dateOfBirth).toLocaleDateString()}
@@ -86,7 +61,7 @@ export default function PatientOverviewPage({
             <div>
               <LabelValue label="Name" value={patient.emergencyContactName} />
               <div className="h-2"></div>
-              <LabelValue label="Phone" value={patient.emergencyContactPhone} />
+              <LabelValue label="Phone" value={formatPhoneNumber(patient.emergencyContactPhone)} />
             </div>
           </div>
           {!patient.emergencyContactName && (

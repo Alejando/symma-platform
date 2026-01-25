@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { PatientsModule } from './patients/patients.module';
 import { ExercisesModule } from './exercises/exercises.module';
 import { RoutinesModule } from './routines/routines.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { RoutinesModule } from './routines/routines.module';
     PatientsModule,
     ExercisesModule,
     RoutinesModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

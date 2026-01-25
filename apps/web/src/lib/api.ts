@@ -88,3 +88,13 @@ export async function getPatientRoutines(token: string, patientId: string): Prom
   const response = await fetchWithAuth(`${API_URL}/api/v1/patients/${patientId}/routines`, token);
   return response.json();
 }
+
+export async function getRoutineStats(token: string, routineId: string): Promise<any> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}/stats`, token);
+  return response.json();
+}
+
+export async function getRoutineHistory(token: string, routineId: string): Promise<any[]> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}/history`, token);
+  return response.json();
+}

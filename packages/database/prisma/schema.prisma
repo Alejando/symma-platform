@@ -97,6 +97,7 @@ model Routine {
   updatedAt      DateTime      @updatedAt @map("updated_at")
   patient        Patient       @relation(fields: [patientId], references: [id])
   items          RoutineItem[]
+  sessions       Session[]
 
   @@map("routines")
 }
@@ -148,4 +149,17 @@ enum ExerciseCategory {
   WARMUP
   CORE
   COOLDOWN
+}
+
+model Session {
+  id              String   @id @default(uuid())
+  routineId       String   @map("routine_id")
+  date            DateTime
+  durationSeconds Int      @map("duration_seconds")
+  score           Float
+  isSynced        Boolean  @default(false) @map("is_synced")
+  createdAt       DateTime @default(now()) @map("created_at")
+  routine         Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
 }

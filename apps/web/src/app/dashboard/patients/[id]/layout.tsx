@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { getPatient } from '@/lib/api';
-import type { Patient } from '@symma/shared-types';
+import { getPatient, updatePatient } from '@/lib/api';
+import type { Patient, UpdatePatientDto, CreatePatientDto } from '@symma/shared-types';
+import { PatientDialog } from '@/components/patients';
+import { PatientContext } from '@/components/patients/patient-context';
 
 function getInitials(firstName: string, lastName: string) {
   return `${firstName[0]}${lastName[0]}`.toUpperCase();
@@ -36,6 +38,23 @@ export default function PatientLayout({
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const handleEditClick = () => {
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async (data: CreatePatientDto | UpdatePatientDto) => {
+    if (!session?.user?.accessToken || !patient) return;
+    try {
+      const updatedPatient = await updatePatient(session.user.accessToken, patient.id, data as UpdatePatientDto);
+      setPatient(updatedPatient);
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to update patient:', error);
+      throw error; // Re-throw to let dialog handle it via its own error state if needed, or just log
+    }
+  };
 
   useEffect(() => {
     async function loadPatient() {
@@ -101,7 +120,10 @@ export default function PatientLayout({
             </div>
           </div>
           <div className="flex gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <button
+              onClick={handleEditClick}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
               <span className="material-symbols-outlined text-lg">edit</span>
               Edit Profile
             </button>
@@ -140,8 +162,17 @@ export default function PatientLayout({
 
       {/* Content Area */}
       <div className="flex-1 overflow-auto p-8">
-        {children}
+        <PatientContext.Provider value={{ patient, loading, refreshPatient: async () => { /* no-op or re-fetch if needed */ } }}>
+          {children}
+        </PatientContext.Provider>
       </div>
+
+      <PatientDialog
+        isOpen={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        patient={patient}
+        onSubmit={handleEditSubmit}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { Patient } from '@symma/shared-types';
+import { formatPhoneNumber } from '@/lib/utils';
 
 interface PatientTableProps {
   patients: Patient[];
@@ -88,7 +89,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                           {patient.firstName} {patient.lastName}
                         </p>
                         {patient.phoneNumber && (
-                          <p className="text-xs text-gray-500">{patient.phoneNumber}</p>
+                          <p className="text-xs text-gray-500">{formatPhoneNumber(patient.phoneNumber)}</p>
                         )}
                       </div>
                     </Link>
