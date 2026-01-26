@@ -64,4 +64,34 @@ export class PatientsController {
   remove(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.patientsService.remove(req.user.userId, id);
   }
+
+  // ============================================
+  // Access Code Management (Mobile PIN)
+  // ============================================
+
+  @Post(':id/access-code')
+  generateAccessCode(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    return this.patientsService.generateAccessCode(req.user.userId, id);
+  }
+
+  @Delete(':id/access-code')
+  revokeAccessCode(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    return this.patientsService.revokeAccessCode(req.user.userId, id);
+  }
+
+  @Get(':id/access-code/status')
+  async hasAccessCode(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    const hasCode = await this.patientsService.hasAccessCode(req.user.userId, id);
+    return { hasAccessCode: hasCode };
+  }
 }
+

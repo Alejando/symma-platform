@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PatientsController } from './patients.controller';
 import { PatientsService } from './patients.service';
+import { RoutinesService } from '../routines/routines.service';
 import type { AuthenticatedRequest } from '../auth/types';
 
 describe('PatientsController', () => {
@@ -38,6 +39,7 @@ describe('PatientsController', () => {
       controllers: [PatientsController],
       providers: [
         { provide: PatientsService, useValue: mockPatientsService },
+        { provide: RoutinesService, useValue: { findAllByPatient: jest.fn() } },
       ],
     }).compile();
 

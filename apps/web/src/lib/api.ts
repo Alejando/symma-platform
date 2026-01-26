@@ -153,3 +153,35 @@ export async function cloneRoutine(token: string, routineId: string): Promise<Ro
   });
   return response.json();
 }
+
+// ============================================
+// Patient Access Code (Mobile PIN)
+// ============================================
+
+export async function generatePatientAccessCode(
+  token: string,
+  patientId: string
+): Promise<{ accessCode: string }> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/patients/${patientId}/access-code`, token, {
+    method: 'POST',
+  });
+  return response.json();
+}
+
+export async function revokePatientAccessCode(
+  token: string,
+  patientId: string
+): Promise<void> {
+  await fetchWithAuth(`${API_URL}/api/v1/patients/${patientId}/access-code`, token, {
+    method: 'DELETE',
+  });
+}
+
+export async function getPatientAccessCodeStatus(
+  token: string,
+  patientId: string
+): Promise<{ hasAccessCode: boolean }> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/patients/${patientId}/access-code/status`, token);
+  return response.json();
+}
+

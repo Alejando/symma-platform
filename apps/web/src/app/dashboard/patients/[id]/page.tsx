@@ -3,6 +3,7 @@
 import { use } from 'react';
 
 import { usePatient } from "@/components/patients/patient-context";
+import { PatientAccessCard } from "@/components/patients/patient-access-card";
 import { formatPhoneNumber } from "@/lib/utils";
 
 export default function PatientOverviewPage() {
@@ -106,6 +107,9 @@ export default function PatientOverviewPage() {
           </div>
         </div>
       </InfoCard>
+
+      {/* Mobile Access */}
+      <PatientAccessCard patientId={patient.id} />
     </div>
   );
 }
