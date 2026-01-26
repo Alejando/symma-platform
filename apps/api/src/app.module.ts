@@ -8,6 +8,7 @@ import { PatientsModule } from './patients/patients.module';
 import { ExercisesModule } from './exercises/exercises.module';
 import { RoutinesModule } from './routines/routines.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     ExercisesModule,
     RoutinesModule,
     AnalyticsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

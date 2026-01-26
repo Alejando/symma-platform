@@ -185,3 +185,8 @@ export async function getPatientAccessCodeStatus(
   return response.json();
 }
 
+
+export async function getDashboardStats(token: string): Promise<any> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/dashboard/stats`, token);
+  return response.json();
+}
