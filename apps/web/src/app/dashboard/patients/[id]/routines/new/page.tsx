@@ -88,7 +88,7 @@ export default function NewPatientRoutinePage({
   const patientsList = patient ? [patient] : [];
 
   return (
-    <div className="flex bg-white h-[calc(100vh-140px)] border border-[#e7f3f2] rounded-xl overflow-hidden">
+    <div className="flex bg-white h-[calc(100vh-180px)] md:h-[calc(100vh-140px)] border border-[#e7f3f2] rounded-xl overflow-hidden relative">
       {/* Exercise Catalog Sidebar */}
       <ExerciseCatalog
         exercises={exercises}
@@ -96,7 +96,7 @@ export default function NewPatientRoutinePage({
       />
 
       {/* Main Builder Area */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 w-full">
         <RoutineBuilder
           patients={patientsList}
           preSelectedPatientId={id}

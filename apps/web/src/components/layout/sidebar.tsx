@@ -14,7 +14,6 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
   { href: '/dashboard/patients', label: 'Patients', icon: 'group' },
   { href: '/dashboard/exercises', label: 'Exercises', icon: 'fitness_center' },
-  // Routines moved to patient profile
   // TODO: Enable when implemented
   // { href: '/dashboard/calendar', label: 'Calendar', icon: 'calendar_month' },
   // { href: '/dashboard/analytics', label: 'Analytics', icon: 'analytics' },
@@ -22,7 +21,8 @@ const navItems = [
 ];
 
 export function Sidebar({ userName, userRole }: SidebarProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false); // Mobile drawer
+  const [isCollapsed, setIsCollapsed] = useState(true); // Desktop collapse (LG only)
   const pathname = usePathname();
 
   const isActive = (href: string) => {
@@ -37,6 +37,13 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
     .map((n) => n[0])
     .join('')
     .toUpperCase();
+
+  // Determine if we should show text based on collapse state and screen size
+  // On mobile: always show text (drawer)
+  // On LG: show/hide based on isCollapsed state
+  // On XL+: always show text
+  const textClass = isCollapsed ? 'lg:hidden xl:inline' : 'inline';
+  const justifyClass = isCollapsed ? 'lg:justify-center xl:justify-start' : 'justify-start';
 
   return (
     <>
@@ -76,15 +83,16 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
         className={`
           fixed lg:static inset-y-0 left-0 z-50
           w-64 flex-shrink-0 border-r border-[#e7f3f2] bg-white flex flex-col justify-between
-          transform transition-transform duration-300 ease-in-out
+          transform transition-all duration-300 ease-in-out
+          ${isCollapsed ? 'lg:w-16 xl:w-64' : 'lg:w-64'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-        <div className="flex flex-col gap-4 p-6">
+        <div className={`flex flex-col gap-4 p-6 ${isCollapsed ? 'lg:p-3 xl:p-6' : ''}`}>
           <div className="flex flex-col mb-4">
-            <div className="flex items-center gap-2 mb-1">
+            <div className={`flex items-center gap-2 mb-1 ${justifyClass}`}>
               <span className="material-symbols-outlined text-[#0d9488] text-3xl">medical_services</span>
-              <h1 className="text-[#0d1b1a] text-xl font-bold leading-normal tracking-tight">Symma</h1>
+              <h1 className={`text-[#0d1b1a] text-xl font-bold leading-normal tracking-tight ${textClass}`}>Symma</h1>
               <button
                 onClick={() => setIsOpen(false)}
                 className="lg:hidden ml-auto p-1 hover:bg-gray-100 rounded"
@@ -92,7 +100,7 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
                 <span className="material-symbols-outlined text-gray-400">close</span>
               </button>
             </div>
-            <p className="text-[#4c9a93] text-xs font-medium uppercase tracking-wider pl-10">Therapist Portal</p>
+            <p className={`text-[#4c9a93] text-xs font-medium uppercase tracking-wider pl-10 ${textClass}`}>Therapist Portal</p>
           </div>
           <nav className="flex flex-col gap-1">
             {navItems.map((item) => (
@@ -100,32 +108,51 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
                 key={item.href}
                 href={item.href}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${isActive(item.href)
+                title={item.label}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${justifyClass} ${isActive(item.href)
                   ? 'bg-[#0d9488]/10 text-[#0d9488]'
                   : 'hover:bg-gray-50 text-gray-600'
                   }`}
               >
                 <span
-                  className={`material-symbols-outlined transition-colors ${isActive(item.href) ? '' : 'group-hover:text-[#0d9488]'
-                    }`}
+                  className={`material-symbols-outlined transition-colors ${isActive(item.href) ? '' : 'group-hover:text-[#0d9488]'}`}
                   style={isActive(item.href) ? { fontVariationSettings: "'FILL' 1" } : undefined}
                 >
                   {item.icon}
                 </span>
-                <span className={`text-sm ${isActive(item.href) ? 'font-semibold' : 'font-medium'}`}>
+                <span className={`text-sm ${textClass} ${isActive(item.href) ? 'font-semibold' : 'font-medium'}`}>
                   {item.label}
                 </span>
               </Link>
             ))}
           </nav>
         </div>
-        <div className="p-6 border-t border-[#e7f3f2]">
+
+        {/* Bottom section with collapse toggle and logout */}
+        <div className={`p-6 border-t border-[#e7f3f2] space-y-2 ${isCollapsed ? 'lg:p-3 xl:p-6' : ''}`}>
+          {/* Collapse Toggle - Only visible on lg screens, hidden on xl+ */}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={`hidden lg:flex xl:hidden items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors w-full ${isCollapsed ? 'justify-center' : 'justify-start'}`}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <span
+              className="material-symbols-outlined transition-transform duration-300"
+              style={{ transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}
+            >
+              chevron_right
+            </span>
+            {!isCollapsed && <span className="text-sm font-medium">Collapse</span>}
+          </button>
+
+          {/* Logout button */}
           <button
             onClick={() => signOut({ callbackUrl: '/login' })}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors group w-full"
+            title="Log Out"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors group w-full ${justifyClass}`}
           >
             <span className="material-symbols-outlined group-hover:text-red-600 transition-colors">logout</span>
-            <span className="text-sm font-medium">Log Out</span>
+            <span className={`text-sm font-medium ${textClass}`}>Log Out</span>
           </button>
         </div>
       </aside>

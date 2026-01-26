@@ -91,7 +91,8 @@ export default function ExercisesPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-[#e7f3f2] shadow-sm overflow-hidden">
+      {/* Desktop Table */}
+      <div className="hidden md:block bg-white rounded-xl border border-[#e7f3f2] shadow-sm overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead className="bg-[#f0f9f9] border-b border-[#e7f3f2]">
             <tr>
@@ -146,6 +147,65 @@ export default function ExercisesPage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {exercises.length === 0 ? (
+          <div className="bg-white rounded-xl border border-[#e7f3f2] p-12 text-center">
+            <span className="material-symbols-outlined text-4xl text-gray-300 mb-3">fitness_center</span>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">No exercises yet</h3>
+            <p className="text-gray-500 text-sm">Add your first exercise to get started.</p>
+          </div>
+        ) : (
+          exercises.map((exercise) => (
+            <div
+              key={exercise.id}
+              className="bg-white rounded-xl border border-[#e7f3f2] p-4 shadow-sm"
+            >
+              <div className="flex items-start gap-3">
+                <div className="h-12 w-12 rounded-lg bg-[#0d9488]/10 flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-[#0d9488]">fitness_center</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="font-medium text-gray-900">{exercise.name}</h3>
+                      <p className="text-xs text-gray-500 font-mono mt-0.5">{exercise.keyName}</p>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                      {exercise.type}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-xs font-medium">
+                      {exercise.category}
+                    </span>
+                  </div>
+                  {exercise.description && (
+                    <p className="mt-2 text-xs text-gray-500 line-clamp-2">{exercise.description}</p>
+                  )}
+                  <div className="mt-3 flex items-center gap-2 pt-3 border-t border-gray-100">
+                    <button
+                      onClick={() => handleEdit(exercise)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#0d9488] hover:bg-[#0d9488]/10 rounded-lg transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-lg">edit</span>
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(exercise.id)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-lg">delete</span>
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       <ExerciseDialog

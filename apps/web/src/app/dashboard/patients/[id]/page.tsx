@@ -21,8 +21,8 @@ export default function PatientOverviewPage() {
   }
 
   const InfoCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="bg-white border border-[#e7f3f2] rounded-xl p-6 shadow-sm">
-      <h3 className="text-lg font-semibold text-[#0d1b1a] mb-4 flex items-center gap-2">
+    <div className="bg-white border border-[#e7f3f2] rounded-xl p-4 md:p-6 shadow-sm">
+      <h3 className="text-base md:text-lg font-semibold text-[#0d1b1a] mb-3 md:mb-4 flex items-center gap-2">
         {title}
       </h3>
       {children}
@@ -32,15 +32,15 @@ export default function PatientOverviewPage() {
   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
     <div className="mb-3 last:mb-0">
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-      <div className="text-gray-900 font-medium">{value || '-'}</div>
+      <div className="text-gray-900 font-medium text-sm md:text-base break-words">{value || '-'}</div>
     </div>
   );
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">
       {/* Personal Information */}
       <InfoCard title="Personal Information">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
           <LabelValue label="First Name" value={patient.firstName} />
           <LabelValue label="Last Name" value={patient.lastName} />
           <LabelValue label="Email" value={patient.email} />
