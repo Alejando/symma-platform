@@ -9,6 +9,7 @@ import { ExercisesModule } from './exercises/exercises.module';
 import { RoutinesModule } from './routines/routines.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { MobileModule } from './mobile/mobile.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     RoutinesModule,
     AnalyticsModule,
     DashboardModule,
+    MobileModule,
   ],
   controllers: [AppController],
   providers: [AppService],
