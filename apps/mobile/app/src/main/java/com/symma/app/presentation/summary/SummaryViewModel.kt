@@ -45,7 +45,7 @@ class SummaryViewModel @Inject constructor(
             
             result.onSuccess {
                 _uiState.value = SummaryUiState.Success
-            }.onFailure { e ->
+            }.onFailure { _ ->
                 // For MVP, even failure (offline) should ideally show success or "Saved Offline".
                 // We'll show success but log the error (logging happened in Repo).
                 // Or if we want to be honest to the user:

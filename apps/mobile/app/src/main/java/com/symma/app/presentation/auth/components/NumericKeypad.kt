@@ -82,7 +82,7 @@ fun KeypadButton(
         modifier = Modifier
             .size(80.dp)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            .background(MaterialTheme.colorScheme.primaryContainer)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -92,7 +92,7 @@ fun KeypadButton(
                 fontWeight = FontWeight.Bold,
                 fontSize = 32.sp
             ),
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onPrimaryContainer
         )
     }
 }

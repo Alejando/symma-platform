@@ -29,6 +29,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.symma.app.presentation.components.design.SymmaButton
+import com.symma.app.presentation.components.design.SymmaScaffold
 
 @Composable
 fun SummaryScreen(
@@ -37,39 +39,42 @@ fun SummaryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        when (uiState) {
-            is SummaryUiState.Loading -> {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Saving your progress...",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+    SymmaScaffold { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            when (uiState) {
+                is SummaryUiState.Loading -> {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Saving your progress...",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
                 }
-            }
-            
-            is SummaryUiState.Success -> {
-                SuccessContent(onNavigateHome = onNavigateHome)
-            }
-            
-            is SummaryUiState.Error -> {
-                // Should technically not happen due to our MVP logic defaulting to Success
-                // But good to have a fallback
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Something went wrong.",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    Button(onClick = onNavigateHome) {
-                        Text("Go Home")
+                
+                is SummaryUiState.Success -> {
+                    SuccessContent(onNavigateHome = onNavigateHome)
+                }
+                
+                is SummaryUiState.Error -> {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Something went wrong.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        SymmaButton(
+                            text = "Go Home",
+                            onClick = onNavigateHome
+                        )
                     }
                 }
             }
@@ -102,39 +107,27 @@ private fun SuccessContent(onNavigateHome: () -> Unit) {
         
         Text(
             text = "Session Complete!",
-            style = MaterialTheme.typography.headlineLarge,
+            style = MaterialTheme.typography.displayLarge,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center
         )
         
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
             text = "You are making great progress.",
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
         
         Spacer(modifier = Modifier.height(48.dp))
         
-        // MVP: Detailed stats were not passed, so we skip showing "Exercises: 5/5" unless we pass them.
-        // We'll focus on the "Finish" action.
-        
-        Button(
+        SymmaButton(
+            text = "Finish",
             onClick = onNavigateHome,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Text(
-                text = "Finish",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

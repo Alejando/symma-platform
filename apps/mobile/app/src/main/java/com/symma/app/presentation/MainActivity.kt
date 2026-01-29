@@ -15,7 +15,7 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.symma.app.presentation.auth.LoginScreen
 import com.symma.app.presentation.home.HomeScreen
-import com.symma.app.presentation.camera.CameraTestScreen
+
 import com.symma.app.presentation.player.PlayerScreen
 import com.symma.app.presentation.summary.SummaryScreen
 import com.symma.app.core.theme.SymmaTheme
@@ -55,16 +55,6 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 onNavigateToSession = {
                                     navController.navigate("player")
-                                },
-                                onNavigateToCamera = {
-                                    navController.navigate("camera_test")
-                                }
-                            )
-                        }
-                        composable("camera_test") {
-                            CameraTestScreen(
-                                onNavigateBack = {
-                                    navController.popBackStack()
                                 }
                             )
                         }

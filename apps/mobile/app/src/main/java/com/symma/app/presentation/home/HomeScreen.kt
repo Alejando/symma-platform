@@ -35,6 +35,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.symma.app.domain.model.Routine
+import com.symma.app.presentation.components.design.SymmaButton
+import com.symma.app.presentation.components.design.SymmaButtonVariant
+import com.symma.app.presentation.components.design.SymmaCard
+import com.symma.app.presentation.components.design.SymmaScaffold
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -42,12 +46,11 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     onNavigateToSession: () -> Unit = {},
-    onNavigateToCamera: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold { paddingValues ->
+    SymmaScaffold { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -73,23 +76,7 @@ fun HomeScreen(
                 )
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // Test Camera Button (Temporary for RFC-016)
-            Button(
-                onClick = onNavigateToCamera,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(
-                    text = "📷 Test Camera",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Medium
-                )
-            }
+
         }
     }
 }
@@ -165,63 +152,36 @@ private fun RoutineCard(
     routine: Routine,
     onStartSession: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+    SymmaCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
-        ) {
-            Text(
-                text = "Today's Therapy",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = routine.name,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "${routine.items.size} exercises",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-            Button(
-                onClick = onStartSession,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(
-                        text = "Start Session",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-        }
+        // Content is already padded by SymmaCard
+        
+        Text(
+            text = "Today's Therapy",
+            style = MaterialTheme.typography.bodyMedium, // instructions
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = routine.name,
+            style = MaterialTheme.typography.headlineLarge, // Heading
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "${routine.items.size} exercises",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+        
+        SymmaButton(
+            text = "Start Session",
+            onClick = onStartSession,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 

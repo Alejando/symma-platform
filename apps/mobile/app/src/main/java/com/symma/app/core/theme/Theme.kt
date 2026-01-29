@@ -10,19 +10,36 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
+
 private val DarkColorScheme = darkColorScheme(
-    // Define primary, secondary, tertiary etc.
+    primary = md_theme_dark_primary,
+    onPrimary = md_theme_dark_onPrimary,
+    background = md_theme_dark_background,
+    onBackground = md_theme_dark_onBackground,
+    surface = md_theme_dark_surface,
+    onSurface = md_theme_dark_onSurface,
 )
 
 private val LightColorScheme = lightColorScheme(
-    // Define primary, secondary, tertiary etc.
+    primary = md_theme_light_primary,
+    onPrimary = md_theme_light_onPrimary,
+    primaryContainer = md_theme_light_primaryContainer,
+    onPrimaryContainer = md_theme_light_onPrimaryContainer,
+    secondary = md_theme_light_secondary,
+    onSecondary = md_theme_light_onSecondary,
+    background = md_theme_light_background,
+    onBackground = md_theme_light_onBackground,
+    surface = md_theme_light_surface,
+    onSurface = md_theme_light_onSurface,
+    error = md_theme_light_error,
+    onError = md_theme_light_onError
 )
 
 @Composable
 fun SymmaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false, // Disable dynamic color to enforce our design system
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -36,7 +53,7 @@ fun SymmaTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        // typography = Typography,
+        typography = Typography,
         content = content
     )
 }

@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.symma.app.presentation.auth.components.NumericKeypad
 import com.symma.app.presentation.auth.components.PinIndicator
+import com.symma.app.presentation.components.design.SymmaScaffold
 
 @Composable
 fun LoginScreen(
@@ -47,7 +48,8 @@ fun LoginScreen(
         }
     }
 
-    Scaffold(
+
+    SymmaScaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Box(
@@ -64,7 +66,7 @@ fun LoginScreen(
             ) {
                 Text(
                     text = "SYMMA",
-                    style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.primary
                 )
                 
@@ -72,7 +74,7 @@ fun LoginScreen(
                 
                 Text(
                     text = "Enter your Access Code",
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.bodyLarge
                 )
                 
                 Spacer(modifier = Modifier.height(48.dp))
@@ -95,3 +97,4 @@ fun LoginScreen(
         }
     }
 }
+
