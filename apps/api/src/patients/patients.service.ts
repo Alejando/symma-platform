@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto, PatientStatus } from './dto/update-patient.dto';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class PatientsService {
@@ -84,24 +85,43 @@ export class PatientsService {
 
   /**
    * Generate a 6-digit access PIN for patient mobile login.
-   * The PIN is hashed before storage - the raw PIN is returned only once.
+   * Uses SHA-256 for deterministic lookup + Bcrypt for legacy support.
    */
   async generateAccessCode(therapistId: string, patientId: string): Promise<{ accessCode: string }> {
     // Verify ownership
     await this.findOne(therapistId, patientId);
 
-    // Generate 6-digit PIN
-    const accessCode = Math.floor(100000 + Math.random() * 900000).toString();
+    let accessCode = '';
+    let accessCodeHash = '';
+    let isUnique = false;
 
-    // Hash the PIN using bcrypt
+    // Retry loop to ensure uniqueness
+    while (!isUnique) {
+      accessCode = Math.floor(100000 + Math.random() * 900000).toString();
+      accessCodeHash = crypto.createHash('sha256').update(accessCode).digest('hex');
+
+      // Check for collision
+      const existing = await this.prisma.patient.findUnique({
+        where: { accessCodeHash },
+      });
+
+      if (!existing) {
+        isUnique = true;
+      }
+    }
+
+    // Hash the PIN using bcrypt (keeping for backward compat if needed, though login uses SHA-256)
     const bcrypt = await import('bcrypt');
     const saltRounds = 10;
-    const hashedCode = await bcrypt.hash(accessCode, saltRounds);
+    const authPinHash = await bcrypt.hash(accessCode, saltRounds);
 
-    // Update patient with hashed code
+    // Update patient with BOTH hashes
     await this.prisma.patient.update({
       where: { id: patientId },
-      data: { authPinHash: hashedCode },
+      data: {
+        authPinHash,
+        accessCodeHash,
+      },
     });
 
     // Return raw PIN (shown only once to therapist)
@@ -115,19 +135,21 @@ export class PatientsService {
     // Verify ownership
     await this.findOne(therapistId, patientId);
 
-    // Remove the access code hash
+    // Remove BOTH access code hashes
     await this.prisma.patient.update({
       where: { id: patientId },
-      data: { authPinHash: null },
+      data: {
+        authPinHash: null,
+        accessCodeHash: null,
+      },
     });
   }
 
   /**
-   * Check if patient has an active access code (without revealing it).
+   * Check if patient has an active access code.
    */
   async hasAccessCode(therapistId: string, patientId: string): Promise<boolean> {
     const patient = await this.findOne(therapistId, patientId);
-    return !!patient.authPinHash;
+    return !!patient.accessCodeHash; // Check the new field
   }
 }
-

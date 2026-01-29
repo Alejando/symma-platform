@@ -58,7 +58,7 @@ Prepare the Backend to serve the Mobile Application.
 
 ## 4. Acceptance Criteria
 
-* **[ ] Swagger UI:** Navigating to `http://localhost:4000/api/docs` loads the interactive API website.
+* **[ ] Swagger UI:** Navigating to `http://localhost:4001/api/docs` loads the interactive API website.
 * **[ ] Login Success:** Sending the correct PIN (generated in RFC-009) returns a JWT Token.
 * **[ ] Login Fail:** Sending a wrong PIN returns 401 Unauthorized.
 * **[ ] Data Sync:** Using the Patient Token, `GET /mobile/routine/active` returns the full JSON with exercises and media URLs.

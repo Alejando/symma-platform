@@ -56,6 +56,7 @@ model Patient {
   emergencyContactName   String?       @map("emergency_contact_name")
   emergencyContactPhone  String?       @map("emergency_contact_phone")
   authPinHash            String?       @map("auth_pin_hash")
+  accessCodeHash         String?       @unique @map("access_code_hash")
   avatarUrl              String?       @map("avatar_url")
   createdAt              DateTime      @default(now()) @map("created_at")
   updatedAt              DateTime      @updatedAt @map("updated_at")
