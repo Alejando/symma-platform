@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.symma.app.presentation.components.camera.FaceLandmarkerHelper
+import com.symma.app.domain.logic.SymmetryCalculator
+import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 
 private const val TAG = "PlayerVM"
 
@@ -32,7 +35,7 @@ private const val DEFAULT_REST_SECONDS = 10
 class PlayerViewModel @Inject constructor(
     private val routineRepository: RoutineRepository,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : ViewModel(), FaceLandmarkerHelper.LandmarkerListener {
     
     // Optional routineId from navigation (currently using active routine from repository)
     private val routineId: String? = savedStateHandle["routineId"]
@@ -42,6 +45,14 @@ class PlayerViewModel @Inject constructor(
     
     private val _events = MutableSharedFlow<PlayerEvent>(extraBufferCapacity = 10)
     val events: SharedFlow<PlayerEvent> = _events.asSharedFlow()
+
+    private val _faceResult = MutableStateFlow<FaceLandmarkerHelper.ResultBundle?>(null)
+    val faceResult: StateFlow<FaceLandmarkerHelper.ResultBundle?> = _faceResult.asStateFlow()
+
+    // MOB-10: Symmetry Logic
+    private val symmetryCalculator = SymmetryCalculator()
+    private val _symmetryScore = MutableStateFlow(0f)
+    val symmetryScore: StateFlow<Float> = _symmetryScore.asStateFlow()
     
     // Session tracking
     private var routine: Routine? = null
@@ -382,5 +393,22 @@ class PlayerViewModel @Inject constructor(
         super.onCleared()
         timerJob?.cancel()
         Log.d(TAG, "🧹 PlayerViewModel cleared")
+    }
+
+    // ==================== FACE LANDMARKER LISTENER ====================
+
+    override fun onError(error: String, errorCode: Int) {
+        Log.e(TAG, "FaceLandmarker error ($errorCode): $error")
+    }
+
+    override fun onResults(resultBundle: FaceLandmarkerHelper.ResultBundle) {
+        _faceResult.value = resultBundle
+        
+        val landmarks = resultBundle.result.faceLandmarks().firstOrNull()
+        if (landmarks != null) {
+            val score = symmetryCalculator.calculateSmileSymmetry(landmarks)
+            _symmetryScore.value = score
+            Log.d(TAG, "SYMMETRY SCORE: $score")
+        }
     }
 }

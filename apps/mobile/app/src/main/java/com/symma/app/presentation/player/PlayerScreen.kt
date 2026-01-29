@@ -15,6 +15,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.symma.app.presentation.components.camera.CameraPreview
 import com.symma.app.presentation.components.camera.CameraPermissionWrapper
 
+import com.symma.app.presentation.components.camera.FaceMeshOverlay
+
 @Composable
 fun PlayerScreen(
     onNavigateBack: () -> Unit,
@@ -23,6 +25,8 @@ fun PlayerScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val faceResult by viewModel.faceResult.collectAsState()
+    val symmetryScore by viewModel.symmetryScore.collectAsState()
     
     // 1. Keep Screen On
     DisposableEffect(Unit) {
@@ -50,11 +54,21 @@ fun PlayerScreen(
     CameraPermissionWrapper {
         Box(modifier = Modifier.fillMaxSize()) {
             // Layer 0: Camera Preview (Background)
-            CameraPreview(modifier = Modifier.fillMaxSize())
+            CameraPreview(
+                modifier = Modifier.fillMaxSize(),
+                landmarkerListener = viewModel
+            )
+            
+            // Layer 1: Face Mesh Overlay
+            FaceMeshOverlay(
+                result = faceResult,
+                modifier = Modifier.fillMaxSize()
+            )
             
             // Layer 2: UI Overlay
             PlayerOverlay(
                 state = uiState,
+                symmetryScore = symmetryScore,
                 onPause = viewModel::pause,
                 onResume = viewModel::resume,
                 onSkip = viewModel::skip,

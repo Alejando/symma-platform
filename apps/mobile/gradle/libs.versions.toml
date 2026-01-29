@@ -19,6 +19,7 @@ camerax = "1.4.1"
 securityCrypto = "1.1.0-alpha06"
 mockk = "1.13.9"
 turbine = "1.0.0"
+tasksVision = "0.10.26.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -71,6 +72,7 @@ androidx-camera-view = { group = "androidx.camera", name = "camera-view", versio
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+mediapipe-tasks-vision = { group = "com.google.mediapipe", name = "tasks-vision", version.ref = "tasksVision" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

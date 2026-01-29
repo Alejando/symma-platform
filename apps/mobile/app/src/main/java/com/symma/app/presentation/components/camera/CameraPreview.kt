@@ -3,6 +3,7 @@ package com.symma.app.presentation.components.camera
 import android.util.Log
 import android.view.ViewGroup
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -30,7 +31,8 @@ private const val TAG = "CameraPreview"
  */
 @Composable
 fun CameraPreview(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    landmarkerListener: FaceLandmarkerHelper.LandmarkerListener? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -49,6 +51,13 @@ fun CameraPreview(
         }
     }
     
+    val faceLandmarkerHelper = remember(landmarkerListener) {
+        FaceLandmarkerHelper(
+            context = context,
+            faceLandmarkerHelperListener = landmarkerListener
+        )
+    }
+
     AndroidView(
         factory = { ctx ->
             PreviewView(ctx).apply {
@@ -63,7 +72,8 @@ fun CameraPreview(
                 startCamera(
                     cameraProviderFuture = cameraProviderFuture,
                     lifecycleOwner = lifecycleOwner,
-                    previewView = previewView
+                    previewView = previewView,
+                    faceLandmarkerHelper = faceLandmarkerHelper
                 )
             }
         },
@@ -74,7 +84,8 @@ fun CameraPreview(
 private fun startCamera(
     cameraProviderFuture: ListenableFuture<ProcessCameraProvider>,
     lifecycleOwner: LifecycleOwner,
-    previewView: PreviewView
+    previewView: PreviewView,
+    faceLandmarkerHelper: FaceLandmarkerHelper
 ) {
     cameraProviderFuture.addListener({
         try {
@@ -87,6 +98,15 @@ private fun startCamera(
                     it.surfaceProvider = previewView.surfaceProvider
                 }
             
+            // Build ImageAnalysis use case
+            val imageAnalyzer = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                .build()
+                .also {
+                    it.setAnalyzer(ContextCompat.getMainExecutor(previewView.context), faceLandmarkerHelper)
+                }
+
             // Select front camera
             val cameraSelector = CameraSelector.Builder()
                 .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
@@ -99,10 +119,11 @@ private fun startCamera(
             cameraProvider.bindToLifecycle(
                 lifecycleOwner,
                 cameraSelector,
-                preview
+                preview,
+                imageAnalyzer
             )
             
-            Log.d(TAG, "Camera started successfully")
+            Log.d(TAG, "Camera started successfully with ImageAnalysis")
         } catch (e: Exception) {
             Log.e(TAG, "Camera initialization failed: ${e.message}", e)
         }

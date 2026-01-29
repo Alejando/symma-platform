@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import com.symma.app.presentation.components.feedback.QualityBar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,10 +46,11 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun PlayerOverlay(
     state: PlayerUiState,
+    symmetryScore: Float, // Added for feedback
     onPause: () -> Unit,
     onResume: () -> Unit,
     onSkip: () -> Unit,
-    onClose: () -> Unit, // Added this as per requirements (Header Close button)
+    onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -58,7 +60,6 @@ fun PlayerOverlay(
         TopHeader(onClose = onClose)
 
         // --- Layer 2: Main Content (State Dependent) ---
-        // We use AnimatedContent for smooth transitions between major states
         AnimatedContent(
             targetState = state,
             transitionSpec = {
@@ -77,6 +78,7 @@ fun PlayerOverlay(
                 is PlayerUiState.Exercise -> {
                     ExerciseView(
                         state = targetState,
+                        symmetryScore = symmetryScore,
                         onPause = onPause,
                         onResume = onResume,
                         onSkip = onSkip
@@ -95,7 +97,167 @@ fun PlayerOverlay(
         }
     }
 }
+// ... (TopHeader, LoadingView, GetReadyView remain unchanged) ...
 
+@Composable
+private fun ExerciseView(
+    state: PlayerUiState.Exercise,
+    symmetryScore: Float,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onSkip: () -> Unit
+) {
+    // Feedback Logic
+    val feedbackText = when {
+        symmetryScore >= 80f -> "Excellent! Keep it up."
+        symmetryScore >= 50f -> "Almost there, steady..."
+        symmetryScore > 0f -> "Try to balance both sides." // Only show if we have some detection
+        else -> "Calibrating..."
+    }
+    
+    val feedbackColor = when {
+        symmetryScore >= 80f -> Color.Green
+        symmetryScore >= 50f -> Color(0xFFFFC107) // Yellow
+        else -> Color.White
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Gradient Scrim at Bottom
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(400.dp) // Increased height to accommodate new UI
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))
+                    )
+                )
+        )
+
+        // Bottom Content
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // --- SYMMETRY FEEDBACK ---
+            Text(
+                text = feedbackText,
+                style = MaterialTheme.typography.titleMedium,
+                color = feedbackColor,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            QualityBar(
+                score = symmetryScore,
+                modifier = Modifier.padding(horizontal = 32.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Exercise Name
+            Text(
+                text = state.exerciseName,
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            
+            if (!state.instruction.isNullOrBlank()) {
+                Text(
+                    text = state.instruction,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.8f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Metrics Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                // Rep Counter
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "REP",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = "${state.currentRep}/${state.totalReps}",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Huge Timer
+                Text(
+                    text = "${state.timeLeft}s",
+                    style = MaterialTheme.typography.displayMedium,
+                    color = if (state.timeLeft <= 3) Color.Red else Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 56.sp
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Controls
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Pause/Resume
+                FilledIconButton(
+                    onClick = { if (state.isPaused) onResume() else onPause() },
+                    modifier = Modifier.size(64.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = Color.White,
+                        contentColor = Color.Black
+                    )
+                ) {
+                    Icon(
+                        imageVector = if (state.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                        contentDescription = if (state.isPaused) "Resume" else "Pause",
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+                
+                // Skip (Secondary)
+                Button(
+                    onClick = onSkip,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White.copy(alpha = 0.2f),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Skip")
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Icon(
+                        imageVector = Icons.Default.SkipNext,
+                        contentDescription = "Skip Exercise",
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+    }
+}
 @Composable
 private fun TopHeader(onClose: () -> Unit) {
     Box(
