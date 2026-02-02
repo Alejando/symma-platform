@@ -1,0 +1,242 @@
+# Symma Platform - Reglas del Repositorio
+
+## Estructura del Monorepo
+
+Este es un monorepo gestionado con **Turborepo** que contiene 3 aplicaciones:
+
+- `apps/web` - Aplicación web (Next.js + React)
+- `apps/api` - API backend (NestJS)
+- `apps/mobile` - Aplicación móvil (Android/Kotlin)
+
+### Paquetes Compartidos
+
+- `packages/database` - Prisma schema y cliente de base de datos
+- `packages/shared-types` - Tipos TypeScript compartidos entre web y api
+- `packages/eslint-config` - Configuración de ESLint compartida
+- `packages/typescript-config` - Configuración de TypeScript compartida
+- `packages/ui` - Componentes UI compartidos
+
+---
+
+## Reglas Generales
+
+### 1. Gestor de Paquetes
+
+**Siempre usar pnpm** - No usar npm ni yarn.
+
+```bash
+# ✅ Correcto
+pnpm install
+pnpm add <package>
+
+# ❌ Incorrecto
+npm install
+yarn add
+```
+
+### 2. Pruebas Unitarias Obligatorias
+
+**Todo código nuevo debe incluir pruebas unitarias.**
+
+- Para `api` y `web`: Archivos de test junto al código fuente con extensión `.spec.ts` o `.test.ts`
+- Para `mobile`: Tests en `app/src/test/` con JUnit y MockK
+
+### 3. Idioma del Código
+
+- **Código fuente**: Inglés (variables, funciones, clases, comentarios técnicos)
+- **Documentación de usuario**: Español permitido
+- **Commits**: Inglés preferido
+
+---
+
+## Reglas por Aplicación
+
+### Web (`apps/web`)
+
+- **Framework**: Next.js 16+ con App Router
+- **Lenguaje**: TypeScript (estricto)
+- **Estilos**: TailwindCSS v4
+- **Componentes UI**: shadcn/ui + Radix UI
+- **Iconos**: Lucide React
+- **Testing**: Vitest + Testing Library
+- **Alias de imports**: Usar `@/` para rutas desde `src/`
+
+```typescript
+// ✅ Correcto
+import { Button } from '@/components/ui/button';
+
+// ❌ Incorrecto
+import { Button } from '../../../components/ui/button';
+```
+
+**Estructura de archivos de test:**
+```
+src/
+  components/
+    Button.tsx
+    Button.test.tsx  ← Test junto al componente
+```
+
+### API (`apps/api`)
+
+- **Framework**: NestJS 11+
+- **Lenguaje**: TypeScript (estricto)
+- **ORM**: Prisma
+- **Testing**: Jest + Supertest
+- **Validación**: class-validator + class-transformer
+- **Documentación**: Swagger/OpenAPI
+
+**Estructura de módulos NestJS:**
+```
+src/
+  auth/
+    auth.module.ts
+    auth.controller.ts
+    auth.service.ts
+    auth.controller.spec.ts  ← Test del controller
+    auth.service.spec.ts     ← Test del service
+    dto/
+      login.dto.ts
+```
+
+**Tests obligatorios:**
+- `.spec.ts` para cada service
+- `.spec.ts` para cada controller
+- Tests e2e en `test/` para endpoints críticos
+
+### Mobile (`apps/mobile`)
+
+- **Lenguaje**: Kotlin
+- **UI**: Jetpack Compose
+- **Inyección de dependencias**: Hilt
+- **Base de datos local**: Room
+- **Networking**: Retrofit + OkHttp
+- **Testing**: JUnit + MockK + Turbine (para Flows)
+- **Min SDK**: 26
+- **Target SDK**: 34
+
+**Arquitectura**: MVVM con Clean Architecture
+
+```
+app/src/main/java/com/symma/app/
+  data/           ← Repositories, data sources
+  domain/         ← Use cases, domain models
+  presentation/   ← ViewModels, UI (Compose)
+  di/             ← Módulos de Hilt
+```
+
+**Tests obligatorios:**
+- Tests unitarios para ViewModels
+- Tests unitarios para UseCases
+- Tests unitarios para Repositories
+
+---
+
+## Configuración Compartida
+
+### TypeScript
+
+Extender configuraciones base desde `packages/typescript-config`:
+
+```json
+{
+  "extends": "@symma/typescript-config/base.json"
+}
+```
+
+### ESLint
+
+Usar configuraciones desde `packages/eslint-config`.
+
+### Prettier
+
+Formato consistente en todo el proyecto. Ejecutar antes de commit:
+
+```bash
+pnpm format
+```
+
+---
+
+## Base de Datos
+
+- **ORM**: Prisma
+- **Ubicación del schema**: `packages/database/prisma/schema.prisma`
+- **Puerto PostgreSQL local**: 5440
+
+### Comandos de base de datos:
+
+```bash
+make db-up       # Iniciar PostgreSQL
+make db-migrate  # Ejecutar migraciones
+make db-generate # Generar cliente Prisma
+make db-studio   # Abrir Prisma Studio
+make db-seed     # Poblar datos de prueba
+```
+
+---
+
+## Comandos del Proyecto
+
+Usar el `Makefile` para operaciones comunes:
+
+```bash
+make install     # Instalar dependencias
+make dev         # Iniciar servidores de desarrollo
+make build       # Build de producción
+make test        # Ejecutar tests
+make lint        # Ejecutar linting
+make start       # Iniciar todo (db + dev)
+make stop        # Detener servicios
+```
+
+---
+
+## Docker
+
+### Puertos:
+
+- **Web**: http://localhost:4000
+- **API**: http://localhost:4001
+- **PostgreSQL**: localhost:5440
+
+### Comandos Docker:
+
+```bash
+make docker-build  # Construir imágenes
+make docker-up     # Iniciar contenedores
+make docker-down   # Detener contenedores
+make docker-logs   # Ver logs
+```
+
+---
+
+## Convenciones de Código
+
+### Nombrado
+
+| Elemento | Convención | Ejemplo |
+|----------|------------|---------|
+| Archivos TS/TSX | kebab-case | `user-profile.tsx` |
+| Componentes React | PascalCase | `UserProfile` |
+| Funciones/Variables | camelCase | `getUserProfile` |
+| Constantes | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT` |
+| Archivos Kotlin | PascalCase | `UserViewModel.kt` |
+| Clases Kotlin | PascalCase | `UserRepository` |
+
+### Imports
+
+Ordenar imports en grupos:
+1. Dependencias externas
+2. Paquetes internos (@symma/*)
+3. Imports relativos del proyecto
+
+---
+
+## Checklist Pre-Commit
+
+- [ ] Código compila sin errores (`pnpm build`)
+- [ ] Linting pasa (`pnpm lint`)
+- [ ] Pruebas unitarias escritas y pasando (`pnpm test`)
+- [ ] Tipos TypeScript correctos (`pnpm check-types`)
+- [ ] Código formateado (`pnpm format`)

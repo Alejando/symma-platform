@@ -98,6 +98,7 @@ export default function ExercisesPage() {
             <tr>
               <th className="px-6 py-4 text-xs font-semibold text-[#0d9488] uppercase tracking-wider">Name</th>
               <th className="px-6 py-4 text-xs font-semibold text-[#0d9488] uppercase tracking-wider">Type</th>
+              <th className="px-6 py-4 text-xs font-semibold text-[#0d9488] uppercase tracking-wider">Module</th>
               <th className="px-6 py-4 text-xs font-semibold text-[#0d9488] uppercase tracking-wider">Category</th>
               <th className="px-6 py-4 text-xs font-semibold text-[#0d9488] uppercase tracking-wider">Key</th>
               <th className="px-6 py-4 text-xs font-semibold text-[#0d9488] uppercase tracking-wider text-right">Actions</th>
@@ -110,6 +111,11 @@ export default function ExercisesPage() {
                 <td className="px-6 py-4 text-sm text-gray-600">
                   <span className="px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
                     {exercise.type}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-600">
+                  <span className="px-2 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-medium">
+                    {exercise.mobileModule}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600">
@@ -177,6 +183,9 @@ export default function ExercisesPage() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
                       {exercise.type}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-xs font-medium">
+                      {exercise.mobileModule}
                     </span>
                     <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-xs font-medium">
                       {exercise.category}

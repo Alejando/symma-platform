@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.symma.app.domain.model.Routine
 import com.symma.app.domain.model.RoutineItem
+import com.symma.app.domain.repository.CalibrationRepository
 import com.symma.app.domain.repository.RoutineRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -22,6 +23,11 @@ import javax.inject.Inject
 import com.symma.app.presentation.components.camera.FaceLandmarkerHelper
 import com.symma.app.domain.logic.SymmetryCalculator
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
+import com.symma.app.data.remote.dto.session.SessionItemRequest
+import com.symma.app.domain.logic.ExerciseStrategyFactory
+import com.symma.app.domain.model.CalibrationBaseline
+import com.symma.app.domain.model.ExerciseType
+import com.google.mediapipe.tasks.components.containers.Category
 
 private const val TAG = "PlayerVM"
 
@@ -34,6 +40,7 @@ private const val DEFAULT_REST_SECONDS = 10
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     private val routineRepository: RoutineRepository,
+    private val calibrationRepository: CalibrationRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel(), FaceLandmarkerHelper.LandmarkerListener {
     
@@ -50,20 +57,36 @@ class PlayerViewModel @Inject constructor(
     val faceResult: StateFlow<FaceLandmarkerHelper.ResultBundle?> = _faceResult.asStateFlow()
 
     // MOB-10: Symmetry Logic
-    private val symmetryCalculator = SymmetryCalculator()
+    // private val symmetryCalculator = SymmetryCalculator() // DEPRECATED
     private val _symmetryScore = MutableStateFlow(0f)
+    
+    // Calibration Baseline (loaded from repository or default)
+    private var calibrationBaseline: CalibrationBaseline = calibrationRepository.getBaseline() ?: CalibrationBaseline()
     val symmetryScore: StateFlow<Float> = _symmetryScore.asStateFlow()
+
+    // MOB-12: Session Results & Sampling
+    private val sessionResults = mutableListOf<SessionItemRequest>()
+    private val currentExerciseScores = mutableListOf<Float>()
+    private var lastSampleTime = 0L
     
     // Session tracking
     private var routine: Routine? = null
     private var routineItems: List<RoutineItem> = emptyList()
     private var currentExerciseIndex = 0
-    private var currentRep = 1
     private var isPaused = false
     private var sessionStartTime: Long = 0L
     
+    // RFC-031: Clinical State Machine Variables
+    private var currentSet = 1
+    private var currentRep = 1
+    private var accumulatedHoldTimeMs: Long = 0L
+    private var isTargetReached = false
+    private var wasTargetReached = false // For edge detection (Isotonic)
+    private var lastFrameTime: Long = 0L
+    
     // Timer management
     private var timerJob: Job? = null
+    private var frameProcessingEnabled = false
     
     init {
         Log.d(TAG, "🚀 PlayerViewModel initialized")
@@ -120,6 +143,11 @@ class PlayerViewModel @Inject constructor(
         currentRep = 1
         isPaused = false
         
+        // Reset metrics
+        sessionResults.clear()
+        currentExerciseScores.clear()
+        lastSampleTime = 0L
+        
         startGetReadyCountdown()
     }
     
@@ -152,38 +180,208 @@ class PlayerViewModel @Inject constructor(
         }
         
         val exercise = currentItem.exercise
-        val totalReps = currentItem.targetRepetitions
-        val holdTime = currentItem.holdTimeSeconds
+        val config = currentItem.config
         
-        Log.d(TAG, "💪 Starting Exercise: ${exercise.name} (Rep $currentRep/$totalReps, Hold: ${holdTime}s)")
+        Log.d(TAG, "💪 Starting Exercise: ${exercise.name} (Set $currentSet/${config.sets}, Rep $currentRep/${config.reps}, Hold: ${config.holdSeconds}s)")
         
-        startExerciseTimer(currentItem)
+        // Reset state for new exercise/rep
+        accumulatedHoldTimeMs = 0L
+        isTargetReached = false
+        wasTargetReached = false
+        lastFrameTime = System.currentTimeMillis()
+        frameProcessingEnabled = true
+        
+        // For Isometric exercises, we use frame-based hold tracking
+        // For Isotonic, we use edge detection on target reached
+        if (config.exerciseType == ExerciseType.ISOMETRIC) {
+            startIsometricExercise(currentItem)
+        } else {
+            startIsotonicExercise(currentItem)
+        }
     }
     
     /**
-     * Timer for the exercise hold duration.
+     * Isometric exercise: User must hold the target gesture for holdSeconds.
+     * The hold timer is driven by frame processing, not a coroutine timer.
      */
-    private fun startExerciseTimer(item: RoutineItem) {
+    private fun startIsometricExercise(item: RoutineItem) {
+        val config = item.config
+        
+        _uiState.value = PlayerUiState.Exercise(
+            exerciseName = item.exercise.name,
+            instruction = item.exercise.description,
+            currentSet = currentSet,
+            totalSets = config.sets,
+            currentRep = currentRep,
+            totalReps = config.reps,
+            holdTimeLeft = config.holdSeconds,
+            holdTimeTotal = config.holdSeconds,
+            isTargetReached = false,
+            isPaused = isPaused,
+            isIsometric = true
+        )
+    }
+    
+    /**
+     * Isotonic exercise: Rep completes when user reaches target (edge detection).
+     */
+    private fun startIsotonicExercise(item: RoutineItem) {
+        val config = item.config
+        
+        _uiState.value = PlayerUiState.Exercise(
+            exerciseName = item.exercise.name,
+            instruction = item.exercise.description,
+            currentSet = currentSet,
+            totalSets = config.sets,
+            currentRep = currentRep,
+            totalReps = config.reps,
+            holdTimeLeft = 0,
+            holdTimeTotal = 0,
+            isTargetReached = false,
+            isPaused = isPaused,
+            isIsometric = false
+        )
+    }
+    
+    /**
+     * RFC-031: Process each frame from FaceLandmarker.
+     * This drives the clinical state machine for Isometric exercises.
+     */
+    fun processFrame(score: Float) {
+        if (!frameProcessingEnabled || isPaused) return
+        
+        val currentItem = routineItems.getOrNull(currentExerciseIndex) ?: return
+        val config = currentItem.config
+        val currentState = _uiState.value
+        
+        if (currentState !is PlayerUiState.Exercise) return
+        
+        val now = System.currentTimeMillis()
+        val deltaTimeMs = now - lastFrameTime
+        lastFrameTime = now
+        
+        // 1. Check Target
+        val previousTargetReached = isTargetReached
+        isTargetReached = score >= 1.0f
+        
+        // Strict Mode: Reset hold time if user slips during isometric hold
+        if (!isTargetReached && previousTargetReached && config.strictMode && config.exerciseType == ExerciseType.ISOMETRIC) {
+            Log.d(TAG, "⚠️ Strict Mode: Target lost, resetting hold time")
+            accumulatedHoldTimeMs = 0L
+        }
+        
+        // 2. Time Accumulation (The "Hold")
+        if (isTargetReached && config.exerciseType == ExerciseType.ISOMETRIC) {
+            accumulatedHoldTimeMs += deltaTimeMs
+        }
+        
+        // 3. Completion Logic
+        var repCompleted = false
+        
+        when (config.exerciseType) {
+            ExerciseType.ISOMETRIC -> {
+                val holdTargetMs = config.holdSeconds * 1000L
+                if (accumulatedHoldTimeMs >= holdTargetMs) {
+                    repCompleted = true
+                }
+            }
+            ExerciseType.ISOTONIC -> {
+                // Edge detection: target was not reached, now it is
+                if (!wasTargetReached && isTargetReached) {
+                    repCompleted = true
+                }
+            }
+        }
+        
+        wasTargetReached = isTargetReached
+        
+        // Update UI state with current hold progress
+        val holdSecondsLeft = if (config.exerciseType == ExerciseType.ISOMETRIC) {
+            val remaining = (config.holdSeconds * 1000L - accumulatedHoldTimeMs).coerceAtLeast(0L)
+            (remaining / 1000).toInt()
+        } else {
+            0
+        }
+        
+        _uiState.value = currentState.copy(
+            holdTimeLeft = holdSecondsLeft,
+            isTargetReached = isTargetReached
+        )
+        
+        // Play tick sound in last 3 seconds
+        if (config.exerciseType == ExerciseType.ISOMETRIC && holdSecondsLeft <= 3 && holdSecondsLeft > 0 && isTargetReached) {
+            val previousSeconds = ((config.holdSeconds * 1000L - (accumulatedHoldTimeMs - deltaTimeMs)).coerceAtLeast(0L) / 1000).toInt()
+            if (previousSeconds != holdSecondsLeft) {
+                viewModelScope.launch { _events.emit(PlayerEvent.PlayTick) }
+            }
+        }
+        
+        // 4. Transition Logic (On Rep Complete)
+        if (repCompleted) {
+            onRepCompleted(currentItem)
+        }
+    }
+    
+    /**
+     * RFC-031: Called when a single rep is completed.
+     * Handles Set/Rep transitions and Rest states.
+     */
+    private fun onRepCompleted(item: RoutineItem) {
+        val config = item.config
+        
+        Log.d(TAG, "✅ Rep $currentRep/${config.reps} completed! (Set $currentSet/${config.sets})")
+        viewModelScope.launch { _events.emit(PlayerEvent.PlayDing) }
+        
+        // Reset accumulated hold time for next rep
+        accumulatedHoldTimeMs = 0L
+        isTargetReached = false
+        wasTargetReached = false
+        frameProcessingEnabled = false
+        
+        if (currentRep < config.reps) {
+            // More reps to go in current set
+            currentRep++
+            startCurrentExercise()
+        } else {
+            // All reps done for current set
+            Log.d(TAG, "🎯 Set $currentSet/${config.sets} completed!")
+            
+            if (currentSet < config.sets) {
+                // More sets to go - enter Rest state
+                Log.d(TAG, "😴 Starting rest between sets...")
+                startSetRestTimer(item)
+            } else {
+                // All sets done for this exercise
+                Log.d(TAG, "🏆 Exercise ${item.exercise.name} fully completed!")
+                moveToNextExercise()
+            }
+        }
+    }
+    
+    /**
+     * Rest timer between sets of the same exercise.
+     */
+    private fun startSetRestTimer(item: RoutineItem) {
         timerJob?.cancel()
+        val restSeconds = item.config.restSeconds
+        
         timerJob = viewModelScope.launch {
-            var timeLeft = item.holdTimeSeconds
+            var timeLeft = restSeconds
             
             while (timeLeft > 0) {
-                // Check if paused
                 while (isPaused) {
                     delay(100)
                 }
                 
-                _uiState.value = PlayerUiState.Exercise(
-                    exerciseName = item.exercise.name,
-                    instruction = item.exercise.description,
-                    currentRep = currentRep,
-                    totalReps = item.targetRepetitions,
+                _uiState.value = PlayerUiState.Rest(
                     timeLeft = timeLeft,
-                    isPaused = isPaused
+                    nextExerciseName = "${item.exercise.name} - Set ${currentSet + 1}",
+                    currentSet = currentSet,
+                    totalSets = item.config.sets,
+                    isSetRest = true
                 )
                 
-                Log.d(TAG, "⏱️ Exercise: ${item.exercise.name} | Rep $currentRep/${item.targetRepetitions} | Time: $timeLeft")
+                Log.d(TAG, "😴 Set Rest: $timeLeft seconds | Next: Set ${currentSet + 1}")
                 
                 if (timeLeft <= 3) {
                     _events.emit(PlayerEvent.PlayTick)
@@ -193,38 +391,11 @@ class PlayerViewModel @Inject constructor(
                 timeLeft--
             }
             
-            // Rep completed!
-            Log.d(TAG, "✅ Rep $currentRep completed!")
-            _events.emit(PlayerEvent.PlayDing)
-            
-            onRepCompleted(item)
-        }
-    }
-    
-    /**
-     * Called when a single rep timer hits zero.
-     * Decides whether to rest, do next rep, or move to next exercise.
-     */
-    private fun onRepCompleted(item: RoutineItem) {
-        val totalReps = item.targetRepetitions
-        
-        if (currentRep < totalReps) {
-            // More reps to go
-            currentRep++
-            
-            val restTime = item.restBetweenSetsSeconds ?: 0
-            if (restTime > 0) {
-                // Go to rest state
-                startRestTimer(restTime, item.exercise.name)
-            } else {
-                // No rest, start next rep immediately
-                Log.d(TAG, "➡️ No rest configured, starting next rep immediately")
-                startCurrentExercise()
-            }
-        } else {
-            // All reps done for this exercise
-            Log.d(TAG, "🎯 All ${totalReps} reps completed for ${item.exercise.name}!")
-            moveToNextExercise()
+            // Rest completed, start next set
+            currentSet++
+            currentRep = 1
+            Log.d(TAG, "✅ Rest completed, starting Set $currentSet")
+            startCurrentExercise()
         }
     }
     
@@ -270,7 +441,30 @@ class PlayerViewModel @Inject constructor(
      * Advances to the next exercise in the routine.
      */
     private fun moveToNextExercise() {
+        // 1. SAVE RESULT OF COMPLETED EXERCISE
+        val currentItem = routineItems.getOrNull(currentExerciseIndex)
+        if (currentItem != null) {
+            val averageAccuracy = if (currentExerciseScores.isNotEmpty()) {
+                currentExerciseScores.average().toFloat()
+            } else {
+                null
+            }
+            
+            val totalRepsCompleted = currentItem.config.sets * currentItem.config.reps
+            sessionResults.add(
+                SessionItemRequest(
+                    exerciseId = currentItem.exercise.id,
+                    repsCompleted = totalRepsCompleted, 
+                    averageAccuracy = averageAccuracy
+                )
+            )
+            Log.d(TAG, "📊 Exercise Finished. Samples: ${currentExerciseScores.size}, Avg Accuracy: $averageAccuracy")
+        }
+        
+        // 2. RESET STATE FOR NEXT EXERCISE
+        currentExerciseScores.clear()
         currentExerciseIndex++
+        currentSet = 1
         currentRep = 1
         
         if (currentExerciseIndex >= routineItems.size) {
@@ -280,8 +474,8 @@ class PlayerViewModel @Inject constructor(
             val nextItem = routineItems[currentExerciseIndex]
             Log.d(TAG, "➡️ Moving to next exercise: ${nextItem.exercise.name}")
             
-            // Add a brief rest before next exercise (using its rest time or default)
-            val restTime = routineItems.getOrNull(currentExerciseIndex - 1)?.restBetweenSetsSeconds 
+            // Add a brief rest before next exercise
+            val restTime = routineItems.getOrNull(currentExerciseIndex - 1)?.config?.restSeconds 
                 ?: DEFAULT_REST_SECONDS
             
             if (restTime > 0) {
@@ -298,11 +492,16 @@ class PlayerViewModel @Inject constructor(
     private fun completeSession() {
         timerJob?.cancel()
         
+        // Handle case where we finish abruptly or the last exercise was just completed naturally in moveToNextExercise
+        // (moveToNextExercise already added the last result)
+        
         val totalTimeSeconds = (System.currentTimeMillis() - sessionStartTime) / 1000
         
         Log.d(TAG, "🎉 SESSION COMPLETED!")
+        Log.d(TAG, "  Routine ID: ${routine?.id}")
         Log.d(TAG, "  Total Exercises: ${routineItems.size}")
         Log.d(TAG, "  Total Time: ${totalTimeSeconds}s")
+        Log.d(TAG, "  Results: $sessionResults")
         
         _uiState.value = PlayerUiState.Completed(
             routineId = routine?.id ?: "",
@@ -313,6 +512,8 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             _events.emit(PlayerEvent.PlaySuccess)
         }
+        
+        // TODO: Trigger network upload here or in the UI layer based on the state
     }
     
     // ==================== PUBLIC CONTROLS ====================
@@ -324,6 +525,7 @@ class PlayerViewModel @Inject constructor(
         if (isPaused) return
         
         isPaused = true
+        frameProcessingEnabled = false
         Log.d(TAG, "⏸️ Session PAUSED")
         
         // Update UI state to show paused
@@ -340,6 +542,8 @@ class PlayerViewModel @Inject constructor(
         if (!isPaused) return
         
         isPaused = false
+        lastFrameTime = System.currentTimeMillis() // Reset frame time to avoid huge delta
+        frameProcessingEnabled = true
         Log.d(TAG, "▶️ Session RESUMED")
         
         // Update UI state
@@ -404,11 +608,39 @@ class PlayerViewModel @Inject constructor(
     override fun onResults(resultBundle: FaceLandmarkerHelper.ResultBundle) {
         _faceResult.value = resultBundle
         
-        val landmarks = resultBundle.result.faceLandmarks().firstOrNull()
-        if (landmarks != null) {
-            val score = symmetryCalculator.calculateSmileSymmetry(landmarks)
-            _symmetryScore.value = score
-            Log.d(TAG, "SYMMETRY SCORE: $score")
+        // Use Blendshapes for Clinical Accuracy (RFC-028)
+        val blendshapesOptional = resultBundle.result.faceBlendshapes()
+        if (blendshapesOptional.isPresent) {
+            val blendshapes = blendshapesOptional.get().firstOrNull()
+            
+            if (blendshapes != null) {
+                // Calculate Score using module-based strategy
+                var score = 0f
+                val currentItem = routineItems.getOrNull(currentExerciseIndex)
+                
+                if (currentItem != null) {
+                    val strategy = ExerciseStrategyFactory.getStrategy(currentItem.module)
+                        ?: ExerciseStrategyFactory.getStrategy(currentItem.exercise.keyName)
+                    if (strategy != null) {
+                        score = strategy.calculateScore(blendshapes, calibrationBaseline, currentItem.difficulty)
+                    }
+                }
+                
+                _symmetryScore.value = score
+                
+                // RFC-031: Process frame for clinical state machine
+                processFrame(score)
+                
+                // SAMPLING LOGIC (MOB-12)
+                val currentState = _uiState.value
+                if (currentState is PlayerUiState.Exercise && !currentState.isPaused) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastSampleTime >= 500) {
+                        currentExerciseScores.add(score)
+                        lastSampleTime = now
+                    }
+                }
+            }
         }
     }
 }

@@ -180,7 +180,7 @@ erDiagram
     EXERCISE_CATALOG {
         uuid id PK
         string key_name UK "Clave i18n (ej: exercise_smile)"
-        string type "AR_TRACKING | MANUAL | RELAXATION"
+        string type "ISOTONIC | ISOMETRIC | MANUAL | RELAXATION"
         string category "WARMUP | CORE | COOLDOWN"
         string asset_animation_url
         string asset_tutorial_video_url

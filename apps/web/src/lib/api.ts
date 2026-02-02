@@ -1,4 +1,4 @@
-import type { Patient, CreatePatientDto, UpdatePatientDto, Exercise, CreateRoutineDto, Routine } from '@symma/shared-types';
+import type { Patient, CreatePatientDto, UpdatePatientDto, Exercise, CreateRoutineDto, UpdateRoutineDto, Routine } from '@symma/shared-types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
 
@@ -131,7 +131,7 @@ export async function getRoutine(token: string, routineId: string): Promise<Rout
 export async function updateRoutine(
   token: string,
   routineId: string,
-  data: Partial<{ name: string; startDate: string; endDate: string; therapistNotes: string; items: { exerciseId: string; targetRepetitions: number; targetSets: number; holdTimeSeconds: number; restBetweenSetsSeconds?: number; }[] }>
+  data: UpdateRoutineDto
 ): Promise<Routine> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}`, token, {
     method: 'PUT',

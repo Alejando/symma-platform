@@ -8,30 +8,43 @@ import {
   IsUUID,
   IsInt,
   Min,
+
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
+
 export class CreateRoutineItemDto {
-  @IsUUID()
+  @IsString()
   @IsNotEmpty()
   exerciseId: string;
 
   @IsInt()
   @Min(1)
-  targetRepetitions: number;
+  sets: number;
 
   @IsInt()
   @Min(1)
-  targetSets: number;
+  repsPerSet: number;
 
   @IsInt()
   @Min(0)
-  holdTimeSeconds: number;
+  targetHoldSeconds: number;
 
   @IsOptional()
   @IsInt()
   @Min(0)
-  restBetweenSetsSeconds?: number;
+  restBetweenSets?: number;
+
+  @IsOptional()
+  difficultyLevel?: number;
+
+  @IsOptional()
+  strictMode?: boolean;
+
+  @IsOptional()
+  allowSkip?: boolean;
+
+
 }
 
 export class CreateRoutineDto {

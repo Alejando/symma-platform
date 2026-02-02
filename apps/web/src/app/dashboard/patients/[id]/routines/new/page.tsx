@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ExerciseCatalog } from '@/components/routines/exercise-catalog';
 import { RoutineBuilder, type BuilderItem } from '@/components/routines/routine-builder';
 import type { Exercise, Patient, CreateRoutineDto } from '@symma/shared-types';
+import { MobileModule, ExerciseType } from '@symma/shared-types';
 import { getExercises, getPatient, createRoutine } from '@/lib/api';
 
 import { use } from 'react';
@@ -44,14 +45,20 @@ export default function NewPatientRoutinePage({
     fetchData();
   }, [session?.user?.accessToken, id]);
 
+
+
   const handleAddExercise = (exercise: Exercise) => {
     const newItem: BuilderItem = {
       id: crypto.randomUUID(),
       exercise,
-      targetRepetitions: 10,
-      targetSets: 3,
-      holdTimeSeconds: exercise.defaultConfig?.holdTime || 5,
-      restBetweenSetsSeconds: exercise.defaultConfig?.restTime || 60,
+      sets: 3,
+      repsPerSet: 10,
+      targetHoldSeconds: exercise.defaultConfig?.holdTime || 5,
+      restBetweenSets: exercise.defaultConfig?.restTime || 60,
+      difficultyLevel: 1.0,
+      strictMode: false,
+      allowSkip: true,
+
     };
     setItems((prev) => [...prev, newItem]);
   };

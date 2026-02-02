@@ -107,17 +107,19 @@ private fun ExerciseView(
     onResume: () -> Unit,
     onSkip: () -> Unit
 ) {
-    // Feedback Logic
+    // Feedback Logic based on target reached state
     val feedbackText = when {
-        symmetryScore >= 80f -> "Excellent! Keep it up."
-        symmetryScore >= 50f -> "Almost there, steady..."
-        symmetryScore > 0f -> "Try to balance both sides." // Only show if we have some detection
+        state.isTargetReached -> "Hold it!"
+        symmetryScore >= 0.8f -> "Almost there!"
+        symmetryScore >= 0.5f -> "Keep going..."
+        symmetryScore > 0f -> "Try harder"
         else -> "Calibrating..."
     }
     
     val feedbackColor = when {
-        symmetryScore >= 80f -> Color.Green
-        symmetryScore >= 50f -> Color(0xFFFFC107) // Yellow
+        state.isTargetReached -> Color.Green
+        symmetryScore >= 0.8f -> Color(0xFFFFC107) // Yellow
+        symmetryScore >= 0.5f -> Color(0xFFFFC107)
         else -> Color.White
     }
 
@@ -129,7 +131,7 @@ private fun ExerciseView(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .height(400.dp) // Increased height to accommodate new UI
+                .height(450.dp)
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))
@@ -145,7 +147,7 @@ private fun ExerciseView(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // --- SYMMETRY FEEDBACK ---
+            // --- FEEDBACK ---
             Text(
                 text = feedbackText,
                 style = MaterialTheme.typography.titleMedium,
@@ -157,11 +159,11 @@ private fun ExerciseView(
             Spacer(modifier = Modifier.height(8.dp))
             
             QualityBar(
-                score = symmetryScore,
+                score = symmetryScore * 100f,
                 modifier = Modifier.padding(horizontal = 32.dp)
             )
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
             // Exercise Name
             Text(
@@ -182,14 +184,78 @@ private fun ExerciseView(
                 )
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             
-            // Metrics Row
+            // Metrics Row: Set | Timer/Rep | Rep
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceAround
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
+                // Set Counter
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "SERIES",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = "${state.currentSet}/${state.totalSets}",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Center: Hold Timer (Isometric) or Rep indicator
+                if (state.isIsometric && state.holdTimeTotal > 0) {
+                    // Circular hold timer for Isometric exercises
+                    Box(contentAlignment = Alignment.Center) {
+                        val progress = if (state.holdTimeTotal > 0) {
+                            1f - (state.holdTimeLeft.toFloat() / state.holdTimeTotal.toFloat())
+                        } else 0f
+                        
+                        CircularProgressIndicator(
+                            progress = { 1f },
+                            modifier = Modifier.size(80.dp),
+                            color = Color.White.copy(alpha = 0.2f),
+                            strokeWidth = 6.dp,
+                        )
+                        
+                        CircularProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.size(80.dp),
+                            color = if (state.isTargetReached) Color.Green else Color.White,
+                            strokeWidth = 6.dp,
+                        )
+                        
+                        Text(
+                            text = "${state.holdTimeLeft}s",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = if (state.holdTimeLeft <= 3 && state.isTargetReached) Color.Green else Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else {
+                    // For Isotonic, show a target indicator
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(80.dp)
+                            .background(
+                                color = if (state.isTargetReached) Color.Green.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.1f),
+                                shape = CircleShape
+                            )
+                    ) {
+                        Text(
+                            text = if (state.isTargetReached) "✓" else "○",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = if (state.isTargetReached) Color.Green else Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                
                 // Rep Counter
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
@@ -204,18 +270,9 @@ private fun ExerciseView(
                         fontWeight = FontWeight.Bold
                     )
                 }
-
-                // Huge Timer
-                Text(
-                    text = "${state.timeLeft}s",
-                    style = MaterialTheme.typography.displayMedium,
-                    color = if (state.timeLeft <= 3) Color.Red else Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 56.sp
-                )
             }
             
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             
             // Controls
             Row(
@@ -345,133 +402,6 @@ private fun GetReadyView(state: PlayerUiState.GetReady) {
 }
 
 @Composable
-private fun ExerciseView(
-    state: PlayerUiState.Exercise,
-    onPause: () -> Unit,
-    onResume: () -> Unit,
-    onSkip: () -> Unit
-) {
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Gradient Scrim at Bottom
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .height(300.dp)
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))
-                    )
-                )
-        )
-
-        // Bottom Content
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Exercise Name
-            Text(
-                text = state.exerciseName,
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            
-            if (!state.instruction.isNullOrBlank()) {
-                Text(
-                    text = state.instruction,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.8f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // Metrics Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceAround
-            ) {
-                // Rep Counter
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "REP",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.Gray
-                    )
-                    Text(
-                        text = "${state.currentRep}/${state.totalReps}",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // Huge Timer
-                Text(
-                    text = "${state.timeLeft}s",
-                    style = MaterialTheme.typography.displayMedium,
-                    color = if (state.timeLeft <= 3) Color.Red else Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 56.sp
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            // Controls
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Pause/Resume
-                FilledIconButton(
-                    onClick = { if (state.isPaused) onResume() else onPause() },
-                    modifier = Modifier.size(64.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = Color.White,
-                        contentColor = Color.Black
-                    )
-                ) {
-                    Icon(
-                        imageVector = if (state.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                        contentDescription = if (state.isPaused) "Resume" else "Pause",
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-                
-                // Skip (Secondary)
-                Button(
-                    onClick = onSkip,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White.copy(alpha = 0.2f),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text("Skip")
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Icon(
-                        imageVector = Icons.Default.SkipNext,
-                        contentDescription = "Skip Exercise",
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun RestView(
     state: PlayerUiState.Rest,
     onSkip: () -> Unit
@@ -484,7 +414,7 @@ private fun RestView(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .height(300.dp)
+                .height(350.dp)
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
@@ -502,6 +432,16 @@ private fun RestView(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Show set progress if this is rest between sets
+            if (state.isSetRest && state.totalSets > 1) {
+                Text(
+                    text = "Set ${state.currentSet}/${state.totalSets} Complete",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            
             Text(
                 text = "REST",
                 style = MaterialTheme.typography.headlineLarge,

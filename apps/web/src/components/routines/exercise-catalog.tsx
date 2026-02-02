@@ -111,7 +111,7 @@ export function ExerciseCatalog({ exercises, onAddExercise }: ExerciseCatalogPro
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-800 truncate">{exercise.name}</p>
                 <p className="text-xs text-slate-500 truncate">
-                  {exercise.category} • {exercise.type.replace('_', ' ')}
+                  {exercise.category} • {exercise.type.replace('_', ' ')} • {exercise.mobileModule?.replace('_', ' ') || 'No Module'}
                 </p>
               </div>
               <button

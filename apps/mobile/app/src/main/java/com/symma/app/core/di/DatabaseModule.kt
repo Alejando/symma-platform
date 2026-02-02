@@ -1,6 +1,8 @@
 package com.symma.app.core.di
 
 import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -47,6 +49,12 @@ object DatabaseModule {
     @Singleton
     fun provideRoutineDao(database: SymmaDatabase): RoutineDao {
         return database.routineDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideSharedPreferences(app: Application): SharedPreferences {
+        return app.getSharedPreferences("symma_prefs", Context.MODE_PRIVATE)
     }
 }
 

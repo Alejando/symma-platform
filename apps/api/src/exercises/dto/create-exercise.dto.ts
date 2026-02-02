@@ -1,5 +1,7 @@
 import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUrl, ValidateIf } from 'class-validator';
-import { ExerciseType, ExerciseCategory } from '@prisma/client';
+import { ExerciseType, ExerciseCategory, MobileModule } from '@prisma/client';
+
+const MOBILE_SUPPORTED_TYPES: ExerciseType[] = [ExerciseType.ISOTONIC, ExerciseType.ISOMETRIC];
 
 export class CreateExerciseDto {
   @IsString()
@@ -32,4 +34,9 @@ export class CreateExerciseDto {
 
   @IsOptional()
   defaultConfig?: any;
+
+  @ValidateIf((o) => MOBILE_SUPPORTED_TYPES.includes(o.type))
+  @IsEnum(MobileModule)
+  @IsOptional()
+  mobileModule?: MobileModule;
 }

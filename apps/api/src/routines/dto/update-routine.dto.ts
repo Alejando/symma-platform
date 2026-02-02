@@ -6,36 +6,48 @@ import {
   IsInt,
   Min,
   IsOptional,
+  IsString,
+
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateRoutineDto } from './create-routine.dto';
+
 
 export class UpdateRoutineItemDto {
   @IsOptional()
   @IsUUID()
   id?: string; // Existing item ID (for update), undefined for new items
 
-  @IsUUID()
+  @IsString()
   exerciseId: string;
 
   @IsInt()
   @Min(1)
-  targetRepetitions: number;
+  sets: number;
 
   @IsInt()
   @Min(1)
-  targetSets: number;
+  repsPerSet: number;
 
   @IsInt()
   @Min(0)
-  @IsInt()
-  @Min(0)
-  holdTimeSeconds: number;
+  targetHoldSeconds: number;
 
   @IsOptional()
   @IsInt()
   @Min(0)
-  restBetweenSetsSeconds?: number;
+  restBetweenSets?: number;
+
+  @IsOptional()
+  difficultyLevel?: number;
+
+  @IsOptional()
+  strictMode?: boolean;
+
+  @IsOptional()
+  allowSkip?: boolean;
+
+
 }
 
 export class UpdateRoutineDto extends PartialType(

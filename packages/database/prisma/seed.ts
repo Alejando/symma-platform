@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, ExerciseType, MobileModule, RoutineStatus } from '@prisma/client';
 import { faker } from '@faker-js/faker/locale/es_MX';
 import * as bcrypt from 'bcrypt';
 
@@ -6,20 +6,90 @@ const prisma = new PrismaClient();
 
 // Configuration
 const NUM_PATIENTS = 10;
-const SESSIONS_PER_ROUTINE = 14; // 2 weeks of sessions
+const SESSIONS_PER_ROUTINE = 14;
 
-// Deterministic UUIDs for seed data (allows idempotent upsert for core entities)
+// Deterministic UUIDs
 const SEED_IDS = {
   clinic: '00000000-0000-0000-0000-000000000001',
 };
 
+// Typed Exercise Data for Seeding
+interface SeedExercise {
+  keyName: string;
+  name: string;
+  description: string;
+  type: ExerciseType;
+  category: 'WARMUP' | 'CORE' | 'COOLDOWN';
+  defaultConfig: { threshold?: number; holdTime?: number; restTime?: number };
+  mobileModule: MobileModule;
+}
+
+const exercises: SeedExercise[] = [
+  {
+    keyName: 'exercise_smile_stretch',
+    name: 'Estiramiento de Sonrisa',
+    description: 'Tira suavemente las comisuras de la boca hacia las orejas, mantén y suelta.',
+    type: 'ISOMETRIC',
+    category: 'CORE',
+    defaultConfig: { threshold: 0.5, holdTime: 5, restTime: 60 },
+    mobileModule: 'SMILE',
+  },
+  {
+    keyName: 'exercise_jaw_release',
+    name: 'Liberación de Mandíbula',
+    description: 'Abre la boca ampliamente para relajar los músculos de la mandíbula.',
+    type: 'RELAXATION',
+    category: 'COOLDOWN',
+    defaultConfig: { threshold: 0.3, holdTime: 3, restTime: 60 },
+    mobileModule: 'JAW',
+  },
+  {
+    keyName: 'exercise_brow_raise',
+    name: 'Elevación de Cejas',
+    description: 'Levanta las cejas lo más alto posible, mantén y relaja.',
+    type: 'ISOMETRIC',
+    category: 'CORE',
+    defaultConfig: { threshold: 0.6, holdTime: 5, restTime: 60 },
+    mobileModule: 'BROWS',
+  },
+  {
+    keyName: 'exercise_eye_squeeze',
+    name: 'Cierre de Ojos',
+    description: 'Cierra los ojos con fuerza, mantén por unos segundos, luego suelta.',
+    type: 'MANUAL',
+    category: 'WARMUP',
+    defaultConfig: { threshold: 0.4, holdTime: 3, restTime: 60 },
+    mobileModule: 'EYES',
+  },
+  {
+    keyName: 'exercise_cheek_puff',
+    name: 'Inflar Mejillas',
+    description: 'Infla las mejillas con aire, mantén y suelta.',
+<<<<<<< /Users/alejandroprado/pratum/symma-platform/packages/database/prisma/seed.ts
+    type: 'ISOMETRIC',
+=======
+    type: 'ISOTONIC',
+>>>>>>> /Users/alejandroprado/.windsurf/worktrees/symma-platform/symma-platform-48b52386/packages/database/prisma/seed.ts
+    category: 'CORE',
+    defaultConfig: { threshold: 0.5, holdTime: 5, restTime: 60 },
+    mobileModule: 'SMILE',
+  },
+  {
+    keyName: 'exercise_lip_pucker',
+    name: 'Fruncir Labios',
+    description: 'Frunce los labios como si fueras a dar un beso.',
+    type: 'ISOMETRIC',
+    category: 'CORE',
+    defaultConfig: { threshold: 0.55, holdTime: 5, restTime: 50 },
+    mobileModule: 'KISS',
+  },
+];
+
 async function main(): Promise<void> {
   console.log('🌱 Seeding database with faker data...');
-
-  // Set seed for reproducible data
   faker.seed(123);
 
-  // Create default clinic
+  // 1. Clinic
   const clinic = await prisma.clinic.upsert({
     where: { id: SEED_IDS.clinic },
     update: {},
@@ -30,19 +100,13 @@ async function main(): Promise<void> {
       contactPhone: faker.phone.number({ style: 'national' }),
     },
   });
+  console.log(`✅ Clinic: ${clinic.name}`);
 
-  console.log(`✅ Clinic created: ${clinic.name}`);
-
-  // Hash admin password
-  const saltRounds = 10;
-  const passwordHash = await bcrypt.hash('admin123', saltRounds);
-
-  // Create admin user
+  // 2. Admin Therapist
+  const passwordHash = await bcrypt.hash('admin123', 10);
   const admin = await prisma.therapist.upsert({
     where: { email: 'admin@symma.com' },
-    update: {
-      passwordHash,
-    },
+    update: { passwordHash },
     create: {
       email: 'admin@symma.com',
       passwordHash,
@@ -53,233 +117,270 @@ async function main(): Promise<void> {
       clinicId: clinic.id,
     },
   });
+  console.log(`✅ Admin: ${admin.email}`);
 
-  console.log(`✅ Admin user created: ${admin.email}`);
-
-  // Create exercise catalog
-  const exercises = [
-    {
-      keyName: 'exercise_smile_stretch',
-      name: 'Estiramiento de Sonrisa',
-      description: 'Tira suavemente las comisuras de la boca hacia las orejas, mantén y suelta. Enfócate en la relajación.',
-      type: 'AR_TRACKING' as const,
-      category: 'CORE' as const,
-      defaultConfig: { threshold: 0.5, holdTime: 5, restTime: 60 },
-    },
-    {
-      keyName: 'exercise_jaw_release',
-      name: 'Liberación de Mandíbula',
-      description: 'Abre la boca ampliamente para relajar los músculos de la mandíbula, luego cierra lentamente. Repite varias veces.',
-      type: 'RELAXATION' as const,
-      category: 'COOLDOWN' as const,
-      defaultConfig: { threshold: 0.3, holdTime: 3, restTime: 60 },
-    },
-    {
-      keyName: 'exercise_brow_raise',
-      name: 'Elevación de Cejas',
-      description: 'Levanta las cejas lo más alto posible, mantén y relaja. Enfócate en la simetría.',
-      type: 'AR_TRACKING' as const,
-      category: 'CORE' as const,
-      defaultConfig: { threshold: 0.6, holdTime: 5, restTime: 60 },
-    },
-    {
-      keyName: 'exercise_eye_squeeze',
-      name: 'Cierre de Ojos',
-      description: 'Cierra los ojos con fuerza, mantén por unos segundos, luego suelta. Ayuda a fortalecer los músculos del párpado.',
-      type: 'MANUAL' as const,
-      category: 'WARMUP' as const,
-      defaultConfig: { threshold: 0.4, holdTime: 3, restTime: 60 },
-    },
-    {
-      keyName: 'exercise_cheek_puff',
-      name: 'Inflar Mejillas',
-      description: 'Infla las mejillas con aire, mantén la posición y luego suelta lentamente. Fortalece los músculos buccinador.',
-      type: 'AR_TRACKING' as const,
-      category: 'CORE' as const,
-      defaultConfig: { threshold: 0.5, holdTime: 4, restTime: 45 },
-    },
-    {
-      keyName: 'exercise_lip_pucker',
-      name: 'Fruncir Labios',
-      description: 'Frunce los labios como si fueras a dar un beso, mantén y relaja. Trabaja los músculos orbiculares.',
-      type: 'AR_TRACKING' as const,
-      category: 'CORE' as const,
-      defaultConfig: { threshold: 0.55, holdTime: 5, restTime: 50 },
-    },
-  ];
-
+  // 3. Exercises
   const createdExercises = [];
-  for (const exercise of exercises) {
+  for (const ex of exercises) {
     const e = await prisma.exercise.upsert({
-      where: { keyName: exercise.keyName },
-      update: exercise,
-      create: exercise,
+      where: { keyName: ex.keyName },
+      update: ex,
+      create: ex,
     });
-    createdExercises.push(e);
+    createdExercises.push({ ...e, mobileModule: ex.mobileModule }); // Keep track of module
   }
+  console.log(`✅ Exercises: ${createdExercises.length}`);
 
-  console.log(`✅ Exercise catalog created: ${exercises.length} exercises`);
-
-  // Clean up old test data before creating new patients
-  console.log('🧹 Cleaning up old seed data...');
+  // Clean old data
+  console.log('🧹 Cleaning old data...');
   await prisma.session.deleteMany({});
   await prisma.routineItem.deleteMany({});
   await prisma.routine.deleteMany({});
-  await prisma.patient.deleteMany({});
+  // Only delete random patients, keep specific test ones managed in separate functions if possible
+  await prisma.patient.deleteMany({
+    where: {
+      NOT: {
+        email: { in: ['patient@symma.com', 'eyes@symma.com'] }
+      }
+    }
+  });
 
-  // Create multiple realistic patients
-  const diagnoses = [
-    'Parálisis Facial - Lado Izquierdo',
-    'Parálisis Facial - Lado Derecho',
-    'Parálisis de Bell',
-    'Síndrome de Ramsay Hunt',
-    'Parálisis Facial Bilateral',
-    'Parálisis Facial Post-Quirúrgica',
-  ];
-
-  const routineNames = [
-    'Fase 1 - Recuperación Inicial',
-    'Fase 2 - Fortalecimiento',
-    'Fase 3 - Coordinación',
-    'Rehabilitación Facial Intensiva',
-    'Protocolo de Mantenimiento',
-  ];
-
-  const createdPatients = [];
-
+  // 4. Patients
+  const patients = [];
   for (let i = 0; i < NUM_PATIENTS; i++) {
     const firstName = faker.person.firstName();
     const lastName = faker.person.lastName();
-    const gender = faker.helpers.arrayElement(['MALE', 'FEMALE'] as const);
+    const sex = faker.person.sexType();
+    const gender = sex === 'female' ? 'FEMALE' : 'MALE';
 
-    const patient = await prisma.patient.create({
+    const p = await prisma.patient.create({
       data: {
         firstName,
         lastName,
         email: faker.internet.email({ firstName, lastName }).toLowerCase(),
         therapistId: admin.id,
-        status: faker.helpers.weightedArrayElement([
-          { value: 'ACTIVE' as const, weight: 8 },
-          { value: 'INACTIVE' as const, weight: 1 },
-          { value: 'ARCHIVED' as const, weight: 1 },
-        ]),
-        dateOfBirth: faker.date.birthdate({ min: 25, max: 75, mode: 'age' }),
+        status: faker.helpers.arrayElement(['ACTIVE', 'INACTIVE', 'ARCHIVED']),
+        dateOfBirth: faker.date.birthdate({ min: 18, max: 80, mode: 'age' }),
         gender,
         phoneNumber: faker.phone.number({ style: 'national' }),
-        diagnosis: faker.helpers.arrayElement(diagnoses),
-        initialParalysisDegree: faker.number.int({ min: 2, max: 6 }),
-        clinicalNotes: faker.helpers.maybe(() => faker.lorem.paragraph(), { probability: 0.6 }),
+        diagnosis: faker.helpers.arrayElement(['Parálisis de Bell', 'Síndrome de Ramsay Hunt', 'Parálisis Facial']),
+        initialParalysisDegree: faker.number.int({ min: 1, max: 6 }),
+        clinicalNotes: faker.lorem.sentence(),
         emergencyContactName: faker.person.fullName(),
         emergencyContactPhone: faker.phone.number({ style: 'national' }),
       },
     });
+    patients.push(p);
 
-    createdPatients.push(patient);
-    console.log(`✅ Patient created: ${patient.firstName} ${patient.lastName}`);
-
-    // Create routine for this patient (80% chance)
-    if (faker.datatype.boolean({ probability: 0.8 })) {
-      const routine = await createPatientRoutine(
-        patient.id,
-        createdExercises,
-        routineNames
-      );
-
-      // Create sessions for this routine (varies by patient)
-      const numSessions = faker.number.int({ min: 5, max: SESSIONS_PER_ROUTINE });
-      await seedPatientSessions(routine.id, numSessions);
+    // Routines for 80% of patients
+    if (faker.datatype.boolean(0.8)) {
+      await createRandomRoutine(p.id, createdExercises);
     }
   }
+  console.log(`✅ Created ${patients.length} random patients`);
 
-  console.log(`🎉 Seeding completed! Created ${createdPatients.length} patients`);
+  // 5. Special RFC Scenarios
+  await seedMobileRFC029(admin.id);
+  await seedMobileRFC030(admin.id);
 }
 
-async function createPatientRoutine(
-  patientId: string,
-  exercises: { id: string }[],
-  routineNames: string[]
-) {
+async function createRandomRoutine(patientId: string, availableExercises: (SeedExercise & { id: string })[]) {
   const startDate = faker.date.recent({ days: 30 });
-  const hasEndDate = faker.datatype.boolean({ probability: 0.3 });
+
+  const selectedExercises = faker.helpers.arrayElements(availableExercises, { min: 2, max: 5 });
 
   const routine = await prisma.routine.create({
     data: {
       patientId,
-      name: faker.helpers.arrayElement(routineNames),
+      name: faker.helpers.arrayElement(['Fase 1', 'Fase 2', 'Mantenimiento', 'Recuperación']),
       startDate,
-      endDate: hasEndDate
-        ? faker.date.soon({ days: 60, refDate: startDate })
-        : null,
-      status: faker.helpers.weightedArrayElement([
-        { value: 'ACTIVE' as const, weight: 9 },
-        { value: 'ARCHIVED' as const, weight: 1 },
-      ]),
-      therapistNotes: faker.helpers.maybe(
-        () => faker.lorem.sentences({ min: 1, max: 3 }),
-        { probability: 0.5 }
-      ),
+      status: 'ACTIVE',
       items: {
-        create: faker.helpers
-          .arrayElements(exercises, { min: 2, max: 4 })
-          .map((exercise, index) => ({
-            exerciseId: exercise.id,
-            orderIndex: index,
-            targetRepetitions: faker.helpers.arrayElement([8, 10, 12, 15]),
-            targetSets: faker.helpers.arrayElement([2, 3, 4]),
-            holdTimeSeconds: faker.helpers.arrayElement([3, 5, 7, 10]),
-            restBetweenSetsSeconds: faker.helpers.arrayElement([30, 45, 60, 90]),
-          })),
+        create: selectedExercises.map((ex, idx) => ({
+          exerciseId: ex.id,
+          orderIndex: idx,
+          // RFC-030 Fields
+          sets: faker.number.int({ min: 1, max: 3 }),
+          repsPerSet: faker.helpers.arrayElement([8, 10, 12, 15]),
+          targetHoldSeconds: ex.defaultConfig.holdTime || 5,
+          restBetweenSets: ex.defaultConfig.restTime || 60,
+          difficultyLevel: faker.number.float({ min: 0.5, max: 1.5, fractionDigits: 1 }),
+          strictMode: faker.datatype.boolean(),
+          allowSkip: faker.datatype.boolean(),
+
+        })),
       },
     },
   });
 
-  console.log(`  ↳ Routine created: ${routine.name}`);
+  // Sessions
+  if (faker.datatype.boolean(0.7)) {
+    const numSessions = faker.number.int({ min: 1, max: 10 });
+    const sessionsData = [];
+    for (let i = 0; i < numSessions; i++) {
+      sessionsData.push({
+        routineId: routine.id,
+        date: faker.date.recent({ days: 20, refDate: new Date() }),
+        durationSeconds: faker.number.int({ min: 300, max: 1200 }),
+        score: faker.number.float({ min: 0.1, max: 0.9, fractionDigits: 2 }),
+        isSynced: true
+      });
+    }
+    await prisma.session.createMany({ data: sessionsData });
+  }
+
   return routine;
 }
 
-async function seedPatientSessions(routineId: string, numSessions: number) {
-  const sessions = [];
-  const today = new Date();
+async function seedMobileRFC029(therapistId: string) {
+  console.log('📱 Seeding RFC-029 (Calibration)...');
+  const PATIENT_ID = 'rfc-029-patient-test-id';
+  const accessCodeHash = await bcrypt.hash('123456', 10);
 
-  for (let i = 0; i < numSessions; i++) {
-    const daysAgo = numSessions - 1 - i;
-    const date = new Date(today);
-    date.setDate(date.getDate() - daysAgo);
-
-    // Progress simulation: scores improve over time
-    let minScore = 0.3;
-    let maxScore = 0.5;
-
-    const progress = i / numSessions;
-    if (progress > 0.7) {
-      minScore = 0.7;
-      maxScore = 0.9;
-    } else if (progress > 0.4) {
-      minScore = 0.5;
-      maxScore = 0.7;
+  const patient = await prisma.patient.upsert({
+    where: { id: PATIENT_ID },
+    update: { accessCodeHash },
+    create: {
+      id: PATIENT_ID,
+      email: 'patient@symma.com',
+      firstName: 'Test',
+      lastName: 'Patient',
+      therapistId,
+      status: 'ACTIVE',
+      accessCodeHash,
+      diagnosis: 'RFC-029 Test',
     }
+  });
 
-    const score = faker.number.float({ min: minScore, max: maxScore, fractionDigits: 2 });
+  // Ensure exercises exist for RFC-029 (using upsert in loop)
+  const exercises = [
+    { id: 'smile_teeth', variable: 'SMILE', name: 'Smile Teeth' },
+    { id: 'brows_up', variable: 'BROWS', name: 'Brows Up' },
+    { id: 'jaw_open', variable: 'JAW', name: 'Jaw Open' },
+    { id: 'kiss', variable: 'KISS', name: 'Kiss' },
+    { id: 'blink', variable: 'EYES', name: 'Blink' },
+  ];
 
-    sessions.push({
-      routineId,
-      date,
-      durationSeconds: faker.number.int({ min: 300, max: 900 }), // 5-15 mins
-      score,
-      isSynced: true,
+  for (const ex of exercises) {
+    await prisma.exercise.upsert({
+      where: { id: ex.id },
+      create: {
+        id: ex.id,
+        keyName: ex.id + '_rfc029',
+        name: ex.name,
+        description: 'Automatic Exercise',
+<<<<<<< /Users/alejandroprado/pratum/symma-platform/packages/database/prisma/seed.ts
+        type: 'ISOMETRIC',
+=======
+        type: 'ISOTONIC',
+>>>>>>> /Users/alejandroprado/.windsurf/worktrees/symma-platform/symma-platform-48b52386/packages/database/prisma/seed.ts
+        category: 'CORE',
+        mobileModule: ex.variable as MobileModule
+      },
+      update: {}
     });
   }
 
-  await prisma.session.createMany({
-    data: sessions,
+  // Clear old routine
+  await prisma.routine.deleteMany({ where: { patientId: PATIENT_ID } });
+
+  await prisma.routine.create({
+    data: {
+      patientId: PATIENT_ID,
+      name: 'Full Calibration Protocol',
+      startDate: new Date(),
+      status: 'ACTIVE',
+      items: {
+        create: exercises.map((ex, i) => ({
+          exerciseId: ex.id,
+          orderIndex: i,
+          sets: 3,
+          repsPerSet: 10,
+          targetHoldSeconds: 5,
+          restBetweenSets: 30,
+          difficultyLevel: 1.0,
+          strictMode: false,
+          allowSkip: true,
+
+        }))
+      }
+    }
+  });
+  console.log('  ✅ RFC-029 Data Ready');
+}
+
+async function seedMobileRFC030(therapistId: string) {
+  console.log('👁️ Seeding RFC-030 (Eyes Split)...');
+  const PATIENT_ID = 'rfc-030-patient-eyes';
+  const accessCodeHash = await bcrypt.hash('123456', 10);
+
+  const patient = await prisma.patient.upsert({
+    where: { id: PATIENT_ID },
+    update: { accessCodeHash },
+    create: {
+      id: PATIENT_ID,
+      email: 'eyes@symma.com',
+      firstName: 'Eye',
+      lastName: 'Therapy',
+      therapistId,
+      status: 'ACTIVE',
+      accessCodeHash,
+      diagnosis: 'Eye Ptosis',
+    }
   });
 
-  console.log(`    ↳ Created ${sessions.length} sessions`);
+  // Create special exercises
+  const eyeExercises = [
+    { id: 'close_eyes_rfc030', module: 'EYES', name: 'Close Eyes Force' },
+    { id: 'open_eyes_rfc030', module: 'EYES_INVERSE', name: 'Open Eyes Surprise' }
+  ];
+
+  for (const ex of eyeExercises) {
+    await prisma.exercise.upsert({
+      where: { id: ex.id },
+      create: {
+        id: ex.id,
+        keyName: ex.id,
+        name: ex.name,
+        description: 'Eye specialized exercise',
+        type: 'ISOMETRIC',
+        category: 'CORE',
+        mobileModule: ex.module as MobileModule
+      },
+      update: {}
+    });
+  }
+
+  await prisma.routine.deleteMany({ where: { patientId: PATIENT_ID } });
+
+  await prisma.routine.create({
+    data: {
+      patientId: PATIENT_ID,
+      name: 'Eye Therapy Protocol',
+      startDate: new Date(),
+      status: 'ACTIVE',
+      items: {
+        create: [
+          {
+            exerciseId: 'close_eyes_rfc030',
+            orderIndex: 0,
+            sets: 2, repsPerSet: 5, targetHoldSeconds: 3, restBetweenSets: 10, difficultyLevel: 1.0, strictMode: true, allowSkip: false
+          },
+          {
+            exerciseId: 'open_eyes_rfc030',
+            orderIndex: 1,
+            sets: 2, repsPerSet: 10, targetHoldSeconds: 0, restBetweenSets: 10, difficultyLevel: 1.0, strictMode: false, allowSkip: true
+          }
+        ]
+      }
+    }
+  });
+  console.log('  ✅ RFC-030 Data Ready');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seeding failed:', e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {

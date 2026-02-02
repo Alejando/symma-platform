@@ -7,5 +7,34 @@ data class RoutineItem(
     val targetSets: Int,
     val holdTimeSeconds: Int,
     val restBetweenSetsSeconds: Int?,
+    val difficulty: Float = 1.0f,
     val exercise: Exercise
-)
+) {
+    /**
+     * Maps backend flat columns to structured ExerciseConfig.
+     */
+    val config: ExerciseConfig
+        get() = ExerciseConfig(
+            exerciseType = if (holdTimeSeconds > 0) ExerciseType.ISOMETRIC else ExerciseType.ISOTONIC,
+            sets = targetSets.coerceAtLeast(1),
+            reps = targetRepetitions.coerceAtLeast(1),
+            restSeconds = restBetweenSetsSeconds ?: 5,
+            holdSeconds = holdTimeSeconds.coerceAtLeast(0),
+            strictMode = false,
+            allowSkip = true
+        )
+
+    /**
+     * Maps exercise keyName to MobileModule for strategy selection.
+     */
+    val module: MobileModule
+        get() = when (exercise.keyName.lowercase()) {
+            "eyes", "eye_close", "blink" -> MobileModule.EYES
+            "eyes_inverse", "eye_open", "wide_eyes" -> MobileModule.EYES_INVERSE
+            "brows", "eyebrows", "brow_raise" -> MobileModule.BROWS
+            "jaw", "jaw_open", "mouth_open" -> MobileModule.JAW
+            "smile", "mouth_smile" -> MobileModule.SMILE
+            "kiss", "pucker", "duck_face" -> MobileModule.KISS
+            else -> MobileModule.UNKNOWN
+        }
+}

@@ -10,6 +10,7 @@ import { RoutinesModule } from './routines/routines.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { MobileModule } from './mobile/mobile.module';
+import { SessionsModule } from './sessions/sessions.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { MobileModule } from './mobile/mobile.module';
     AnalyticsModule,
     DashboardModule,
     MobileModule,
+    SessionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

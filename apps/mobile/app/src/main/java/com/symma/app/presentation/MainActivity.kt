@@ -15,7 +15,7 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.symma.app.presentation.auth.LoginScreen
 import com.symma.app.presentation.home.HomeScreen
-
+import com.symma.app.presentation.features.calibration.CalibrationScreen
 import com.symma.app.presentation.player.PlayerScreen
 import com.symma.app.presentation.summary.SummaryScreen
 import com.symma.app.core.theme.SymmaTheme
@@ -54,7 +54,17 @@ class MainActivity : ComponentActivity() {
                         composable("home") {
                             HomeScreen(
                                 onNavigateToSession = {
-                                    navController.navigate("player")
+                                    navController.navigate("calibration")
+                                }
+                            )
+                        }
+
+                        composable("calibration") {
+                            CalibrationScreen(
+                                onCalibrationComplete = {
+                                    navController.navigate("player") {
+                                        popUpTo("calibration") { inclusive = true }
+                                    }
                                 }
                             )
                         }

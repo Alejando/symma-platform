@@ -70,6 +70,16 @@ model Patient {
 // Rehabilitation Engine Models
 // ===========================================
 
+
+enum MobileModule {
+  EYES
+  EYES_INVERSE
+  BROWS
+  JAW
+  SMILE
+  KISS
+}
+
 model Exercise {
   id                    String           @id @default(uuid())
   keyName               String           @unique @map("key_name")
@@ -77,11 +87,13 @@ model Exercise {
   description           String?
   type                  ExerciseType
   category              ExerciseCategory
+  mobileModule          MobileModule?    @map("mobile_module")
   assetAnimationUrl     String?          @map("asset_animation_url")
   assetTutorialVideoUrl String?          @map("asset_tutorial_video_url")
   defaultConfig         Json?            @map("default_config")
   createdAt             DateTime         @default(now()) @map("created_at")
   routineItems          RoutineItem[]
+  sessionItems          SessionItem[]
 
   @@map("exercises")
 }
@@ -104,17 +116,20 @@ model Routine {
 }
 
 model RoutineItem {
-  id                     String   @id @default(uuid())
-  routineId              String   @map("routine_id")
-  exerciseId             String   @map("exercise_id")
-  orderIndex             Int      @map("order_index")
-  targetRepetitions      Int      @map("target_repetitions")
-  targetSets             Int      @map("target_sets")
-  holdTimeSeconds        Int      @map("hold_time_seconds")
-  successThreshold       Float?   @map("success_threshold")
-  restBetweenSetsSeconds Int      @default(60) @map("rest_between_sets_seconds")
-  routine                Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
-  exercise               Exercise @relation(fields: [exerciseId], references: [id])
+  id                String       @id @default(uuid())
+  routineId         String       @map("routine_id")
+  exerciseId        String       @map("exercise_id")
+  orderIndex        Int          @map("order_index")
+
+  sets              Int          @default(1)
+  repsPerSet        Int          @default(10) @map("reps_per_set")
+  targetHoldSeconds Int          @default(0) @map("target_hold_seconds")
+  difficultyLevel   Float        @default(1.0) @map("difficulty_level")
+  restBetweenSets   Int          @default(10) @map("rest_between_sets")
+  strictMode        Boolean      @default(false) @map("strict_mode")
+  allowSkip         Boolean      @default(true) @map("allow_skip")
+  routine           Routine      @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercise          Exercise     @relation(fields: [exerciseId], references: [id])
 
   @@map("routine_items")
 }
@@ -141,7 +156,8 @@ enum PatientStatus {
 }
 
 enum ExerciseType {
-  AR_TRACKING
+  ISOTONIC
+  ISOMETRIC
   MANUAL
   RELAXATION
 }
@@ -163,9 +179,24 @@ model Session {
   date            DateTime
   durationSeconds Int      @map("duration_seconds")
   score           Float
-  isSynced        Boolean  @default(false) @map("is_synced")
-  createdAt       DateTime @default(now()) @map("created_at")
-  routine         Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  items           SessionItem[]
+  isSynced        Boolean       @default(false) @map("is_synced")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  routine         Routine       @relation(fields: [routineId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
+}
+
+model SessionItem {
+  id              String   @id @default(uuid())
+  sessionId       String   @map("session_id")
+  exerciseId      String   @map("exercise_id")
+  repsCompleted   Int      @map("reps_completed")
+  difficulty      Int      @default(0)
+  averageAccuracy Float?   @map("average_accuracy") // RFC-026: AI Metric
+  seriesData      Json?    @map("series_data")      // RFC-030: Detailed Series Data
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise        Exercise @relation(fields: [exerciseId], references: [id])
+
+  @@map("session_items")
 }

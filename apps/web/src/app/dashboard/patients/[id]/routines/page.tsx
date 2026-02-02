@@ -131,7 +131,7 @@ export default function PatientRoutinesPage({
                       >
                         {item.exercise?.name}
                         <span className="text-[#0d9488]/60 text-xs ml-1">
-                          {item.targetSets}x{item.targetRepetitions}
+                          {item.sets}x{item.repsPerSet}
                         </span>
                       </span>
                     ))}

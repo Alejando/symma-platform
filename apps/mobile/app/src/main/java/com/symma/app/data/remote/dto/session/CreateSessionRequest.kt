@@ -24,5 +24,8 @@ data class SessionItemRequest(
     val repsCompleted: Int,
     
     @SerializedName("difficulty")
-    val difficulty: Int = 0 // Optional for now
+    val difficulty: Int = 0, // Optional for now
+
+    @SerializedName("averageAccuracy")
+    val averageAccuracy: Float? = null // RFC-026: AI Metric
 )

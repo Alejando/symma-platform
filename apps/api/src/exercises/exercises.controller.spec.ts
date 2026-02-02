@@ -21,7 +21,11 @@ describe('ExercisesController', () => {
   const createDto: CreateExerciseDto = {
     keyName: 'test_ex',
     name: 'Test Exercise',
-    type: ExerciseType.AR_TRACKING,
+<<<<<<< /Users/alejandroprado/pratum/symma-platform/apps/api/src/exercises/exercises.controller.spec.ts
+    type: ExerciseType.ISOMETRIC,
+=======
+    type: ExerciseType.ISOTONIC,
+>>>>>>> /Users/alejandroprado/.windsurf/worktrees/symma-platform/symma-platform-48b52386/apps/api/src/exercises/exercises.controller.spec.ts
     category: ExerciseCategory.CORE,
   };
 

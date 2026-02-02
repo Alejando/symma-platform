@@ -1,15 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Exercise, Patient, CreateRoutineDto, Routine, UpdateRoutineDto } from '@symma/shared-types';
+import type { Exercise, Patient, CreateRoutineDto, Routine, UpdateRoutineDto, RoutineItem } from '@symma/shared-types';
+import { MobileModule, ExerciseType } from '@symma/shared-types';
 
 export type BuilderItem = {
   id: string;
   exercise: Exercise;
-  targetRepetitions: number;
-  targetSets: number;
-  holdTimeSeconds: number;
-  restBetweenSetsSeconds: number;
+  sets: number;
+  repsPerSet: number;
+  targetHoldSeconds: number;
+  restBetweenSets: number;
+  difficultyLevel: number;
+  strictMode: boolean;
+  allowSkip: boolean;
+
 };
 
 interface RoutineBuilderProps {
@@ -69,7 +74,7 @@ export function RoutineBuilder({
     onItemsChange(items.filter((item) => item.id !== itemId));
   };
 
-  const handleUpdateItem = (itemId: string, field: keyof BuilderItem, value: number) => {
+  const handleUpdateItem = (itemId: string, field: keyof BuilderItem, value: number | string | boolean) => {
     if (isLocked) return;
     onItemsChange(
       items.map((item) => (item.id === itemId ? { ...item, [field]: value } : item))
@@ -103,10 +108,14 @@ export function RoutineBuilder({
       if (!isLocked) {
         updateDto.items = items.map((item) => ({
           exerciseId: item.exercise.id,
-          targetRepetitions: item.targetRepetitions,
-          targetSets: item.targetSets,
-          holdTimeSeconds: item.holdTimeSeconds,
-          restBetweenSetsSeconds: item.restBetweenSetsSeconds,
+          sets: item.sets,
+          repsPerSet: item.repsPerSet,
+          targetHoldSeconds: item.targetHoldSeconds,
+          restBetweenSets: item.restBetweenSets,
+          difficultyLevel: item.difficultyLevel,
+          strictMode: item.strictMode,
+          allowSkip: item.allowSkip,
+
         }));
       }
 
@@ -120,10 +129,14 @@ export function RoutineBuilder({
         therapistNotes: therapistNotes || undefined,
         items: items.map((item) => ({
           exerciseId: item.exercise.id,
-          targetRepetitions: item.targetRepetitions,
-          targetSets: item.targetSets,
-          holdTimeSeconds: item.holdTimeSeconds,
-          restBetweenSetsSeconds: item.restBetweenSetsSeconds,
+          sets: item.sets,
+          repsPerSet: item.repsPerSet,
+          targetHoldSeconds: item.targetHoldSeconds,
+          restBetweenSets: item.restBetweenSets,
+          difficultyLevel: item.difficultyLevel,
+          strictMode: item.strictMode,
+          allowSkip: item.allowSkip,
+
         })),
       };
       onSubmit(routineDto);
@@ -291,50 +304,95 @@ export function RoutineBuilder({
                 </div>
 
                 {/* Inputs row */}
-                <div className="grid grid-cols-4 gap-2 md:gap-3">
-                  <div>
-                    <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Sets</label>
-                    <input
-                      className={`w-full h-9 md:h-10 rounded-md border-slate-200 text-slate-900 text-center text-sm md:text-base font-medium focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
-                      type="number"
-                      min="1"
-                      value={item.targetSets}
-                      onChange={(e) => handleUpdateItem(item.id, 'targetSets', parseInt(e.target.value) || 0)}
-                      disabled={isLocked}
-                    />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                  {/* Row 1: Module & Type - REMOVED */}
+                  {/* Row 2: Metrics */}
+                  < div className="col-span-2 md:col-span-4 grid grid-cols-2 md:grid-cols-4 gap-3" >
+
+
+                    <div>
+                      <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Sets</label>
+                      <input
+                        className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100' : 'bg-slate-50'}`}
+                        type="number"
+                        min="1"
+                        value={item.sets}
+                        onChange={(e) => handleUpdateItem(item.id, 'sets', parseInt(e.target.value) || 0)}
+                        disabled={isLocked}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Reps</label>
+                      <input
+                        className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100' : 'bg-slate-50'}`}
+                        type="number"
+                        min="1"
+                        value={item.repsPerSet}
+                        onChange={(e) => handleUpdateItem(item.id, 'repsPerSet', parseInt(e.target.value) || 0)}
+                        disabled={isLocked}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Hold (s)</label>
+                      <input
+                        className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked || item.exercise.type === ExerciseType.ISOTONIC ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
+                        type="number"
+                        min="0"
+                        value={item.targetHoldSeconds}
+                        onChange={(e) => handleUpdateItem(item.id, 'targetHoldSeconds', parseInt(e.target.value) || 0)}
+                        disabled={isLocked || item.exercise.type === ExerciseType.ISOTONIC}
+                      />
+                    </div>
                   </div>
+                </div>
+
+                {/* Row 3: Advanced Config */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-slate-100">
                   <div>
-                    <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Reps</label>
+                    <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Rest (s)</label>
                     <input
-                      className={`w-full h-9 md:h-10 rounded-md border-slate-200 text-slate-900 text-center text-sm md:text-base font-medium focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
-                      type="number"
-                      min="1"
-                      value={item.targetRepetitions}
-                      onChange={(e) => handleUpdateItem(item.id, 'targetRepetitions', parseInt(e.target.value) || 0)}
-                      disabled={isLocked}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Hold</label>
-                    <input
-                      className={`w-full h-9 md:h-10 rounded-md border-slate-200 text-slate-900 text-center text-sm md:text-base font-medium focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
+                      className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100' : 'bg-slate-50'}`}
                       type="number"
                       min="0"
-                      value={item.holdTimeSeconds}
-                      onChange={(e) => handleUpdateItem(item.id, 'holdTimeSeconds', parseInt(e.target.value) || 0)}
+                      value={item.restBetweenSets}
+                      onChange={(e) => handleUpdateItem(item.id, 'restBetweenSets', parseInt(e.target.value) || 0)}
                       disabled={isLocked}
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Rest</label>
+                    <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Diff (0.1-3)</label>
                     <input
-                      className={`w-full h-9 md:h-10 rounded-md border-slate-200 text-slate-900 text-center text-sm md:text-base font-medium focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
+                      className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100' : 'bg-slate-50'}`}
                       type="number"
-                      min="0"
-                      value={item.restBetweenSetsSeconds}
-                      onChange={(e) => handleUpdateItem(item.id, 'restBetweenSetsSeconds', parseInt(e.target.value) || 0)}
+                      step="0.1"
+                      min="0.1"
+                      max="3.0"
+                      value={item.difficultyLevel}
+                      onChange={(e) => handleUpdateItem(item.id, 'difficultyLevel', parseFloat(e.target.value) || 1.0)}
                       disabled={isLocked}
                     />
+                  </div>
+                  <div className="md:col-span-2 flex items-center justify-end gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={item.strictMode}
+                        onChange={(e) => handleUpdateItem(item.id, 'strictMode', e.target.checked as any)}
+                        disabled={isLocked}
+                        className="rounded border-slate-300 text-[#0d9488] focus:ring-[#0d9488]"
+                      />
+                      <span className="text-xs font-medium text-slate-600">Strict</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={item.allowSkip}
+                        onChange={(e) => handleUpdateItem(item.id, 'allowSkip', e.target.checked as any)}
+                        disabled={isLocked}
+                        className="rounded border-slate-300 text-[#0d9488] focus:ring-[#0d9488]"
+                      />
+                      <span className="text-xs font-medium text-slate-600">Skip</span>
+                    </label>
                   </div>
                 </div>
               </div>

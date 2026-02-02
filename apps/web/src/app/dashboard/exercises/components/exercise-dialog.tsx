@@ -1,13 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Exercise } from '@symma/shared-types';
+import { Exercise, MobileModule, ExerciseType, MOBILE_SUPPORTED_TYPES } from '@symma/shared-types';
 
-const EXERCISE_TYPES = [
-  { value: 'AR_TRACKING', label: 'AR Tracking' },
-  { value: 'MANUAL', label: 'Manual' },
-  { value: 'RELAXATION', label: 'Relaxation' },
-];
+
 
 const EXERCISE_CATEGORIES = [
   { value: 'WARMUP', label: 'Warmup' },
@@ -30,8 +26,9 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
     keyName: '',
     name: '',
     description: '',
-    type: 'AR_TRACKING',
+    type: ExerciseType.ISOMETRIC,
     category: 'CORE',
+    mobileModule: MobileModule.EYES,
     assetAnimationUrl: '',
     assetTutorialVideoUrl: '',
   });
@@ -42,8 +39,9 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
         keyName: exercise?.keyName || '',
         name: exercise?.name || '',
         description: exercise?.description || '',
-        type: exercise?.type || 'AR_TRACKING',
+        type: exercise?.type || ExerciseType.ISOMETRIC,
         category: exercise?.category || 'CORE',
+        mobileModule: exercise?.mobileModule || MobileModule.EYES,
         assetAnimationUrl: exercise?.assetAnimationUrl || '',
         assetTutorialVideoUrl: exercise?.assetTutorialVideoUrl || '',
       });
@@ -51,9 +49,18 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
     }
   }, [exercise, isOpen]);
 
+  const isMobileModuleEnabled = MOBILE_SUPPORTED_TYPES.includes(formData.type as ExerciseType);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+      // Clear mobileModule if type doesn't support it
+      if (name === 'type' && !MOBILE_SUPPORTED_TYPES.includes(value as ExerciseType)) {
+        updated.mobileModule = undefined as any;
+      }
+      return updated;
+    });
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
@@ -156,11 +163,27 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
               >
-                {EXERCISE_TYPES.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                {Object.values(ExerciseType).map(type => (
+                  <option key={type} value={type}>{type.replace(/_/g, ' ')}</option>
                 ))}
               </select>
             </div>
+            {isMobileModuleEnabled && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Module</label>
+                <select
+                  name="mobileModule"
+                  value={formData.mobileModule || ''}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
+                >
+                  <option value="">Select module...</option>
+                  {Object.values(MobileModule).map(module => (
+                    <option key={module} value={module}>{module.replace(/_/g, ' ')}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
               <select

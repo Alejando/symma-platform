@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ExerciseCatalog } from '@/components/routines/exercise-catalog';
 import { RoutineBuilder, type BuilderItem } from '@/components/routines/routine-builder';
 import type { Exercise, Patient, Routine, UpdateRoutineDto } from '@symma/shared-types';
+import { MobileModule, ExerciseType } from '@symma/shared-types';
 import { getExercises, getPatient, getRoutine, updateRoutine } from '@/lib/api';
 
 import { use } from 'react';
@@ -42,15 +43,20 @@ export default function EditRoutinePage({
         setPatient(fetchedPatient);
         setRoutine(fetchedRoutine);
 
+
         // Convert routine items to builder items
         if (fetchedRoutine.items) {
           const builderItems: BuilderItem[] = fetchedRoutine.items.map((item) => ({
             id: item.id,
             exercise: item.exercise!,
-            targetRepetitions: item.targetRepetitions,
-            targetSets: item.targetSets,
-            holdTimeSeconds: item.holdTimeSeconds,
-            restBetweenSetsSeconds: item.restBetweenSetsSeconds,
+            sets: item.sets,
+            repsPerSet: item.repsPerSet,
+            targetHoldSeconds: item.targetHoldSeconds,
+            restBetweenSets: item.restBetweenSets,
+            difficultyLevel: item.difficultyLevel,
+            strictMode: item.strictMode,
+            allowSkip: item.allowSkip,
+
           }));
           setItems(builderItems);
         }
@@ -68,10 +74,14 @@ export default function EditRoutinePage({
     const newItem: BuilderItem = {
       id: crypto.randomUUID(),
       exercise,
-      targetRepetitions: 10,
-      targetSets: 3,
-      holdTimeSeconds: exercise.defaultConfig?.holdTime || 5,
-      restBetweenSetsSeconds: exercise.defaultConfig?.restTime || 60,
+      sets: 3,
+      repsPerSet: 10,
+      targetHoldSeconds: exercise.defaultConfig?.holdTime || 5, // Keep existing fallback logic
+      restBetweenSets: exercise.defaultConfig?.restTime || 60,
+      difficultyLevel: 1.0,
+      strictMode: false,
+      allowSkip: true,
+
     };
     setItems((prev) => [...prev, newItem]);
   };

@@ -25,29 +25,48 @@ sealed interface PlayerUiState {
      * 
      * @param exerciseName Name of the current exercise
      * @param instruction Optional instruction text for the exercise
+     * @param currentSet Current set number (1-based)
+     * @param totalSets Total sets to complete for this exercise
      * @param currentRep Current repetition number (1-based)
-     * @param totalReps Total repetitions to complete for this exercise
-     * @param timeLeft Remaining hold time in seconds
+     * @param totalReps Total repetitions to complete per set
+     * @param holdTimeLeft Remaining hold time in seconds (for Isometric)
+     * @param holdTimeTotal Total hold time required per rep (for Isometric)
+     * @param isTargetReached Whether user has reached the target gesture
      * @param isPaused Whether the session is currently paused
+     * @param isIsometric Whether this is an isometric (hold) exercise
      */
     data class Exercise(
         val exerciseName: String,
         val instruction: String?,
+        val currentSet: Int,
+        val totalSets: Int,
         val currentRep: Int,
         val totalReps: Int,
-        val timeLeft: Int,
-        val isPaused: Boolean
-    ) : PlayerUiState
+        val holdTimeLeft: Int,
+        val holdTimeTotal: Int,
+        val isTargetReached: Boolean,
+        val isPaused: Boolean,
+        val isIsometric: Boolean
+    ) : PlayerUiState {
+        @Deprecated("Use holdTimeLeft instead", ReplaceWith("holdTimeLeft"))
+        val timeLeft: Int get() = holdTimeLeft
+    }
     
     /**
-     * Rest period between repetitions or exercises.
+     * Rest period between sets or exercises.
      * 
      * @param timeLeft Remaining rest time in seconds
      * @param nextExerciseName Name of the next exercise for preview
+     * @param currentSet Current set just completed
+     * @param totalSets Total sets for this exercise
+     * @param isSetRest True if resting between sets, false if between exercises
      */
     data class Rest(
         val timeLeft: Int,
-        val nextExerciseName: String
+        val nextExerciseName: String,
+        val currentSet: Int = 1,
+        val totalSets: Int = 1,
+        val isSetRest: Boolean = false
     ) : PlayerUiState
     
     /**

@@ -86,7 +86,30 @@ export interface ApiError {
 // Routine Types
 // ==========================================
 
-export type ExerciseType = 'AR_TRACKING' | 'MANUAL' | 'RELAXATION';
+// ==========================================
+// Routine Types
+// ==========================================
+
+export enum ExerciseType {
+  ISOTONIC = 'ISOTONIC',
+  ISOMETRIC = 'ISOMETRIC',
+  MANUAL = 'MANUAL',
+  RELAXATION = 'RELAXATION'
+}
+
+export const MOBILE_SUPPORTED_TYPES: ExerciseType[] = [
+  ExerciseType.ISOTONIC,
+  ExerciseType.ISOMETRIC,
+];
+
+export enum MobileModule {
+  EYES = 'EYES',
+  EYES_INVERSE = 'EYES_INVERSE',
+  BROWS = 'BROWS',
+  JAW = 'JAW',
+  SMILE = 'SMILE',
+  KISS = 'KISS'
+}
 
 export type ExerciseCategory = 'WARMUP' | 'CORE' | 'COOLDOWN';
 
@@ -97,6 +120,7 @@ export interface Exercise {
   description?: string;
   type: ExerciseType;
   category: ExerciseCategory;
+  mobileModule?: MobileModule;
   assetAnimationUrl?: string;
   assetTutorialVideoUrl?: string;
   defaultConfig?: { threshold?: number; holdTime?: number; restTime?: number };
@@ -108,13 +132,16 @@ export interface RoutineItem {
   routineId: string;
   exerciseId: string;
   orderIndex: number;
-  targetRepetitions: number;
-  targetSets: number;
-  holdTimeSeconds: number;
-  successThreshold?: number;
-  restBetweenSetsSeconds: number; // It is required in DB now (defaulted), but checking how API returns it. 
-  // Wait, DB has @default(60), so it is INT. 
-  // Prisma Client return type matches DB.
+
+  // RFC-030 Configuration
+  sets: number;
+  repsPerSet: number;
+  targetHoldSeconds: number;
+  difficultyLevel: number;
+  restBetweenSets: number;
+  strictMode: boolean;
+  allowSkip: boolean;
+
   exercise?: Exercise;
 }
 
@@ -137,10 +164,13 @@ export interface Routine {
 
 export interface CreateRoutineItemDto {
   exerciseId: string;
-  targetRepetitions: number;
-  targetSets: number;
-  holdTimeSeconds: number;
-  restBetweenSetsSeconds?: number;
+  sets: number;
+  repsPerSet: number;
+  targetHoldSeconds: number;
+  difficultyLevel?: number;
+  restBetweenSets?: number;
+  strictMode?: boolean;
+  allowSkip?: boolean;
 }
 
 export interface CreateRoutineDto {
