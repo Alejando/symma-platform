@@ -6,6 +6,7 @@ import com.symma.app.domain.repository.CalibrationRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,6 +29,8 @@ class CalibrationRepositoryImpl @Inject constructor(
             putFloat(KEY_DUCK_FACE_MAX, baseline.duckFaceMax)
             putFloat(KEY_EYES_CLOSED_MAX, baseline.eyesClosedMax)
             putFloat(KEY_EYES_OPEN_MIN, baseline.eyesOpenMin)
+            // Serialize neutral offsets as JSON
+            putString(KEY_NEUTRAL_OFFSETS, serializeNeutralOffsets(baseline.neutralOffsets))
             apply()
         }
         _baselineFlow.value = baseline
@@ -47,8 +50,31 @@ class CalibrationRepositoryImpl @Inject constructor(
             mouthOpenMax = sharedPreferences.getFloat(KEY_MOUTH_OPEN_MAX, 0.5f),
             duckFaceMax = sharedPreferences.getFloat(KEY_DUCK_FACE_MAX, 0.5f),
             eyesClosedMax = sharedPreferences.getFloat(KEY_EYES_CLOSED_MAX, 0.8f),
-            eyesOpenMin = sharedPreferences.getFloat(KEY_EYES_OPEN_MIN, 0.1f)
+            eyesOpenMin = sharedPreferences.getFloat(KEY_EYES_OPEN_MIN, 0.1f),
+            neutralOffsets = deserializeNeutralOffsets(
+                sharedPreferences.getString(KEY_NEUTRAL_OFFSETS, null)
+            )
         )
+    }
+
+    private fun serializeNeutralOffsets(offsets: Map<String, Float>): String {
+        val json = JSONObject()
+        offsets.forEach { (key, value) -> json.put(key, value.toDouble()) }
+        return json.toString()
+    }
+
+    private fun deserializeNeutralOffsets(json: String?): Map<String, Float> {
+        if (json.isNullOrEmpty()) return emptyMap()
+        return try {
+            val jsonObject = JSONObject(json)
+            val map = mutableMapOf<String, Float>()
+            jsonObject.keys().forEach { key ->
+                map[key] = jsonObject.getDouble(key).toFloat()
+            }
+            map
+        } catch (e: Exception) {
+            emptyMap()
+        }
     }
 
     companion object {
@@ -58,5 +84,6 @@ class CalibrationRepositoryImpl @Inject constructor(
         private const val KEY_DUCK_FACE_MAX = "calibration_duck_face_max"
         private const val KEY_EYES_CLOSED_MAX = "calibration_eyes_closed_max"
         private const val KEY_EYES_OPEN_MIN = "calibration_eyes_open_min"
+        private const val KEY_NEUTRAL_OFFSETS = "calibration_neutral_offsets"
     }
 }
