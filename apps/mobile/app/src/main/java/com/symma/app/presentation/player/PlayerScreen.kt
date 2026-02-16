@@ -9,6 +9,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -27,6 +30,10 @@ fun PlayerScreen(
     val uiState by viewModel.uiState.collectAsState()
     val faceResult by viewModel.faceResult.collectAsState()
     val symmetryScore by viewModel.symmetryScore.collectAsState()
+    
+    // FaceMesh visibility toggles
+    var isMeshVisible by remember { mutableStateOf(true) }
+    var showMeshPoints by remember { mutableStateOf(false) }
     
     // 1. Keep Screen On
     DisposableEffect(Unit) {
@@ -59,16 +66,23 @@ fun PlayerScreen(
                 landmarkerListener = viewModel
             )
             
-            // Layer 1: Face Mesh Overlay
-            FaceMeshOverlay(
-                result = faceResult,
-                modifier = Modifier.fillMaxSize()
-            )
+            // Layer 1: Face Mesh Overlay (togglable)
+            if (isMeshVisible) {
+                FaceMeshOverlay(
+                    result = faceResult,
+                    modifier = Modifier.fillMaxSize(),
+                    showPoints = showMeshPoints
+                )
+            }
             
             // Layer 2: UI Overlay
             PlayerOverlay(
                 state = uiState,
                 symmetryScore = symmetryScore,
+                isMeshVisible = isMeshVisible,
+                showMeshPoints = showMeshPoints,
+                onToggleMesh = { isMeshVisible = !isMeshVisible },
+                onToggleMeshPoints = { showMeshPoints = !showMeshPoints },
                 onPause = viewModel::pause,
                 onResume = viewModel::resume,
                 onSkip = viewModel::skip,

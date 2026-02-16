@@ -17,7 +17,8 @@ sealed interface PlayerUiState {
      * Pre-session countdown (typically 5 seconds) to prepare the patient.
      */
     data class GetReady(
-        val countdownSeconds: Int
+        val countdownSeconds: Int,
+        val totalSeconds: Int = 5
     ) : PlayerUiState
     
     /**
@@ -46,7 +47,9 @@ sealed interface PlayerUiState {
         val holdTimeTotal: Int,
         val isTargetReached: Boolean,
         val isPaused: Boolean,
-        val isIsometric: Boolean
+        val isIsometric: Boolean,
+        val completedSets: Int,
+        val completedReps: Int
     ) : PlayerUiState {
         @Deprecated("Use holdTimeLeft instead", ReplaceWith("holdTimeLeft"))
         val timeLeft: Int get() = holdTimeLeft

@@ -1,7 +1,8 @@
 package com.symma.app.presentation.features.calibration
 
-import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
 import com.symma.app.domain.model.CalibrationBaseline
+import com.symma.app.domain.repository.CalibrationRepository
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -21,12 +22,14 @@ import org.junit.Test
 class CalibrationViewModelTest {
 
     private lateinit var viewModel: CalibrationViewModel
+    private lateinit var calibrationRepository: CalibrationRepository
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = CalibrationViewModel()
+        calibrationRepository = mockk(relaxed = true)
+        viewModel = CalibrationViewModel(calibrationRepository)
     }
 
     @After
@@ -35,41 +38,51 @@ class CalibrationViewModelTest {
     }
 
     @Test
-    fun `initial state is Instructions`() {
-        assertEquals(CalibrationStep.Instructions, viewModel.uiState.value.currentStep)
+    fun `initial state starts in POSITIONING phase`() {
+        assertEquals(CalibrationPhase.POSITIONING, viewModel.uiState.value.phase)
     }
 
     @Test
-    fun `nextStep transitions to Neutral`() {
-        viewModel.nextStep()
+    fun `initial step is Neutral`() {
         assertEquals(CalibrationStep.Neutral, viewModel.uiState.value.currentStep)
     }
 
     @Test
-    fun `startCapture enables capturing`() = runTest {
-        viewModel.nextStep() // To Neutral
-        assertTrue(viewModel.uiState.value.isCapturing)
+    fun `initial state has default values`() {
+        val state = viewModel.uiState.value
+        assertEquals(0f, state.captureProgress, 0.001f)
+        assertEquals(0, state.framesCaptured)
+        assertFalse(state.isCapturing)
+        assertFalse(state.isFaceDetected)
+        assertFalse(state.stepCompleted)
     }
 
-    // Add more tests for next steps and logic flow
     @Test
-    fun `full flow transitions`() = runTest {
-        viewModel.nextStep()
-        assertEquals(CalibrationStep.Neutral, viewModel.uiState.value.currentStep)
-        
-        viewModel.nextStep()
-        assertEquals(CalibrationStep.Smile, viewModel.uiState.value.currentStep)
-        
-        viewModel.nextStep()
-        assertEquals(CalibrationStep.BrowRaise, viewModel.uiState.value.currentStep)
-        
-        viewModel.nextStep()
-        assertEquals(CalibrationStep.Kiss, viewModel.uiState.value.currentStep)
-        
-        viewModel.nextStep()
-        assertEquals(CalibrationStep.JawOpen, viewModel.uiState.value.currentStep)
-        
-        viewModel.nextStep()
-        assertEquals(CalibrationStep.Complete, viewModel.uiState.value.currentStep)
+    fun `setGestureThreshold updates threshold`() {
+        viewModel.setGestureThreshold(0.25f)
+        // Threshold is internal, verified through UI state
+        val state = viewModel.uiState.value
+        assertEquals(0.25f, state.minGestureThreshold, 0.001f)
+    }
+
+    @Test
+    fun `calibration steps enum has correct values`() {
+        val steps = CalibrationStep.values()
+        assertTrue(steps.contains(CalibrationStep.Neutral))
+        assertTrue(steps.contains(CalibrationStep.Smile))
+        assertTrue(steps.contains(CalibrationStep.BrowRaise))
+        assertTrue(steps.contains(CalibrationStep.Kiss))
+        assertTrue(steps.contains(CalibrationStep.JawOpen))
+        assertTrue(steps.contains(CalibrationStep.EyesClosed))
+        assertTrue(steps.contains(CalibrationStep.Complete))
+    }
+
+    @Test
+    fun `calibration phases enum has correct values`() {
+        val phases = CalibrationPhase.values()
+        assertTrue(phases.contains(CalibrationPhase.POSITIONING))
+        assertTrue(phases.contains(CalibrationPhase.NEUTRAL_CAPTURE))
+        assertTrue(phases.contains(CalibrationPhase.ACTIVE_CAPTURE))
+        assertTrue(phases.contains(CalibrationPhase.COMPLETE))
     }
 }

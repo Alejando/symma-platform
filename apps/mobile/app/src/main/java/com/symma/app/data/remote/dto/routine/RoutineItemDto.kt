@@ -10,5 +10,7 @@ data class RoutineItemDto(
     @SerializedName("targetSets") val targetSets: Int,
     @SerializedName("holdTimeSeconds") val holdTimeSeconds: Int,
     @SerializedName("restBetweenSetsSeconds") val restBetweenSetsSeconds: Int?,
+    @SerializedName("difficultyLevel") val difficultyLevel: Double = 1.0,
+    @SerializedName("strictMode") val strictMode: Boolean = false,
     @SerializedName("exercise") val exercise: ExerciseDto
 )

@@ -45,6 +45,7 @@ fun ExerciseDto.toDomain(): Exercise {
         description = description,
         type = type,
         category = category,
+        mobileModule = mobileModule,
         assetAnimationUrl = assetAnimationUrl,
         assetTutorialVideoUrl = assetTutorialVideoUrl
     )
@@ -70,6 +71,7 @@ fun ExerciseDto.toEntity(): ExerciseEntity {
         description = description,
         type = type,
         category = category,
+        mobileModule = mobileModule,
         assetAnimationUrl = assetAnimationUrl,
         assetTutorialVideoUrl = assetTutorialVideoUrl
     )
@@ -84,7 +86,9 @@ fun RoutineItemDto.toEntity(routineId: String): RoutineItemEntity {
         targetRepetitions = targetRepetitions,
         targetSets = targetSets,
         holdTimeSeconds = holdTimeSeconds,
-        restBetweenSetsSeconds = restBetweenSetsSeconds
+        restBetweenSetsSeconds = restBetweenSetsSeconds,
+        difficultyLevel = difficultyLevel,
+        strictMode = strictMode
     )
 }
 
@@ -98,6 +102,7 @@ fun ExerciseEntity.toDomain(): Exercise {
         description = description,
         type = type,
         category = category,
+        mobileModule = mobileModule,
         assetAnimationUrl = assetAnimationUrl,
         assetTutorialVideoUrl = assetTutorialVideoUrl
     )
@@ -111,6 +116,8 @@ fun RoutineItemWithExercise.toDomain(): RoutineItem {
         targetSets = routineItem.targetSets,
         holdTimeSeconds = routineItem.holdTimeSeconds,
         restBetweenSetsSeconds = routineItem.restBetweenSetsSeconds,
+        difficulty = routineItem.difficultyLevel.toFloat(),
+        strictMode = routineItem.strictMode,
         exercise = exercise.toDomain()
     )
 }

@@ -9,6 +9,14 @@ abstract class BaseExerciseStrategy : ExerciseStrategy {
         return shapes.find { it.categoryName() == name }?.score() ?: 0f
     }
 
+    /**
+     * Applies neutral offset correction to a raw blendshape value.
+     * Subtracts the resting-face noise captured during calibration.
+     */
+    protected fun applyNeutralOffset(rawValue: Float, baseline: CalibrationBaseline, offsetKey: String): Float {
+        return (rawValue - baseline.getNeutralOffset(offsetKey)).coerceAtLeast(0f)
+    }
+
     protected fun calculate(currentValue: Float, baselineValue: Float, difficulty: Float): Float {
         val denominator = baselineValue * difficulty
         if (denominator <= 0.001f) return 0f // Avoid division by zero
@@ -22,9 +30,10 @@ class SmileStrategy : BaseExerciseStrategy() {
     override fun calculateScore(shapes: List<Category>, baseline: CalibrationBaseline, difficulty: Float): Float {
         val left = getScore(shapes, "mouthSmileLeft")
         val right = getScore(shapes, "mouthSmileRight")
-        val current = (left + right) / 2
+        val raw = (left + right) / 2
+        val corrected = applyNeutralOffset(raw, baseline, CalibrationBaseline.KEY_SMILE)
         
-        return calculate(current, baseline.mouthSmileMax, difficulty)
+        return calculate(corrected, baseline.mouthSmileMax, difficulty)
     }
 }
 
@@ -33,23 +42,26 @@ class BrowsStrategy : BaseExerciseStrategy() {
         val inner = getScore(shapes, "browInnerUp")
         val outerLeft = getScore(shapes, "browOuterUpLeft")
         val outerRight = getScore(shapes, "browOuterUpRight")
-        val current = (inner + outerLeft + outerRight) / 3
+        val raw = (inner + outerLeft + outerRight) / 3
+        val corrected = applyNeutralOffset(raw, baseline, CalibrationBaseline.KEY_BROW_RAISE)
         
-        return calculate(current, baseline.browRaiseMax, difficulty)
+        return calculate(corrected, baseline.browRaiseMax, difficulty)
     }
 }
 
 class JawStrategy : BaseExerciseStrategy() {
     override fun calculateScore(shapes: List<Category>, baseline: CalibrationBaseline, difficulty: Float): Float {
-        val current = getScore(shapes, "jawOpen")
-        return calculate(current, baseline.mouthOpenMax, difficulty)
+        val raw = getScore(shapes, "jawOpen")
+        val corrected = applyNeutralOffset(raw, baseline, CalibrationBaseline.KEY_JAW_OPEN)
+        return calculate(corrected, baseline.mouthOpenMax, difficulty)
     }
 }
 
 class KissStrategy : BaseExerciseStrategy() {
     override fun calculateScore(shapes: List<Category>, baseline: CalibrationBaseline, difficulty: Float): Float {
-        val current = getScore(shapes, "mouthPucker")
-        return calculate(current, baseline.duckFaceMax, difficulty)
+        val raw = getScore(shapes, "mouthPucker")
+        val corrected = applyNeutralOffset(raw, baseline, CalibrationBaseline.KEY_KISS)
+        return calculate(corrected, baseline.duckFaceMax, difficulty)
     }
 }
 
@@ -63,9 +75,10 @@ class EyesStrategy : BaseExerciseStrategy() {
     override fun calculateScore(shapes: List<Category>, baseline: CalibrationBaseline, difficulty: Float): Float {
         val left = getScore(shapes, "eyeBlinkLeft")
         val right = getScore(shapes, "eyeBlinkRight")
-        val currentAvg = (left + right) / 2f
+        val raw = (left + right) / 2f
+        val corrected = applyNeutralOffset(raw, baseline, CalibrationBaseline.KEY_EYES_CLOSED)
         
-        return calculate(currentAvg, baseline.eyesClosedMax, difficulty)
+        return calculate(corrected, baseline.eyesClosedMax, difficulty)
     }
 }
 

@@ -22,7 +22,7 @@ import javax.inject.Singleton
         ExerciseEntity::class,
         RoutineItemEntity::class
     ],
-    version = 2,
+    version = 4,
     exportSchema = false
 )
 abstract class SymmaDatabase : RoomDatabase() {

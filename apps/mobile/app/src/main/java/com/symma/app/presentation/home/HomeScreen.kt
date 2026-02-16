@@ -39,8 +39,10 @@ import com.symma.app.presentation.components.design.SymmaButton
 import com.symma.app.presentation.components.design.SymmaButtonVariant
 import com.symma.app.presentation.components.design.SymmaCard
 import com.symma.app.presentation.components.design.SymmaScaffold
+import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Date
 import java.util.Locale
 
 @Composable
@@ -49,6 +51,8 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val lastSyncedAt by viewModel.lastSyncedAt.collectAsStateWithLifecycle()
+    val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
 
     SymmaScaffold { paddingValues ->
         Column(
@@ -75,8 +79,15 @@ fun HomeScreen(
                     onRetry = viewModel::refreshRoutine
                 )
             }
-            
 
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Footer: Last synced + Sync button
+            SyncFooter(
+                lastSyncedAt = lastSyncedAt,
+                isSyncing = isSyncing,
+                onSync = viewModel::syncRoutine
+            )
         }
     }
 }
@@ -266,6 +277,56 @@ private fun ErrorCard(
                 Spacer(modifier = Modifier.size(6.dp))
                 Text("Retry")
             }
+        }
+    }
+}
+
+@Composable
+private fun SyncFooter(
+    lastSyncedAt: Long?,
+    isSyncing: Boolean,
+    onSync: () -> Unit
+) {
+    val dateFormat = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = if (lastSyncedAt != null) {
+                "Last sync: ${dateFormat.format(Date(lastSyncedAt))}"
+            } else {
+                "Not synced yet"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+
+        TextButton(
+            onClick = onSync,
+            enabled = !isSyncing
+        ) {
+            if (isSyncing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Sync",
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Spacer(modifier = Modifier.size(4.dp))
+            Text(
+                text = if (isSyncing) "Syncing..." else "Sync",
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }

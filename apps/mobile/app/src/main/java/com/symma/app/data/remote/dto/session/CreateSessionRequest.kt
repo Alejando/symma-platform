@@ -27,5 +27,8 @@ data class SessionItemRequest(
     val difficulty: Int = 0, // Optional for now
 
     @SerializedName("averageAccuracy")
-    val averageAccuracy: Float? = null // RFC-026: AI Metric
+    val averageAccuracy: Float? = null, // RFC-026: AI Metric
+
+    @SerializedName("skipped")
+    val skipped: Boolean = false
 )

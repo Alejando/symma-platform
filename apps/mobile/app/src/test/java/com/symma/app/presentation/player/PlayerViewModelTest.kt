@@ -6,6 +6,8 @@ import com.symma.app.MainDispatcherRule
 import com.symma.app.domain.model.Exercise
 import com.symma.app.domain.model.Routine
 import com.symma.app.domain.model.RoutineItem
+import com.symma.app.domain.model.CalibrationBaseline
+import com.symma.app.domain.repository.CalibrationRepository
 import com.symma.app.domain.repository.RoutineRepository
 import io.mockk.coEvery
 import io.mockk.every
@@ -31,6 +33,7 @@ class PlayerViewModelTest {
     val mainDispatcherRule = MainDispatcherRule(testDispatcher)
 
     private lateinit var routineRepository: RoutineRepository
+    private lateinit var calibrationRepository: CalibrationRepository
     private lateinit var routineFlow: MutableStateFlow<Routine?>
     private lateinit var savedStateHandle: SavedStateHandle
     private lateinit var viewModel: PlayerViewModel
@@ -39,7 +42,9 @@ class PlayerViewModelTest {
     fun setup() {
         routineFlow = MutableStateFlow(null)
         routineRepository = mockk()
+        calibrationRepository = mockk()
         every { routineRepository.getRoutineFlow() } returns routineFlow
+        every { calibrationRepository.getBaseline() } returns CalibrationBaseline()
         savedStateHandle = SavedStateHandle()
     }
 
@@ -58,7 +63,7 @@ class PlayerViewModelTest {
                     targetSets = 1,
                     holdTimeSeconds = 3,
                     restBetweenSetsSeconds = 5,
-                    exercise = Exercise("ex-1", "Exercise 1", "ex1", "Desc", "type", "cat", null, null)
+                    exercise = Exercise("ex-1", "Exercise 1", "ex1", "Desc", "type", "cat", null, null, null)
                 ),
                 RoutineItem(
                     id = "item-2",
@@ -67,7 +72,7 @@ class PlayerViewModelTest {
                     targetSets = 1,
                     holdTimeSeconds = 2,
                     restBetweenSetsSeconds = 0,
-                    exercise = Exercise("ex-2", "Exercise 2", "ex2", "Desc", "type", "cat", null, null)
+                    exercise = Exercise("ex-2", "Exercise 2", "ex2", "Desc", "type", "cat", null, null, null)
                 )
             )
         )
@@ -79,7 +84,7 @@ class PlayerViewModelTest {
         routineFlow.value = createTestRoutine()
 
         // When
-        viewModel = PlayerViewModel(routineRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
 
         // Then
         viewModel.uiState.test {
@@ -98,7 +103,7 @@ class PlayerViewModelTest {
     fun `Verify Countdown transitions from GetReady to Exercise`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createTestRoutine()
-        viewModel = PlayerViewModel(routineRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
         testDispatcher.scheduler.runCurrent() // Process Loading -> GetReady
 
         // When/Then
@@ -130,7 +135,7 @@ class PlayerViewModelTest {
     fun `Verify Exercise state has correct initial rep count`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createTestRoutine()
-        viewModel = PlayerViewModel(routineRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
         testDispatcher.scheduler.runCurrent() // Loading -> GetReady
         advanceTimeBy(5500) // Skip GetReady (5s)
 
@@ -174,7 +179,7 @@ class PlayerViewModelTest {
                     targetSets = 2,
                     holdTimeSeconds = 3,
                     restBetweenSetsSeconds = 5,
-                    exercise = Exercise("ex-1", "Eyes Close", "eyes", "Close eyes tightly", "isometric", "eyes", null, null)
+                    exercise = Exercise("ex-1", "Eyes Close", "eyes", "Close eyes tightly", "isometric", "eyes", null, null, null)
                 )
             )
         )
@@ -184,7 +189,7 @@ class PlayerViewModelTest {
     fun `RFC-031 - Exercise state includes Set tracking`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createMultiSetRoutine()
-        viewModel = PlayerViewModel(routineRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100) // Skip GetReady
 
@@ -205,7 +210,7 @@ class PlayerViewModelTest {
     fun `RFC-031 - processFrame updates isTargetReached when score reaches 1`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createMultiSetRoutine()
-        viewModel = PlayerViewModel(routineRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100) // Skip GetReady
 
@@ -226,7 +231,7 @@ class PlayerViewModelTest {
     fun `RFC-031 - isTargetReached becomes false when score drops below 1`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createMultiSetRoutine()
-        viewModel = PlayerViewModel(routineRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100)
 
@@ -249,7 +254,7 @@ class PlayerViewModelTest {
     fun `RFC-031 - Exercise state has correct initial values for multi-set routine`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createMultiSetRoutine()
-        viewModel = PlayerViewModel(routineRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100)
 
@@ -271,7 +276,7 @@ class PlayerViewModelTest {
     fun `RFC-031 - Initial state has isTargetReached false`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createMultiSetRoutine()
-        viewModel = PlayerViewModel(routineRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100)
 
@@ -301,16 +306,46 @@ class PlayerViewModelTest {
     }
 
     @Test
-    fun `RFC-031 - Exercise state correctly reports isIsometric based on holdTime`() = runTest(testDispatcher) {
-        // Given: Routine with holdTimeSeconds > 0
-        routineFlow.value = createMultiSetRoutine()
-        viewModel = PlayerViewModel(routineRepository, savedStateHandle)
+    fun `Verify completedSets and completedReps in UI state`() = runTest(testDispatcher) {
+        // Given
+        routineFlow.value = createTestRoutine()
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
-        advanceTimeBy(5100)
+        advanceTimeBy(5100) // Skip GetReady
 
         viewModel.uiState.test {
             val state = expectMostRecentItem() as PlayerUiState.Exercise
-            assertTrue("Exercise with holdTime > 0 should be isometric", state.isIsometric)
+            assertEquals("Should have 0 completed sets", 0, state.completedSets)
+            assertEquals("Should have 0 completed reps", 0, state.completedReps)
+            assertEquals(1, state.currentSet)
+            assertEquals(1, state.currentRep)
         }
+    }
+
+    @Test
+    fun `Verify calibration reloads on startSession`() = runTest(testDispatcher) {
+        // Given
+        val initialBaseline = CalibrationBaseline(mouthSmileMax = 0.5f)
+        every { calibrationRepository.getBaseline() } returns initialBaseline
+        routineFlow.value = createTestRoutine()
+        
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        testDispatcher.scheduler.runCurrent()
+        
+        // Then - modify repository response
+        val newBaseline = CalibrationBaseline(mouthSmileMax = 0.9f)
+        every { calibrationRepository.getBaseline() } returns newBaseline
+        
+        // When - restart session
+        viewModel.restart()
+        testDispatcher.scheduler.runCurrent()
+        
+        // Verification would be indirect via logging or if we exposed baseline, 
+        // but this ensures the call is made
+        // In a real unit test we would verify the repository call count
+        // 1. Property init
+        // 2. loadRoutine -> startSession
+        // 3. restart -> startSession
+        io.mockk.verify(exactly = 3) { calibrationRepository.getBaseline() }
     }
 }

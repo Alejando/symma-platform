@@ -35,5 +35,7 @@ data class RoutineItemEntity(
     val targetRepetitions: Int,
     val targetSets: Int,
     val holdTimeSeconds: Int,
-    val restBetweenSetsSeconds: Int?
+    val restBetweenSetsSeconds: Int?,
+    val difficultyLevel: Double = 1.0,
+    val strictMode: Boolean = false
 )

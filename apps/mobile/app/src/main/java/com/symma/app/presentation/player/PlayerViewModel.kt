@@ -21,8 +21,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.symma.app.presentation.components.camera.FaceLandmarkerHelper
-import com.symma.app.domain.logic.SymmetryCalculator
-import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import com.symma.app.data.remote.dto.session.SessionItemRequest
 import com.symma.app.domain.logic.ExerciseStrategyFactory
 import com.symma.app.domain.model.CalibrationBaseline
@@ -79,6 +77,8 @@ class PlayerViewModel @Inject constructor(
     // RFC-031: Clinical State Machine Variables
     private var currentSet = 1
     private var currentRep = 1
+    private var completedRepsCount = 0 // Track actual reps completed (not just index)
+    private var wasSkipped = false // Track if exercise was skipped
     private var accumulatedHoldTimeMs: Long = 0L
     private var isTargetReached = false
     private var wasTargetReached = false // For edge detection (Isotonic)
@@ -116,7 +116,7 @@ class PlayerViewModel @Inject constructor(
                 
                 Log.d(TAG, "✅ Loaded routine: ${loadedRoutine.name} with ${routineItems.size} exercises")
                 routineItems.forEachIndexed { index, item ->
-                    Log.d(TAG, "  [$index] ${item.exercise.name}: ${item.targetRepetitions} reps x ${item.holdTimeSeconds}s hold")
+                    Log.d(TAG, "  [$index] ${item.exercise.name}: ${item.targetSets} sets x ${item.targetRepetitions} reps, hold=${item.holdTimeSeconds}s, rest=${item.restBetweenSetsSeconds}s")
                 }
                 
                 if (routineItems.isEmpty()) {
@@ -138,9 +138,17 @@ class PlayerViewModel @Inject constructor(
      */
     private fun startSession() {
         Log.d(TAG, "🏁 Starting session...")
+        
+        // Reload calibration to ensure fresh values (MOB-12)
+        calibrationBaseline = calibrationRepository.getBaseline() ?: CalibrationBaseline()
+        Log.v(TAG, "📐 Calibration loaded: smileMax=${calibrationBaseline.mouthSmileMax}, eyesClosedMax=${calibrationBaseline.eyesClosedMax}")
+        
         sessionStartTime = System.currentTimeMillis()
         currentExerciseIndex = 0
+        currentSet = 1
         currentRep = 1
+        completedRepsCount = 0
+        wasSkipped = false
         isPaused = false
         
         // Reset metrics
@@ -158,7 +166,7 @@ class PlayerViewModel @Inject constructor(
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
             for (seconds in GET_READY_DURATION downTo 1) {
-                _uiState.value = PlayerUiState.GetReady(seconds)
+                _uiState.value = PlayerUiState.GetReady(seconds, GET_READY_DURATION)
                 Log.d(TAG, "⏱️ GetReady: $seconds")
                 _events.emit(PlayerEvent.PlayTick)
                 delay(1000)
@@ -187,7 +195,10 @@ class PlayerViewModel @Inject constructor(
         // Reset state for new exercise/rep
         accumulatedHoldTimeMs = 0L
         isTargetReached = false
-        wasTargetReached = false
+        // For Isotonic: if starting a new rep (not first), assume target was reached
+        // so user must RELEASE the gesture before the next rep can trigger.
+        // For Isometric or first rep: start fresh.
+        wasTargetReached = config.exerciseType == ExerciseType.ISOTONIC && currentRep > 1
         lastFrameTime = System.currentTimeMillis()
         frameProcessingEnabled = true
         
@@ -218,7 +229,9 @@ class PlayerViewModel @Inject constructor(
             holdTimeTotal = config.holdSeconds,
             isTargetReached = false,
             isPaused = isPaused,
-            isIsometric = true
+            isIsometric = true,
+            completedSets = currentSet - 1,
+            completedReps = currentRep - 1
         )
     }
     
@@ -239,7 +252,9 @@ class PlayerViewModel @Inject constructor(
             holdTimeTotal = 0,
             isTargetReached = false,
             isPaused = isPaused,
-            isIsometric = false
+            isIsometric = false,
+            completedSets = currentSet - 1,
+            completedReps = currentRep - 1
         )
     }
     
@@ -305,7 +320,9 @@ class PlayerViewModel @Inject constructor(
         
         _uiState.value = currentState.copy(
             holdTimeLeft = holdSecondsLeft,
-            isTargetReached = isTargetReached
+            isTargetReached = isTargetReached,
+            completedSets = currentSet - 1,
+            completedReps = currentRep - 1
         )
         
         // Play tick sound in last 3 seconds
@@ -329,9 +346,12 @@ class PlayerViewModel @Inject constructor(
     private fun onRepCompleted(item: RoutineItem) {
         val config = item.config
         
-        Log.d(TAG, "✅ Rep $currentRep/${config.reps} completed! (Set $currentSet/${config.sets})")
+        Log.v(TAG, "✅ Rep $currentRep/${config.reps} completed! (Set $currentSet/${config.sets})")
         viewModelScope.launch { _events.emit(PlayerEvent.PlayDing) }
         
+        // Track actual completion (MOB-12)
+        completedRepsCount++
+
         // Reset accumulated hold time for next rep
         accumulatedHoldTimeMs = 0L
         isTargetReached = false
@@ -450,15 +470,16 @@ class PlayerViewModel @Inject constructor(
                 null
             }
             
-            val totalRepsCompleted = currentItem.config.sets * currentItem.config.reps
+            val totalRepsCompleted = completedRepsCount
             sessionResults.add(
                 SessionItemRequest(
                     exerciseId = currentItem.exercise.id,
                     repsCompleted = totalRepsCompleted, 
-                    averageAccuracy = averageAccuracy
+                    averageAccuracy = averageAccuracy,
+                    skipped = wasSkipped
                 )
             )
-            Log.d(TAG, "📊 Exercise Finished. Samples: ${currentExerciseScores.size}, Avg Accuracy: $averageAccuracy")
+            Log.d(TAG, "📊 Exercise Finished. Samples: ${currentExerciseScores.size}, Avg Accuracy: $averageAccuracy, Reps: $totalRepsCompleted, Skipped: $wasSkipped")
         }
         
         // 2. RESET STATE FOR NEXT EXERCISE
@@ -466,6 +487,8 @@ class PlayerViewModel @Inject constructor(
         currentExerciseIndex++
         currentSet = 1
         currentRep = 1
+        completedRepsCount = 0
+        wasSkipped = false
         
         if (currentExerciseIndex >= routineItems.size) {
             // All exercises completed!
@@ -474,9 +497,9 @@ class PlayerViewModel @Inject constructor(
             val nextItem = routineItems[currentExerciseIndex]
             Log.d(TAG, "➡️ Moving to next exercise: ${nextItem.exercise.name}")
             
-            // Add a brief rest before next exercise
-            val restTime = routineItems.getOrNull(currentExerciseIndex - 1)?.config?.restSeconds 
-                ?: DEFAULT_REST_SECONDS
+            // Rest before next exercise (use completed exercise's rest config)
+            val completedItem = routineItems.getOrNull(currentExerciseIndex - 1)
+            val restTime = completedItem?.restBetweenSetsSeconds ?: DEFAULT_REST_SECONDS
             
             if (restTime > 0) {
                 startRestTimer(restTime, nextItem.exercise.name)
@@ -531,7 +554,11 @@ class PlayerViewModel @Inject constructor(
         // Update UI state to show paused
         val currentState = _uiState.value
         if (currentState is PlayerUiState.Exercise) {
-            _uiState.value = currentState.copy(isPaused = true)
+            _uiState.value = currentState.copy(
+                isPaused = true,
+                completedSets = currentSet - 1,
+                completedReps = currentRep - 1
+            )
         }
     }
     
@@ -549,7 +576,11 @@ class PlayerViewModel @Inject constructor(
         // Update UI state
         val currentState = _uiState.value
         if (currentState is PlayerUiState.Exercise) {
-            _uiState.value = currentState.copy(isPaused = false)
+            _uiState.value = currentState.copy(
+                isPaused = false,
+                completedSets = currentSet - 1,
+                completedReps = currentRep - 1
+            )
         }
     }
     
@@ -576,6 +607,7 @@ class PlayerViewModel @Inject constructor(
             is PlayerUiState.Exercise, is PlayerUiState.Rest -> {
                 // Skip to next exercise
                 timerJob?.cancel()
+                wasSkipped = true // Mark as skipped
                 moveToNextExercise()
             }
             else -> {
@@ -623,7 +655,14 @@ class PlayerViewModel @Inject constructor(
                         ?: ExerciseStrategyFactory.getStrategy(currentItem.exercise.keyName)
                     if (strategy != null) {
                         score = strategy.calculateScore(blendshapes, calibrationBaseline, currentItem.difficulty)
+                    } else {
+                        Log.w(TAG, "⚠️ No strategy found for module=${currentItem.module}, keyName=${currentItem.exercise.keyName}")
                     }
+                }
+                
+                // Debug: Log score periodically
+                if (System.currentTimeMillis() % 1000 < 50) {
+                    Log.v(TAG, "📊 Score: ${"%.2f".format(score)} | Target: ${if (score >= 1.0f) "✅ REACHED" else "❌"} | frameProcessing=$frameProcessingEnabled")
                 }
                 
                 _symmetryScore.value = score

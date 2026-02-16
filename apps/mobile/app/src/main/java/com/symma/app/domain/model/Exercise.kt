@@ -7,6 +7,7 @@ data class Exercise(
     val description: String?,
     val type: String,
     val category: String,
+    val mobileModule: String? = null,
     val assetAnimationUrl: String?,
     val assetTutorialVideoUrl: String?
 )

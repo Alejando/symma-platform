@@ -8,6 +8,7 @@ data class RoutineItem(
     val holdTimeSeconds: Int,
     val restBetweenSetsSeconds: Int?,
     val difficulty: Float = 1.0f,
+    val strictMode: Boolean = false,
     val exercise: Exercise
 ) {
     /**
@@ -20,21 +21,37 @@ data class RoutineItem(
             reps = targetRepetitions.coerceAtLeast(1),
             restSeconds = restBetweenSetsSeconds ?: 5,
             holdSeconds = holdTimeSeconds.coerceAtLeast(0),
-            strictMode = false,
+            strictMode = strictMode,
             allowSkip = true
         )
 
     /**
-     * Maps exercise keyName to MobileModule for strategy selection.
+     * Maps exercise mobileModule to MobileModule enum for strategy selection.
+     * Falls back to keyName-based inference if mobileModule is not set.
      */
     val module: MobileModule
-        get() = when (exercise.keyName.lowercase()) {
-            "eyes", "eye_close", "blink" -> MobileModule.EYES
-            "eyes_inverse", "eye_open", "wide_eyes" -> MobileModule.EYES_INVERSE
-            "brows", "eyebrows", "brow_raise" -> MobileModule.BROWS
-            "jaw", "jaw_open", "mouth_open" -> MobileModule.JAW
-            "smile", "mouth_smile" -> MobileModule.SMILE
-            "kiss", "pucker", "duck_face" -> MobileModule.KISS
-            else -> MobileModule.UNKNOWN
+        get() {
+            // Primary: Use mobileModule from backend if available
+            exercise.mobileModule?.let { moduleStr ->
+                return when (moduleStr.uppercase()) {
+                    "SMILE" -> MobileModule.SMILE
+                    "BROWS" -> MobileModule.BROWS
+                    "JAW" -> MobileModule.JAW
+                    "KISS" -> MobileModule.KISS
+                    "EYES" -> MobileModule.EYES
+                    "EYES_INVERSE" -> MobileModule.EYES_INVERSE
+                    else -> MobileModule.UNKNOWN
+                }
+            }
+            // Fallback: Infer from keyName (legacy support)
+            return when (exercise.keyName.lowercase()) {
+                "eyes", "eye_close", "blink" -> MobileModule.EYES
+                "eyes_inverse", "eye_open", "wide_eyes" -> MobileModule.EYES_INVERSE
+                "brows", "eyebrows", "brow_raise" -> MobileModule.BROWS
+                "jaw", "jaw_open", "mouth_open" -> MobileModule.JAW
+                "smile", "mouth_smile" -> MobileModule.SMILE
+                "kiss", "pucker", "duck_face" -> MobileModule.KISS
+                else -> MobileModule.UNKNOWN
+            }
         }
 }

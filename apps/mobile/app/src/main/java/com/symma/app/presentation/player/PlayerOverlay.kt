@@ -20,7 +20,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.FaceRetouchingOff
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.ScatterPlot
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
@@ -46,7 +51,11 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun PlayerOverlay(
     state: PlayerUiState,
-    symmetryScore: Float, // Added for feedback
+    symmetryScore: Float,
+    isMeshVisible: Boolean,
+    showMeshPoints: Boolean,
+    onToggleMesh: () -> Unit,
+    onToggleMeshPoints: () -> Unit,
     onPause: () -> Unit,
     onResume: () -> Unit,
     onSkip: () -> Unit,
@@ -57,7 +66,13 @@ fun PlayerOverlay(
         modifier = modifier.fillMaxSize()
     ) {
         // --- Layer 1: Header (Always visible) ---
-        TopHeader(onClose = onClose)
+        TopHeader(
+            isMeshVisible = isMeshVisible,
+            showMeshPoints = showMeshPoints,
+            onToggleMesh = onToggleMesh,
+            onToggleMeshPoints = onToggleMeshPoints,
+            onClose = onClose
+        )
 
         // --- Layer 2: Main Content (State Dependent) ---
         AnimatedContent(
@@ -91,7 +106,7 @@ fun PlayerOverlay(
                     )
                 }
                 is PlayerUiState.Completed -> {
-                    CompletedView(state = targetState)
+                    CompletedView(state = targetState, onClose = onClose)
                 }
             }
         }
@@ -107,13 +122,23 @@ private fun ExerciseView(
     onResume: () -> Unit,
     onSkip: () -> Unit
 ) {
-    // Feedback Logic based on target reached state
-    val feedbackText = when {
-        state.isTargetReached -> "Hold it!"
-        symmetryScore >= 0.8f -> "Almost there!"
-        symmetryScore >= 0.5f -> "Keep going..."
-        symmetryScore > 0f -> "Try harder"
-        else -> "Calibrating..."
+    // Feedback Logic: differentiate isometric (hold) vs isotonic (pulse)
+    val feedbackText = if (state.isIsometric) {
+        when {
+            state.isTargetReached -> "Hold it!"
+            symmetryScore >= 0.8f -> "Almost there!"
+            symmetryScore >= 0.5f -> "Keep going..."
+            symmetryScore > 0f -> "Try harder"
+            else -> "Get in position"
+        }
+    } else {
+        when {
+            state.isTargetReached -> "Nice!"
+            symmetryScore >= 0.8f -> "Almost!"
+            symmetryScore >= 0.5f -> "Keep going..."
+            symmetryScore > 0f -> "Go!"
+            else -> "Get in position"
+        }
     }
     
     val feedbackColor = when {
@@ -200,7 +225,7 @@ private fun ExerciseView(
                         color = Color.Gray
                     )
                     Text(
-                        text = "${state.currentSet}/${state.totalSets}",
+                        text = "${state.completedSets}/${state.totalSets}",
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
@@ -247,11 +272,11 @@ private fun ExerciseView(
                                 shape = CircleShape
                             )
                     ) {
-                        Text(
-                            text = if (state.isTargetReached) "✓" else "○",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = if (state.isTargetReached) Color.Green else Color.White,
-                            fontWeight = FontWeight.Bold
+                        Icon(
+                            imageVector = if (state.isTargetReached) Icons.Default.Check else Icons.Default.FitnessCenter,
+                            contentDescription = if (state.isTargetReached) "Target reached" else "Perform gesture",
+                            tint = if (state.isTargetReached) Color.Green else Color.White,
+                            modifier = Modifier.size(40.dp)
                         )
                     }
                 }
@@ -264,7 +289,7 @@ private fun ExerciseView(
                         color = Color.Gray
                     )
                     Text(
-                        text = "${state.currentRep}/${state.totalReps}",
+                        text = "${state.completedReps}/${state.totalReps}",
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
@@ -316,11 +341,19 @@ private fun ExerciseView(
     }
 }
 @Composable
-private fun TopHeader(onClose: () -> Unit) {
-    Box(
+private fun TopHeader(
+    isMeshVisible: Boolean,
+    showMeshPoints: Boolean,
+    onToggleMesh: () -> Unit,
+    onToggleMeshPoints: () -> Unit,
+    onClose: () -> Unit
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         // "Close" (X) button (Top Left)
         IconButton(
@@ -332,14 +365,43 @@ private fun TopHeader(onClose: () -> Unit) {
         ) {
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "Close"
+                contentDescription = "Cerrar"
             )
         }
         
-        // "Exercise X of Y" pill could go here in Top Center if we had that info in all states
-        // For now adhering to strict RFC, but state might not always have "X of Y". 
-        // Exercise State has it. Rest State doesn't explicitly. 
-        // We will leave Top Center empty for now or add it if needed later.
+        // Toggle buttons (Top Right)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Points toggle button
+            IconButton(
+                onClick = onToggleMeshPoints,
+                enabled = isMeshVisible,
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = if (showMeshPoints && isMeshVisible) Color(0xFFFF9800).copy(alpha = 0.8f) else Color.Black.copy(alpha = 0.4f),
+                    contentColor = Color.White,
+                    disabledContainerColor = Color.Black.copy(alpha = 0.2f),
+                    disabledContentColor = Color.White.copy(alpha = 0.3f)
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ScatterPlot,
+                    contentDescription = if (showMeshPoints) "Ocultar puntos" else "Mostrar puntos"
+                )
+            }
+            
+            // Mesh toggle button
+            IconButton(
+                onClick = onToggleMesh,
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = if (isMeshVisible) Color(0xFF00BCD4).copy(alpha = 0.8f) else Color.Black.copy(alpha = 0.4f),
+                    contentColor = Color.White
+                )
+            ) {
+                Icon(
+                    imageVector = if (isMeshVisible) Icons.Default.Face else Icons.Default.FaceRetouchingOff,
+                    contentDescription = if (isMeshVisible) "Ocultar malla" else "Mostrar malla"
+                )
+            }
+        }
     }
 }
 
@@ -383,7 +445,7 @@ private fun GetReadyView(state: PlayerUiState.GetReady) {
                 )
                 
                 CircularProgressIndicator(
-                    progress = { state.countdownSeconds / 5f }, // Assuming 5s max
+                    progress = { state.countdownSeconds.toFloat() / state.totalSeconds.toFloat() },
                     modifier = Modifier.size(120.dp),
                     color = Color.Green,
                     strokeWidth = 8.dp,
@@ -481,7 +543,10 @@ private fun RestView(
 }
 
 @Composable
-private fun CompletedView(state: PlayerUiState.Completed) {
+private fun CompletedView(
+    state: PlayerUiState.Completed,
+    onClose: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -507,6 +572,23 @@ private fun CompletedView(state: PlayerUiState.Completed) {
                 color = Color.White,
                 textAlign = TextAlign.Center
             )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            Button(
+                onClick = onClose,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Green,
+                    contentColor = Color.White
+                ),
+                modifier = Modifier.fillMaxWidth(0.6f)
+            ) {
+                Text(
+                    text = "Done",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }

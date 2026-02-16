@@ -9,6 +9,7 @@ data class ExerciseDto(
     @SerializedName("description") val description: String?,
     @SerializedName("type") val type: String,
     @SerializedName("category") val category: String,
+    @SerializedName("mobileModule") val mobileModule: String? = null,
     @SerializedName("assetAnimationUrl") val assetAnimationUrl: String?,
     @SerializedName("assetTutorialVideoUrl") val assetTutorialVideoUrl: String?
 )

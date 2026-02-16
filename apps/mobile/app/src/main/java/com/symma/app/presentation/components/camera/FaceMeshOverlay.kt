@@ -1,76 +1,65 @@
 package com.symma.app.presentation.components.camera
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PointMode
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.unit.dp
-import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 
+/**
+ * Face mesh overlay Composable wrapper for FaceMeshView (Android View).
+ * Uses high-performance native Android Canvas drawing for better FPS.
+ */
 @Composable
 fun FaceMeshOverlay(
     result: FaceLandmarkerHelper.ResultBundle?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    meshColor: Color = Color(0xFF00BCD4), // Cyan
+    showPoints: Boolean = false,
+    lineWidth: Float = 2f
 ) {
-    Canvas(modifier = modifier.fillMaxSize()) {
-        val landmarks = result?.result?.faceLandmarks()
-        if (landmarks.isNullOrEmpty()) return@Canvas
-
-        val firstFace = landmarks[0]
-        val width = size.width
-        val height = size.height
-
-        // Define key landmarks indices
-        val lipsIndices = listOf(61, 291, 0, 17)
-        val leftEyeIndices = listOf(33, 263) // Simple approximation
-        // Add more if needed
-
-        // Draw all landmarks as small white points
-        val allPoints = firstFace.map { landmark ->
-            // Mirror X coordinate for front camera: 1.0 - x
-            val x = (1.0f - landmark.x()) * width
-            val y = landmark.y() * height
-            Offset(x, y)
-        }
-        
-        drawPoints(
-            points = allPoints,
-            pointMode = PointMode.Points,
-            color = Color.White.copy(alpha = 0.5f),
-            strokeWidth = 2.dp.toPx(),
-            cap = StrokeCap.Round
-        )
-
-        // Draw Lips (Green circles)
-        lipsIndices.forEach { index ->
-            if (index < firstFace.size) {
-                val landmark = firstFace[index]
-                val x = (1.0f - landmark.x()) * width
-                val y = landmark.y() * height
-                drawCircle(
-                    color = Color.Green,
-                    radius = 4.dp.toPx(),
-                    center = Offset(x, y)
-                )
-            }
-        }
-
-        // Draw Eyes (Green circles)
-        leftEyeIndices.forEach { index ->
-            if (index < firstFace.size) {
-                val landmark = firstFace[index]
-                val x = (1.0f - landmark.x()) * width
-                val y = landmark.y() * height
-                drawCircle(
-                    color = Color.Green,
-                    radius = 4.dp.toPx(),
-                    center = Offset(x, y)
-                )
-            }
+    val context = LocalContext.current
+    
+    // Create and remember the FaceMeshView
+    val faceMeshView = remember {
+        FaceMeshView(context).apply {
+            this.meshColor = meshColor.toArgb()
+            this.showPoints = showPoints
+            this.lineWidth = lineWidth
         }
     }
+
+    // Update view properties when they change
+    LaunchedEffect(meshColor) {
+        faceMeshView.meshColor = meshColor.toArgb()
+    }
+    LaunchedEffect(showPoints) {
+        faceMeshView.showPoints = showPoints
+    }
+    LaunchedEffect(lineWidth) {
+        faceMeshView.lineWidth = lineWidth
+    }
+
+    // Update results when they change
+    LaunchedEffect(result) {
+        if (result != null) {
+            faceMeshView.setResults(
+                faceLandmarkerResult = result.result,
+                imageHeight = result.inputImageHeight,
+                imageWidth = result.inputImageWidth
+            )
+        } else {
+            faceMeshView.clear()
+        }
+    }
+
+    // Embed the Android View in Compose
+    AndroidView(
+        factory = { faceMeshView },
+        modifier = modifier.fillMaxSize()
+    )
 }

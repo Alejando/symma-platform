@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -27,6 +28,10 @@ class HomeViewModel @Inject constructor(
 
     private val _isRefreshing = MutableStateFlow(true)
     private val _errorMessage = MutableStateFlow<String?>(null)
+    private val _lastSyncedAt = MutableStateFlow<Long?>(null)
+    val lastSyncedAt: StateFlow<Long?> = _lastSyncedAt.asStateFlow()
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
     val uiState: StateFlow<HomeUiState> = combine(
         routineRepository.getRoutineFlow(),
@@ -52,14 +57,36 @@ class HomeViewModel @Inject constructor(
     fun refreshRoutine() {
         viewModelScope.launch {
             _isRefreshing.value = true
+            _isSyncing.value = true
             _errorMessage.value = null
 
             routineRepository.refreshRoutine()
+                .onSuccess {
+                    _lastSyncedAt.value = System.currentTimeMillis()
+                }
                 .onFailure { exception ->
                     _errorMessage.value = exception.message ?: "Failed to sync routine"
                 }
 
             _isRefreshing.value = false
+            _isSyncing.value = false
+        }
+    }
+
+    fun syncRoutine() {
+        viewModelScope.launch {
+            _isSyncing.value = true
+            _errorMessage.value = null
+
+            routineRepository.refreshRoutine()
+                .onSuccess {
+                    _lastSyncedAt.value = System.currentTimeMillis()
+                }
+                .onFailure { exception ->
+                    _errorMessage.value = exception.message ?: "Failed to sync routine"
+                }
+
+            _isSyncing.value = false
         }
     }
 }

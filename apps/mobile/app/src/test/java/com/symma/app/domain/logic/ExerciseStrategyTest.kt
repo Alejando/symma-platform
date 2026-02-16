@@ -81,4 +81,118 @@ class ExerciseStrategyTest {
         assert(ExerciseStrategyFactory.getStrategy("kiss") is KissStrategy)
         assert(ExerciseStrategyFactory.getStrategy("unknown") == null)
     }
+
+    // ==================== Neutral Offset Tests ====================
+
+    @Test
+    fun `SmileStrategy applies neutral offset`() {
+        val strategy = SmileStrategy()
+        val baselineWithOffset = CalibrationBaseline(
+            mouthSmileMax = 0.72f,
+            neutralOffsets = mapOf(CalibrationBaseline.KEY_SMILE to 0.08f)
+        )
+        // Raw: (0.52 + 0.52) / 2 = 0.52
+        // Corrected: 0.52 - 0.08 = 0.44
+        // Score: 0.44 / 0.72 = 0.611
+        val shapes = listOf(
+            createCategory("mouthSmileLeft", 0.52f),
+            createCategory("mouthSmileRight", 0.52f)
+        )
+        val score = strategy.calculateScore(shapes, baselineWithOffset, 1.0f)
+        assertEquals(0.611f, score, 0.01f)
+    }
+
+    @Test
+    fun `SmileStrategy without neutral offset gives higher score`() {
+        val strategy = SmileStrategy()
+        val baselineNoOffset = CalibrationBaseline(mouthSmileMax = 0.72f)
+        val baselineWithOffset = CalibrationBaseline(
+            mouthSmileMax = 0.72f,
+            neutralOffsets = mapOf(CalibrationBaseline.KEY_SMILE to 0.08f)
+        )
+        val shapes = listOf(
+            createCategory("mouthSmileLeft", 0.52f),
+            createCategory("mouthSmileRight", 0.52f)
+        )
+        val scoreNoOffset = strategy.calculateScore(shapes, baselineNoOffset, 1.0f)
+        val scoreWithOffset = strategy.calculateScore(shapes, baselineWithOffset, 1.0f)
+        // Without offset: 0.52/0.72 = 0.722
+        // With offset: 0.44/0.72 = 0.611
+        assert(scoreNoOffset > scoreWithOffset)
+    }
+
+    @Test
+    fun `Neutral offset clamps to zero - no negative scores`() {
+        val strategy = SmileStrategy()
+        val baselineWithLargeOffset = CalibrationBaseline(
+            mouthSmileMax = 0.72f,
+            neutralOffsets = mapOf(CalibrationBaseline.KEY_SMILE to 0.60f)
+        )
+        // Raw: 0.10, Offset: 0.60 => Corrected: max(0.10 - 0.60, 0) = 0.0
+        val shapes = listOf(
+            createCategory("mouthSmileLeft", 0.10f),
+            createCategory("mouthSmileRight", 0.10f)
+        )
+        val score = strategy.calculateScore(shapes, baselineWithLargeOffset, 1.0f)
+        assertEquals(0.0f, score, 0.001f)
+    }
+
+    @Test
+    fun `JawStrategy applies neutral offset`() {
+        val strategy = JawStrategy()
+        val baselineWithOffset = CalibrationBaseline(
+            mouthOpenMax = 0.83f,
+            neutralOffsets = mapOf(CalibrationBaseline.KEY_JAW_OPEN to 0.03f)
+        )
+        // Raw: 0.43, Corrected: 0.40, Score: 0.40/0.83 = 0.482
+        val shapes = listOf(createCategory("jawOpen", 0.43f))
+        val score = strategy.calculateScore(shapes, baselineWithOffset, 1.0f)
+        assertEquals(0.482f, score, 0.01f)
+    }
+
+    @Test
+    fun `KissStrategy applies neutral offset`() {
+        val strategy = KissStrategy()
+        val baselineWithOffset = CalibrationBaseline(
+            duckFaceMax = 0.45f,
+            neutralOffsets = mapOf(CalibrationBaseline.KEY_KISS to 0.12f)
+        )
+        // Raw: 0.32, Corrected: 0.20, Score: 0.20/0.45 = 0.444
+        val shapes = listOf(createCategory("mouthPucker", 0.32f))
+        val score = strategy.calculateScore(shapes, baselineWithOffset, 1.0f)
+        assertEquals(0.444f, score, 0.01f)
+    }
+
+    @Test
+    fun `BrowsStrategy applies neutral offset`() {
+        val strategy = BrowsStrategy()
+        val baselineWithOffset = CalibrationBaseline(
+            browRaiseMax = 0.58f,
+            neutralOffsets = mapOf(CalibrationBaseline.KEY_BROW_RAISE to 0.05f)
+        )
+        // Raw: (0.35+0.35+0.35)/3 = 0.35, Corrected: 0.30, Score: 0.30/0.58 = 0.517
+        val shapes = listOf(
+            createCategory("browInnerUp", 0.35f),
+            createCategory("browOuterUpLeft", 0.35f),
+            createCategory("browOuterUpRight", 0.35f)
+        )
+        val score = strategy.calculateScore(shapes, baselineWithOffset, 1.0f)
+        assertEquals(0.517f, score, 0.01f)
+    }
+
+    @Test
+    fun `EyesStrategy applies neutral offset`() {
+        val strategy = EyesStrategy()
+        val baselineWithOffset = CalibrationBaseline(
+            eyesClosedMax = 0.91f,
+            neutralOffsets = mapOf(CalibrationBaseline.KEY_EYES_CLOSED to 0.15f)
+        )
+        // Raw: (0.65+0.65)/2 = 0.65, Corrected: 0.50, Score: 0.50/0.91 = 0.549
+        val shapes = listOf(
+            createCategory("eyeBlinkLeft", 0.65f),
+            createCategory("eyeBlinkRight", 0.65f)
+        )
+        val score = strategy.calculateScore(shapes, baselineWithOffset, 1.0f)
+        assertEquals(0.549f, score, 0.01f)
+    }
 }
