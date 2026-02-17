@@ -1,0 +1,308 @@
+openapi: 3.0.3
+info:
+  title: Symma API — Routines Contracts
+  version: 1.0.0
+
+paths:
+  /routines:
+    post:
+      tags: [Routines]
+      operationId: createRoutine
+      summary: Create a new routine with exercise items
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoutineRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutineResponse'
+    get:
+      tags: [Routines]
+      operationId: listRoutines
+      summary: List all routines (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: './common.yaml#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/RoutineResponse'
+
+  /routines/{id}:
+    get:
+      tags: [Routines]
+      operationId: getRoutine
+      summary: Get a routine by ID (includes items with exercises)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutineResponse'
+    put:
+      tags: [Routines]
+      operationId: updateRoutine
+      summary: Update a routine (full replace of items)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoutineRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutineResponse'
+    delete:
+      tags: [Routines]
+      operationId: deleteRoutine
+      summary: Delete a routine
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: No content
+
+  /routines/{id}/clone:
+    post:
+      tags: [Routines]
+      operationId: cloneRoutine
+      summary: Clone an existing routine
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutineResponse'
+
+  /patients/{id}/routines:
+    get:
+      tags: [Routines]
+      operationId: listPatientRoutines
+      summary: List routines for a specific patient
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoutineResponse'
+
+components:
+  schemas:
+    RoutineItemRequest:
+      type: object
+      required: [exerciseId, sets, repsPerSet, targetHoldSeconds]
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        sets:
+          type: integer
+          minimum: 1
+        repsPerSet:
+          type: integer
+          minimum: 1
+        targetHoldSeconds:
+          type: integer
+          minimum: 0
+        restBetweenSets:
+          type: integer
+          minimum: 0
+          default: 10
+        difficultyLevel:
+          type: number
+          format: float
+          default: 1.0
+        strictMode:
+          type: boolean
+          default: false
+        allowSkip:
+          type: boolean
+          default: true
+
+    CreateRoutineRequest:
+      type: object
+      required: [patientId, name, startDate, items]
+      properties:
+        patientId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        therapistNotes:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoutineItemRequest'
+
+    UpdateRoutineRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        therapistNotes:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoutineItemRequest'
+
+    RoutineItemResponse:
+      type: object
+      required: [id, routineId, exerciseId, orderIndex, sets, repsPerSet, targetHoldSeconds, difficultyLevel, restBetweenSets, strictMode, allowSkip]
+      properties:
+        id:
+          type: string
+          format: uuid
+        routineId:
+          type: string
+          format: uuid
+        exerciseId:
+          type: string
+          format: uuid
+        orderIndex:
+          type: integer
+        sets:
+          type: integer
+        repsPerSet:
+          type: integer
+        targetHoldSeconds:
+          type: integer
+        difficultyLevel:
+          type: number
+          format: float
+        restBetweenSets:
+          type: integer
+        strictMode:
+          type: boolean
+        allowSkip:
+          type: boolean
+        exercise:
+          $ref: './exercises.yaml#/components/schemas/ExerciseResponse'
+
+    RoutineResponse:
+      type: object
+      required: [id, patientId, name, startDate, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        patientId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          $ref: './common.yaml#/components/schemas/RoutineStatus'
+        therapistNotes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoutineItemResponse'
+        sessionsCount:
+          type: integer
+          description: Computed count of sessions for this routine

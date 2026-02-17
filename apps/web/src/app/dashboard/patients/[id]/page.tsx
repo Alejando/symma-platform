@@ -48,7 +48,7 @@ export default function PatientOverviewPage() {
           <LabelValue label="Phone" value={formatPhoneNumber(patient.phoneNumber)} />
           <LabelValue
             label="Date of Birth"
-            value={new Date(patient.dateOfBirth).toLocaleDateString()}
+            value={patient.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString() : 'N/A'}
           />
           <LabelValue label="Gender" value={<span className="capitalize">{patient.gender?.toLowerCase()}</span>} />
         </div>

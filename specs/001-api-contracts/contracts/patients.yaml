@@ -1,0 +1,314 @@
+openapi: 3.0.3
+info:
+  title: Symma API — Patients Contracts
+  version: 1.0.0
+
+paths:
+  /patients:
+    post:
+      tags: [Patients]
+      operationId: createPatient
+      summary: Create a new patient
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePatientRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+    get:
+      tags: [Patients]
+      operationId: listPatients
+      summary: List patients (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: './common.yaml#/components/schemas/PaginationQuery/properties/page'
+        - $ref: './common.yaml#/components/schemas/PaginationQuery/properties/limit'
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: './common.yaml#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PatientResponse'
+
+  /patients/{id}:
+    get:
+      tags: [Patients]
+      operationId: getPatient
+      summary: Get a patient by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+        '404':
+          description: Patient not found
+    patch:
+      tags: [Patients]
+      operationId: updatePatient
+      summary: Update a patient
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePatientRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+    delete:
+      tags: [Patients]
+      operationId: deletePatient
+      summary: Delete a patient
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: No content
+
+  /patients/{id}/access-code:
+    post:
+      tags: [Patients]
+      operationId: generateAccessCode
+      summary: Generate a new access code for mobile login
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessCodeResponse'
+    delete:
+      tags: [Patients]
+      operationId: revokeAccessCode
+      summary: Revoke patient access code
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: No content
+
+  /patients/{id}/access-code/status:
+    get:
+      tags: [Patients]
+      operationId: getAccessCodeStatus
+      summary: Check if patient has an active access code
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessCodeStatusResponse'
+
+components:
+  schemas:
+    CreatePatientRequest:
+      type: object
+      required: [firstName, lastName, email, dateOfBirth]
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        dateOfBirth:
+          type: string
+          format: date
+          description: YYYY-MM-DD
+        gender:
+          $ref: './common.yaml#/components/schemas/Gender'
+        phoneNumber:
+          type: string
+        diagnosis:
+          type: string
+        initialParalysisDegree:
+          type: integer
+          minimum: 1
+          maximum: 6
+          description: House-Brackmann scale
+        clinicalNotes:
+          type: string
+        emergencyContactName:
+          type: string
+        emergencyContactPhone:
+          type: string
+
+    UpdatePatientRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        dateOfBirth:
+          type: string
+          format: date
+        gender:
+          $ref: './common.yaml#/components/schemas/Gender'
+        phoneNumber:
+          type: string
+        status:
+          $ref: './common.yaml#/components/schemas/PatientStatus'
+        diagnosis:
+          type: string
+        initialParalysisDegree:
+          type: integer
+          minimum: 1
+          maximum: 6
+        clinicalNotes:
+          type: string
+        emergencyContactName:
+          type: string
+        emergencyContactPhone:
+          type: string
+
+    PatientResponse:
+      type: object
+      required: [id, therapistId, firstName, lastName, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        therapistId:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+        gender:
+          allOf:
+            - $ref: './common.yaml#/components/schemas/Gender'
+          nullable: true
+        phoneNumber:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        status:
+          $ref: './common.yaml#/components/schemas/PatientStatus'
+        diagnosis:
+          type: string
+          nullable: true
+        initialParalysisDegree:
+          type: integer
+          nullable: true
+          description: House-Brackmann scale 1–6
+        clinicalNotes:
+          type: string
+          nullable: true
+        emergencyContactName:
+          type: string
+          nullable: true
+        emergencyContactPhone:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AccessCodeResponse:
+      type: object
+      required: [accessCode, patientId]
+      properties:
+        accessCode:
+          type: string
+          description: Plain-text 6-digit code (shown once)
+        patientId:
+          type: string
+          format: uuid
+
+    AccessCodeStatusResponse:
+      type: object
+      required: [hasAccessCode]
+      properties:
+        hasAccessCode:
+          type: boolean

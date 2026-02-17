@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Exercise, Patient, CreateRoutineDto, Routine, UpdateRoutineDto, RoutineItem } from '@symma/shared-types';
-import { MobileModule, ExerciseType } from '@symma/shared-types';
+import type { ExerciseResponse, Patient, CreateRoutineDto, RoutineResponse, UpdateRoutineDto, RoutineItemResponse, ExerciseType } from '@symma/shared-types';
+
+type Exercise = ExerciseResponse;
+type Routine = RoutineResponse;
+type RoutineItem = RoutineItemResponse;
 
 export type BuilderItem = {
   id: string;
@@ -335,12 +338,12 @@ export function RoutineBuilder({
                     <div>
                       <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Hold (s)</label>
                       <input
-                        className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked || item.exercise.type === ExerciseType.ISOTONIC ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
+                        className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked || item.exercise.type === 'ISOTONIC' ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
                         type="number"
                         min="0"
                         value={item.targetHoldSeconds}
                         onChange={(e) => handleUpdateItem(item.id, 'targetHoldSeconds', parseInt(e.target.value) || 0)}
-                        disabled={isLocked || item.exercise.type === ExerciseType.ISOTONIC}
+                        disabled={isLocked || item.exercise.type === 'ISOTONIC'}
                       />
                     </div>
                   </div>

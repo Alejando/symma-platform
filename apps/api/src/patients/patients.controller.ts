@@ -37,8 +37,14 @@ export class PatientsController {
   findAll(
     @Request() req: AuthenticatedRequest,
     @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.patientsService.findAll(req.user.userId, search);
+    return this.patientsService.findAll(req.user.userId, {
+      search,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? Math.min(parseInt(limit, 10), 100) : undefined,
+    });
   }
 
   @Get(':id')

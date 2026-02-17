@@ -4,7 +4,7 @@ import { AppModule } from '../src/app.module';
 import { PatientsService } from '../src/patients/patients.service';
 import { PatientAuthService } from '../src/auth/patient-auth.service';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { PatientStatus } from '../src/patients/dto/update-patient.dto';
+import type { PatientStatus } from '@symma/shared-types';
 
 async function verify() {
   console.log('🚀 Starting Verification Script...');
@@ -63,7 +63,7 @@ async function verify() {
     // 4. Attempt Login
     console.log('4️⃣  Attempting Login with Access Code...');
     const token = await authService.login(code);
-    if (!token.access_token) throw new Error('❌ Login failed: No token returned');
+    if (!token.accessToken) throw new Error('❌ Login failed: No token returned');
     console.log('   ✅ Login Successful! Token received.');
 
     console.log('✅✅✅ VERIFICATION PASSED ✅✅✅');

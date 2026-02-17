@@ -1,0 +1,105 @@
+openapi: 3.0.3
+info:
+  title: Symma API — Mobile Contracts
+  version: 1.0.0
+
+paths:
+  /mobile/routine/active:
+    get:
+      tags: [Mobile]
+      operationId: getActiveRoutine
+      summary: Get the active routine for the logged-in patient
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Returns full routine with exercises, or null if none active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActiveRoutineResponse'
+        '204':
+          description: No active routine found
+
+components:
+  schemas:
+    ActiveRoutineExerciseResponse:
+      type: object
+      required: [id, name, keyName, type, category]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        keyName:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          $ref: './common.yaml#/components/schemas/ExerciseType'
+        category:
+          $ref: './common.yaml#/components/schemas/ExerciseCategory'
+        mobileModule:
+          allOf:
+            - $ref: './common.yaml#/components/schemas/MobileModule'
+          nullable: true
+        assetAnimationUrl:
+          type: string
+          nullable: true
+        assetTutorialVideoUrl:
+          type: string
+          nullable: true
+
+    ActiveRoutineItemResponse:
+      type: object
+      required: [id, orderIndex, sets, repsPerSet, targetHoldSeconds, restBetweenSets, difficultyLevel, strictMode, exercise]
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderIndex:
+          type: integer
+        sets:
+          type: integer
+          description: "Canonical name (replaces former 'targetSets')"
+        repsPerSet:
+          type: integer
+          description: "Canonical name (replaces former 'targetRepetitions')"
+        targetHoldSeconds:
+          type: integer
+          description: "Canonical name (replaces former 'holdTimeSeconds')"
+        restBetweenSets:
+          type: integer
+          description: "Canonical name (replaces former 'restBetweenSetsSeconds')"
+        difficultyLevel:
+          type: number
+          format: float
+        strictMode:
+          type: boolean
+        exercise:
+          $ref: '#/components/schemas/ActiveRoutineExerciseResponse'
+
+    ActiveRoutineResponse:
+      type: object
+      required: [id, name, startDate, status, items]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          $ref: './common.yaml#/components/schemas/RoutineStatus'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActiveRoutineItemResponse'

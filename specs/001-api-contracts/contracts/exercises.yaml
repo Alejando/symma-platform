@@ -1,0 +1,226 @@
+openapi: 3.0.3
+info:
+  title: Symma API — Exercises Contracts
+  version: 1.0.0
+
+paths:
+  /exercises:
+    get:
+      tags: [Exercises]
+      operationId: listExercises
+      summary: List all exercises (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: './common.yaml#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ExerciseResponse'
+    post:
+      tags: [Exercises]
+      operationId: createExercise
+      summary: Create a new exercise
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExerciseRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseResponse'
+
+  /exercises/{id}:
+    get:
+      tags: [Exercises]
+      operationId: getExercise
+      summary: Get an exercise by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseResponse'
+    patch:
+      tags: [Exercises]
+      operationId: updateExercise
+      summary: Update an exercise
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExerciseRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseResponse'
+    delete:
+      tags: [Exercises]
+      operationId: deleteExercise
+      summary: Delete an exercise
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: No content
+
+components:
+  schemas:
+    ExerciseDefaultConfig:
+      type: object
+      properties:
+        threshold:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Success threshold (0.0–1.0)
+        holdTime:
+          type: integer
+          minimum: 0
+          description: Hold time in seconds
+        restTime:
+          type: integer
+          minimum: 0
+          description: Rest time in seconds
+
+    CreateExerciseRequest:
+      type: object
+      required: [keyName, name, type, category]
+      properties:
+        keyName:
+          type: string
+          description: Unique key identifier for the exercise
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: './common.yaml#/components/schemas/ExerciseType'
+        category:
+          $ref: './common.yaml#/components/schemas/ExerciseCategory'
+        mobileModule:
+          $ref: './common.yaml#/components/schemas/MobileModule'
+        assetAnimationUrl:
+          type: string
+          format: uri
+        assetTutorialVideoUrl:
+          type: string
+          format: uri
+        defaultConfig:
+          $ref: '#/components/schemas/ExerciseDefaultConfig'
+
+    UpdateExerciseRequest:
+      type: object
+      properties:
+        keyName:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: './common.yaml#/components/schemas/ExerciseType'
+        category:
+          $ref: './common.yaml#/components/schemas/ExerciseCategory'
+        mobileModule:
+          $ref: './common.yaml#/components/schemas/MobileModule'
+        assetAnimationUrl:
+          type: string
+          format: uri
+        assetTutorialVideoUrl:
+          type: string
+          format: uri
+        defaultConfig:
+          $ref: '#/components/schemas/ExerciseDefaultConfig'
+
+    ExerciseResponse:
+      type: object
+      required: [id, keyName, name, type, category, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        keyName:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          $ref: './common.yaml#/components/schemas/ExerciseType'
+        category:
+          $ref: './common.yaml#/components/schemas/ExerciseCategory'
+        mobileModule:
+          allOf:
+            - $ref: './common.yaml#/components/schemas/MobileModule'
+          nullable: true
+        assetAnimationUrl:
+          type: string
+          nullable: true
+        assetTutorialVideoUrl:
+          type: string
+          nullable: true
+        defaultConfig:
+          allOf:
+            - $ref: '#/components/schemas/ExerciseDefaultConfig'
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time

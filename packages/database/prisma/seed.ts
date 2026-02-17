@@ -65,11 +65,7 @@ const exercises: SeedExercise[] = [
     keyName: 'exercise_cheek_puff',
     name: 'Inflar Mejillas',
     description: 'Infla las mejillas con aire, mantén y suelta.',
-<<<<<<< /Users/alejandroprado/pratum/symma-platform/packages/database/prisma/seed.ts
     type: 'ISOMETRIC',
-=======
-    type: 'ISOTONIC',
->>>>>>> /Users/alejandroprado/.windsurf/worktrees/symma-platform/symma-platform-48b52386/packages/database/prisma/seed.ts
     category: 'CORE',
     defaultConfig: { threshold: 0.5, holdTime: 5, restTime: 60 },
     mobileModule: 'SMILE',
@@ -269,11 +265,7 @@ async function seedMobileRFC029(therapistId: string) {
         keyName: ex.id + '_rfc029',
         name: ex.name,
         description: 'Automatic Exercise',
-<<<<<<< /Users/alejandroprado/pratum/symma-platform/packages/database/prisma/seed.ts
         type: 'ISOMETRIC',
-=======
-        type: 'ISOTONIC',
->>>>>>> /Users/alejandroprado/.windsurf/worktrees/symma-platform/symma-platform-48b52386/packages/database/prisma/seed.ts
         category: 'CORE',
         mobileModule: ex.variable as MobileModule
       },

@@ -99,7 +99,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                   <span className="text-sm text-gray-600">{patient.email}</span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm text-gray-600">{formatDate(patient.dateOfBirth)}</span>
+                  <span className="text-sm text-gray-600">{patient.dateOfBirth ? formatDate(patient.dateOfBirth) : 'N/A'}</span>
                 </td>
                 <td className="px-6 py-4">
                   <span
@@ -175,7 +175,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                   </span>
                 </div>
                 <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
-                  <span>{formatDate(patient.dateOfBirth)}</span>
+                  <span>{patient.dateOfBirth ? formatDate(patient.dateOfBirth) : 'N/A'}</span>
                   {patient.diagnosis && (
                     <span className="truncate">{patient.diagnosis}</span>
                   )}

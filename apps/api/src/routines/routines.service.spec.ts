@@ -78,8 +78,8 @@ describe('RoutinesService', () => {
               expect.objectContaining({
                 sets: 3,
                 repsPerSet: 10,
-                mobileModule: 'EYES',
-                exerciseType: 'ISOMETRIC',
+                exerciseId: 'exercise-id',
+                targetHoldSeconds: 5,
               }),
             ]),
           },

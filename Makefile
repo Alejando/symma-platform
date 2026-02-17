@@ -124,6 +124,18 @@ stop:
 restart: stop start
 
 # ============================================
+# Code Generation Commands
+# ============================================
+
+generate-openapi:
+	pnpm run generate:openapi
+	@echo "OpenAPI spec generated at apps/api/openapi.json"
+
+generate-kotlin: generate-openapi
+	pnpm run generate:kotlin
+	@echo "Kotlin models generated at apps/mobile/app/src/main/java/com/symma/app/data/remote/model"
+
+# ============================================
 # Utility Commands
 # ============================================
 

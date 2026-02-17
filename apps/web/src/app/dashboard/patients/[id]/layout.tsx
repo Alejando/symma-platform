@@ -107,7 +107,7 @@ export default function PatientLayout({
               <div className="flex items-center gap-3 md:gap-4 text-sm text-gray-500 flex-wrap">
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-base md:text-lg">calendar_today</span>
-                  <span>{calculateAge(patient.dateOfBirth)} yrs</span>
+                  <span>{patient.dateOfBirth ? `${calculateAge(patient.dateOfBirth)} yrs` : 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-base md:text-lg">wc</span>

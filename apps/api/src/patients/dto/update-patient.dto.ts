@@ -1,15 +1,12 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsEnum, IsOptional } from 'class-validator';
+import { IsIn, IsOptional } from 'class-validator';
 import { CreatePatientDto } from './create-patient.dto';
+import type { PatientStatus } from '@symma/shared-types';
 
-export enum PatientStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  ARCHIVED = 'ARCHIVED',
-}
+const PATIENT_STATUS_VALUES: PatientStatus[] = ['ACTIVE', 'INACTIVE', 'ARCHIVED'];
 
 export class UpdatePatientDto extends PartialType(CreatePatientDto) {
   @IsOptional()
-  @IsEnum(PatientStatus)
+  @IsIn(PATIENT_STATUS_VALUES)
   status?: PatientStatus;
 }

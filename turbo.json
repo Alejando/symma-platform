@@ -35,6 +35,11 @@
     },
     "db:push": {
       "cache": false
+    },
+    "generate:openapi": {
+      "dependsOn": ["^build"],
+      "outputs": ["openapi.json"],
+      "cache": false
     }
   }
 }

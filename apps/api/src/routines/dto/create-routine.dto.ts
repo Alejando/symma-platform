@@ -8,12 +8,13 @@ import {
   IsUUID,
   IsInt,
   Min,
-
+  IsBoolean,
+  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import type { CreateRoutineRequest, RoutineItemRequest } from '@symma/shared-types';
 
-
-export class CreateRoutineItemDto {
+export class CreateRoutineItemDto implements RoutineItemRequest {
   @IsString()
   @IsNotEmpty()
   exerciseId: string;
@@ -47,7 +48,7 @@ export class CreateRoutineItemDto {
 
 }
 
-export class CreateRoutineDto {
+export class CreateRoutineDto implements CreateRoutineRequest {
   @IsUUID()
   @IsNotEmpty()
   patientId: string;

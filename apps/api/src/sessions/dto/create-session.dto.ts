@@ -1,8 +1,9 @@
 import { IsString, IsNotEmpty, IsISO8601, IsArray, ValidateNested, IsNumber, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import type { CreateSessionRequest, SessionItemRequest } from '@symma/shared-types';
 
-export class SessionItemDto {
+export class SessionItemDto implements SessionItemRequest {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
@@ -27,7 +28,7 @@ export class SessionItemDto {
   seriesData?: any; // Using any for JSON flexibility, or create nested DTO
 }
 
-export class CreateSessionDto {
+export class CreateSessionDto implements CreateSessionRequest {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()

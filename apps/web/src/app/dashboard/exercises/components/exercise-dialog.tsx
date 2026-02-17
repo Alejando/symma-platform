@@ -1,7 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Exercise, MobileModule, ExerciseType, MOBILE_SUPPORTED_TYPES } from '@symma/shared-types';
+import type { ExerciseResponse, MobileModule, ExerciseType } from '@symma/shared-types';
+
+type Exercise = ExerciseResponse;
+
+const MOBILE_SUPPORTED_TYPES: ExerciseType[] = ['ISOTONIC', 'ISOMETRIC'];
+
+const EXERCISE_TYPES: ExerciseType[] = ['ISOTONIC', 'ISOMETRIC', 'MANUAL', 'RELAXATION'];
+const MOBILE_MODULES: MobileModule[] = ['SMILE', 'BROWS', 'JAW', 'KISS', 'EYES', 'EYES_INVERSE'];
 
 
 
@@ -26,9 +33,9 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
     keyName: '',
     name: '',
     description: '',
-    type: ExerciseType.ISOMETRIC,
+    type: 'ISOMETRIC' as ExerciseType,
     category: 'CORE',
-    mobileModule: MobileModule.EYES,
+    mobileModule: 'EYES' as MobileModule,
     assetAnimationUrl: '',
     assetTutorialVideoUrl: '',
   });
@@ -39,9 +46,9 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
         keyName: exercise?.keyName || '',
         name: exercise?.name || '',
         description: exercise?.description || '',
-        type: exercise?.type || ExerciseType.ISOMETRIC,
+        type: exercise?.type || 'ISOMETRIC',
         category: exercise?.category || 'CORE',
-        mobileModule: exercise?.mobileModule || MobileModule.EYES,
+        mobileModule: exercise?.mobileModule || 'EYES',
         assetAnimationUrl: exercise?.assetAnimationUrl || '',
         assetTutorialVideoUrl: exercise?.assetTutorialVideoUrl || '',
       });
@@ -163,7 +170,7 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
               >
-                {Object.values(ExerciseType).map(type => (
+                {EXERCISE_TYPES.map(type => (
                   <option key={type} value={type}>{type.replace(/_/g, ' ')}</option>
                 ))}
               </select>
@@ -178,7 +185,7 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
                 >
                   <option value="">Select module...</option>
-                  {Object.values(MobileModule).map(module => (
+                  {MOBILE_MODULES.map(module => (
                     <option key={module} value={module}>{module.replace(/_/g, ' ')}</option>
                   ))}
                 </select>

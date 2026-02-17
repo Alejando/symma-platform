@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRoutineDto } from './dto/create-routine.dto';
 import { UpdateRoutineDto } from './dto/update-routine.dto';
+import type { PaginatedResponse } from '@symma/shared-types';
 
 @Injectable()
 export class RoutinesService {
@@ -69,23 +70,35 @@ export class RoutinesService {
     });
   }
 
-  async findAll(therapistId: string) {
-    // Get all routines for patients owned by this therapist
-    return this.prisma.routine.findMany({
-      where: {
-        patient: { therapistId },
-      },
-      include: {
-        patient: {
-          select: { firstName: true, lastName: true },
+  async findAll(
+    therapistId: string,
+    options: { page?: number; limit?: number } = {},
+  ): Promise<PaginatedResponse<unknown>> {
+    const { page = 1, limit = 20 } = options;
+    const skip = (page - 1) * limit;
+
+    const where = { patient: { therapistId } };
+
+    const [data, total] = await Promise.all([
+      this.prisma.routine.findMany({
+        where,
+        include: {
+          patient: {
+            select: { firstName: true, lastName: true },
+          },
+          items: {
+            include: { exercise: true },
+            orderBy: { orderIndex: 'asc' },
+          },
         },
-        items: {
-          include: { exercise: true },
-          orderBy: { orderIndex: 'asc' },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.routine.count({ where }),
+    ]);
+
+    return { data, total, page, limit };
   }
 
   async findAllByPatient(therapistId: string, patientId: string) {

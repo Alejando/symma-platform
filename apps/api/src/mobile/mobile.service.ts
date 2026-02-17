@@ -34,10 +34,10 @@ export class MobileService {
       items: routine.items.map((item) => ({
         id: item.id,
         orderIndex: item.orderIndex,
-        targetSets: item.sets,
-        targetRepetitions: item.repsPerSet,
-        holdTimeSeconds: item.targetHoldSeconds,
-        restBetweenSetsSeconds: item.restBetweenSets,
+        sets: item.sets,
+        repsPerSet: item.repsPerSet,
+        targetHoldSeconds: item.targetHoldSeconds,
+        restBetweenSets: item.restBetweenSets,
         difficultyLevel: item.difficultyLevel,
         strictMode: item.strictMode,
         exercise: {

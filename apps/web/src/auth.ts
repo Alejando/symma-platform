@@ -35,7 +35,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           // Fetch user profile with the token
           const profileResponse = await fetch(`${API_URL}/api/v1/auth/profile`, {
             headers: {
-              Authorization: `Bearer ${data.access_token}`,
+              Authorization: `Bearer ${data.accessToken}`,
             },
           });
 
@@ -49,7 +49,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             id: profile.id,
             email: profile.email,
             name: `${profile.firstName} ${profile.lastName}`,
-            accessToken: data.access_token,
+            accessToken: data.accessToken,
             role: profile.role,
           };
         } catch {

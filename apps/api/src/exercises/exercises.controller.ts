@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { ExercisesService } from './exercises.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
@@ -10,8 +10,16 @@ export class ExercisesController {
   constructor(private readonly exercisesService: ExercisesService) { }
 
   @Get()
-  findAll() {
-    return this.exercisesService.findAll();
+  findAll(
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.exercisesService.findAll({
+      search,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? Math.min(parseInt(limit, 10), 100) : undefined,
+    });
   }
 
   @Get(':id')

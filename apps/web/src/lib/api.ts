@@ -30,7 +30,9 @@ export async function getPatients(token: string, search?: string): Promise<Patie
     url.searchParams.set('search', search);
   }
   const response = await fetchWithAuth(url.toString(), token);
-  return response.json();
+  const result = await response.json();
+  // API returns PaginatedResponse { data, total, page, limit }
+  return result.data ?? result;
 }
 
 export async function getPatient(token: string, id: string): Promise<Patient> {
@@ -70,7 +72,9 @@ export async function deletePatient(token: string, id: string): Promise<Patient>
 
 export async function getExercises(token: string): Promise<Exercise[]> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/exercises`, token);
-  return response.json();
+  const result = await response.json();
+  // API returns PaginatedResponse { data, total, page, limit }
+  return result.data ?? result;
 }
 
 export async function createRoutine(

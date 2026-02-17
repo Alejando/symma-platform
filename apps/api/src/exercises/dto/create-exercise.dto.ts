@@ -1,9 +1,18 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUrl, ValidateIf } from 'class-validator';
-import { ExerciseType, ExerciseCategory, MobileModule } from '@prisma/client';
+import { IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, ValidateIf } from 'class-validator';
+import type {
+  CreateExerciseRequest,
+  ExerciseType,
+  ExerciseCategory,
+  MobileModule,
+  ExerciseDefaultConfig,
+} from '@symma/shared-types';
 
-const MOBILE_SUPPORTED_TYPES: ExerciseType[] = [ExerciseType.ISOTONIC, ExerciseType.ISOMETRIC];
+const EXERCISE_TYPE_VALUES: ExerciseType[] = ['ISOTONIC', 'ISOMETRIC', 'MANUAL', 'RELAXATION'];
+const EXERCISE_CATEGORY_VALUES: ExerciseCategory[] = ['WARMUP', 'CORE', 'COOLDOWN'];
+const MOBILE_MODULE_VALUES: MobileModule[] = ['EYES', 'EYES_INVERSE', 'BROWS', 'JAW', 'SMILE', 'KISS'];
+const MOBILE_SUPPORTED_TYPES: ExerciseType[] = ['ISOTONIC', 'ISOMETRIC'];
 
-export class CreateExerciseDto {
+export class CreateExerciseDto implements CreateExerciseRequest {
   @IsString()
   @IsNotEmpty()
   keyName: string;
@@ -16,10 +25,10 @@ export class CreateExerciseDto {
   @IsOptional()
   description?: string;
 
-  @IsEnum(ExerciseType)
+  @IsIn(EXERCISE_TYPE_VALUES)
   type: ExerciseType;
 
-  @IsEnum(ExerciseCategory)
+  @IsIn(EXERCISE_CATEGORY_VALUES)
   category: ExerciseCategory;
 
   @ValidateIf((o) => o.assetAnimationUrl !== '')
@@ -33,10 +42,10 @@ export class CreateExerciseDto {
   assetTutorialVideoUrl?: string;
 
   @IsOptional()
-  defaultConfig?: any;
+  defaultConfig?: ExerciseDefaultConfig;
 
   @ValidateIf((o) => MOBILE_SUPPORTED_TYPES.includes(o.type))
-  @IsEnum(MobileModule)
+  @IsIn(MOBILE_MODULE_VALUES)
   @IsOptional()
   mobileModule?: MobileModule;
 }

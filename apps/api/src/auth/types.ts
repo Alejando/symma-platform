@@ -5,7 +5,7 @@ export interface JwtPayload {
 }
 
 export interface LoginResponse {
-  access_token: string;
+  accessToken: string;
 }
 
 export interface TherapistInfo {

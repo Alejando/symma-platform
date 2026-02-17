@@ -37,16 +37,16 @@ export class ActiveRoutineItemDto {
   orderIndex: number;
 
   @ApiProperty({ description: 'Number of sets for this exercise' })
-  targetSets: number;
+  sets: number;
 
   @ApiProperty({ description: 'Number of repetitions per set' })
-  targetRepetitions: number;
+  repsPerSet: number;
 
   @ApiProperty({ description: 'Hold time in seconds (0 for isotonic exercises)' })
-  holdTimeSeconds: number;
+  targetHoldSeconds: number;
 
   @ApiProperty({ description: 'Rest time between sets in seconds' })
-  restBetweenSetsSeconds: number;
+  restBetweenSets: number;
 
   @ApiProperty({ description: 'Difficulty level multiplier (1.0 = normal)' })
   difficultyLevel: number;

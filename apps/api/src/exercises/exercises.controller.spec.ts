@@ -3,7 +3,7 @@ import { ExercisesController } from './exercises.controller';
 import { ExercisesService } from './exercises.service';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
 import { UpdateExerciseDto } from './dto/update-exercise.dto';
-import { ExerciseType, ExerciseCategory } from '@prisma/client';
+import type { ExerciseType, ExerciseCategory } from '@symma/shared-types';
 
 describe('ExercisesController', () => {
   let controller: ExercisesController;
@@ -21,12 +21,8 @@ describe('ExercisesController', () => {
   const createDto: CreateExerciseDto = {
     keyName: 'test_ex',
     name: 'Test Exercise',
-<<<<<<< /Users/alejandroprado/pratum/symma-platform/apps/api/src/exercises/exercises.controller.spec.ts
-    type: ExerciseType.ISOMETRIC,
-=======
-    type: ExerciseType.ISOTONIC,
->>>>>>> /Users/alejandroprado/.windsurf/worktrees/symma-platform/symma-platform-48b52386/apps/api/src/exercises/exercises.controller.spec.ts
-    category: ExerciseCategory.CORE,
+    type: 'ISOMETRIC' as ExerciseType,
+    category: 'CORE' as ExerciseCategory,
   };
 
   beforeEach(async () => {
@@ -52,7 +48,7 @@ describe('ExercisesController', () => {
     it('should return an array of exercises', async () => {
       const result = [{ id: exerciseId, ...createDto }];
       mockExercisesService.findAll.mockResolvedValue(result);
-      expect(await controller.findAll()).toBe(result);
+      expect(await controller.findAll(undefined, undefined, undefined)).toBe(result);
     });
   });
 
