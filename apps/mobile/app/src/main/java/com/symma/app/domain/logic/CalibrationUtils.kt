@@ -15,6 +15,27 @@ enum class DistanceState {
     OK          // ratio 0.25-0.45 - Optimal distance
 }
 
+/** Default engage threshold: score must reach this to count as target reached. */
+const val REP_ENGAGE_THRESHOLD = 1.0f
+
+/**
+ * Default release threshold: score must drop below this after a rep completes
+ * before the next rep can start. Strictly lower than [REP_ENGAGE_THRESHOLD] to
+ * provide hysteresis and avoid jitter-driven false transitions.
+ */
+const val REP_RELEASE_THRESHOLD = 0.75f
+
+/** Step-specific minimum gesture intensity thresholds for calibration. */
+const val CALIBRATION_THRESHOLD_DEFAULT = 0.15f
+const val CALIBRATION_THRESHOLD_BROW_RAISE = 0.10f
+const val CALIBRATION_THRESHOLD_EYES_CLOSED = 0.10f
+const val CALIBRATION_THRESHOLD_SMILE = 0.20f
+const val CALIBRATION_THRESHOLD_JAW_OPEN = 0.20f
+const val CALIBRATION_THRESHOLD_KISS = 0.20f
+
+/** Minimum valid stable samples required before a calibration step can finalize. */
+const val CALIBRATION_MIN_VALID_SAMPLES = 30
+
 object CalibrationUtils {
 
     private const val HEAD_MOVEMENT_THRESHOLD_PX = 15f

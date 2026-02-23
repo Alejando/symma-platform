@@ -3,10 +3,11 @@ package com.symma.app.presentation.player
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.symma.app.MainDispatcherRule
+import com.symma.app.domain.model.CalibrationBaseline
 import com.symma.app.domain.model.Exercise
+import com.symma.app.domain.model.ExerciseType
 import com.symma.app.domain.model.Routine
 import com.symma.app.domain.model.RoutineItem
-import com.symma.app.domain.model.CalibrationBaseline
 import com.symma.app.domain.repository.CalibrationRepository
 import com.symma.app.domain.repository.RoutineRepository
 import io.mockk.coEvery
@@ -18,6 +19,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -46,6 +48,48 @@ class PlayerViewModelTest {
         every { routineRepository.getRoutineFlow() } returns routineFlow
         every { calibrationRepository.getBaseline() } returns CalibrationBaseline()
         savedStateHandle = SavedStateHandle()
+    }
+
+    private fun createIsometricRoutine(reps: Int = 2, holdSeconds: Int = 3): Routine {
+        return Routine(
+            id = "routine-isometric",
+            name = "Isometric Routine",
+            startDate = "2024-01-01",
+            endDate = null,
+            status = "active",
+            items = listOf(
+                RoutineItem(
+                    id = "item-iso",
+                    orderIndex = 0,
+                    targetRepetitions = reps,
+                    targetSets = 1,
+                    holdTimeSeconds = holdSeconds,
+                    restBetweenSetsSeconds = 0,
+                    exercise = Exercise("ex-iso", "Smile Hold", "smile", "Hold smile", "isometric", "smile", null, null, null)
+                )
+            )
+        )
+    }
+
+    private fun createIsotonicRoutine(reps: Int = 2): Routine {
+        return Routine(
+            id = "routine-isotonic",
+            name = "Isotonic Routine",
+            startDate = "2024-01-01",
+            endDate = null,
+            status = "active",
+            items = listOf(
+                RoutineItem(
+                    id = "item-tonic",
+                    orderIndex = 0,
+                    targetRepetitions = reps,
+                    targetSets = 1,
+                    holdTimeSeconds = 0,
+                    restBetweenSetsSeconds = 0,
+                    exercise = Exercise("ex-tonic", "Smile Pulse", "smile", "Pulse smile", "isotonic", "smile", null, null, null)
+                )
+            )
+        )
     }
 
     private fun createTestRoutine(): Routine {
@@ -319,6 +363,208 @@ class PlayerViewModelTest {
             assertEquals("Should have 0 completed reps", 0, state.completedReps)
             assertEquals(1, state.currentSet)
             assertEquals(1, state.currentRep)
+        }
+    }
+
+    // ==================== US1: Release-gating tests ====================
+
+    @Test
+    fun `US1 - Isometric rep does not count next rep while gesture is held after completion`() = runTest(testDispatcher) {
+        // Given
+        routineFlow.value = createIsometricRoutine(reps = 2, holdSeconds = 1)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        testDispatcher.scheduler.runCurrent()
+        advanceTimeBy(5100) // Skip GetReady
+
+        val initial = viewModel.uiState.value as PlayerUiState.Exercise
+        assertEquals(1, initial.currentRep)
+
+        // Complete first rep: inject virtual timestamps so hold-time accumulates deterministically.
+        // 20 frames × 60ms = 1200ms > 1000ms holdTarget → rep completes.
+        var ts = 1000L
+        repeat(20) {
+            ts += 60
+            viewModel.processFrame(1.0f, ts)
+        }
+
+        // After rep completes, startCurrentExercise emits state with awaitingRelease = true.
+        // Keep gesture active — processFrame hits release gate and returns early.
+        repeat(5) {
+            ts += 60
+            viewModel.processFrame(1.0f, ts)
+        }
+
+        val afterHold = viewModel.uiState.value
+        assertTrue(
+            "Expected Exercise state after rep completion, got: $afterHold",
+            afterHold is PlayerUiState.Exercise
+        )
+        assertTrue(
+            "awaitingRelease must be true while gesture is held after rep completion",
+            (afterHold as PlayerUiState.Exercise).awaitingRelease
+        )
+    }
+
+    @Test
+    fun `US1 - Isometric next rep starts after release and re-engage`() = runTest(testDispatcher) {
+        // Given
+        routineFlow.value = createIsometricRoutine(reps = 2, holdSeconds = 1)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        testDispatcher.scheduler.runCurrent()
+        advanceTimeBy(5100)
+
+        var ts = 1000L
+
+        // Complete first rep
+        repeat(20) { ts += 60; viewModel.processFrame(1.0f, ts) }
+
+        // Release gesture (score below release threshold 0.75)
+        repeat(5) { ts += 60; viewModel.processFrame(0.3f, ts) }
+
+        // Re-engage for second rep (hold time accumulates for rep 2)
+        repeat(5) { ts += 60; viewModel.processFrame(1.0f, ts) }
+
+        val state = viewModel.uiState.value
+        if (state is PlayerUiState.Exercise) {
+            assertFalse("awaitingRelease must be false after release", state.awaitingRelease)
+        }
+    }
+
+    @Test
+    fun `US1 - Isotonic rep does not count next rep while gesture is held after completion`() = runTest(testDispatcher) {
+        // Given
+        routineFlow.value = createIsotonicRoutine(reps = 2)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        testDispatcher.scheduler.runCurrent()
+        advanceTimeBy(5100)
+
+        // Trigger first rep: rising edge (0 -> 1)
+        advanceTimeBy(60)
+        viewModel.processFrame(0.3f)
+        advanceTimeBy(60)
+        viewModel.processFrame(1.0f) // rep 1 completes here
+
+        // Keep gesture active — must NOT trigger rep 2
+        repeat(5) {
+            advanceTimeBy(60)
+            viewModel.processFrame(1.0f)
+        }
+
+        val state = viewModel.uiState.value
+        assertTrue(
+            "Expected Exercise state, got: $state",
+            state is PlayerUiState.Exercise
+        )
+        assertTrue(
+            "awaitingRelease must be true for isotonic while gesture is held after rep",
+            (state as PlayerUiState.Exercise).awaitingRelease
+        )
+    }
+
+    @Test
+    fun `US1 - Isotonic next rep counts after release and re-engage`() = runTest(testDispatcher) {
+        // Given
+        routineFlow.value = createIsotonicRoutine(reps = 2)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        testDispatcher.scheduler.runCurrent()
+        advanceTimeBy(5100)
+
+        // Trigger first rep
+        advanceTimeBy(60)
+        viewModel.processFrame(0.3f)
+        advanceTimeBy(60)
+        viewModel.processFrame(1.0f)
+
+        // Release
+        repeat(3) {
+            advanceTimeBy(60)
+            viewModel.processFrame(0.2f)
+        }
+
+        // Re-engage
+        advanceTimeBy(60)
+        viewModel.processFrame(0.3f)
+        advanceTimeBy(60)
+        viewModel.processFrame(1.0f)
+
+        val state = viewModel.uiState.value
+        if (state is PlayerUiState.Exercise) {
+            assertFalse("awaitingRelease must be false after release+re-engage", state.awaitingRelease)
+        }
+    }
+
+    @Test
+    fun `US1 - Jitter near release threshold does not cause false release`() = runTest(testDispatcher) {
+        // Given: score oscillates between 0.76 and 0.80 (above release threshold 0.75)
+        routineFlow.value = createIsometricRoutine(reps = 2, holdSeconds = 1)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        testDispatcher.scheduler.runCurrent()
+        advanceTimeBy(5100)
+
+        var ts = 1000L
+
+        // Complete first rep
+        repeat(20) { ts += 60; viewModel.processFrame(1.0f, ts) }
+
+        // Jitter above release threshold — should NOT release
+        repeat(10) { i ->
+            ts += 60
+            viewModel.processFrame(if (i % 2 == 0) 0.76f else 0.80f, ts)
+        }
+
+        val state = viewModel.uiState.value
+        assertTrue(
+            "Expected Exercise state during jitter, got: $state",
+            state is PlayerUiState.Exercise
+        )
+        assertTrue(
+            "awaitingRelease must remain true when score stays above release threshold",
+            (state as PlayerUiState.Exercise).awaitingRelease
+        )
+    }
+
+    // ==================== US2: Rep completion sound tests ====================
+
+    @Test
+    fun `US2 - PlayDing is emitted exactly once when isometric rep completes`() = runTest(testDispatcher) {
+        // Given: 1 rep, 1s hold.
+        routineFlow.value = createIsometricRoutine(reps = 1, holdSeconds = 1)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        testDispatcher.scheduler.runCurrent()
+        advanceTimeBy(5100) // Skip GetReady
+        testDispatcher.scheduler.runCurrent()
+
+        viewModel.events.test {
+            var ts = 1000L
+            // Hold gesture for 1 second using virtual timestamps
+            repeat(20) { ts += 60; viewModel.processFrame(1.0f, ts) }
+            testDispatcher.scheduler.runCurrent()
+
+            // First event after rep completion must be PlayDing
+            val first = awaitItem()
+            assertEquals("PlayDing must be emitted on rep completion", PlayerEvent.PlayDing, first)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `US2 - No PlayDing emitted while rep is in progress`() = runTest(testDispatcher) {
+        // Given: hold requires 3s, we only inject ~1s worth of virtual time
+        routineFlow.value = createIsometricRoutine(reps = 1, holdSeconds = 3)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        testDispatcher.scheduler.runCurrent()
+        advanceTimeBy(5100)
+        testDispatcher.scheduler.runCurrent()
+
+        viewModel.events.test {
+            var ts = 1000L
+            // 15 frames × 60ms = 900ms < 3000ms required — rep must NOT complete
+            repeat(15) { ts += 60; viewModel.processFrame(1.0f, ts) }
+            testDispatcher.scheduler.runCurrent()
+
+            val emitted = cancelAndConsumeRemainingEvents()
+            val dingCount = emitted.count { it is app.cash.turbine.Event.Item && it.value == PlayerEvent.PlayDing }
+            assertEquals("No PlayDing should be emitted while rep is still in progress", 0, dingCount)
         }
     }
 

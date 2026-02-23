@@ -33,7 +33,11 @@ fun RoutineItemDto.toDomain(): RoutineItem {
         targetSets = targetSets,
         holdTimeSeconds = holdTimeSeconds,
         restBetweenSetsSeconds = restBetweenSetsSeconds,
-        exercise = exercise.toDomain()
+        difficulty = difficultyLevel.toFloat(),
+        strictMode = strictMode,
+        exercise = exercise.toDomain(),
+        engageThreshold = engageThreshold,
+        releaseThreshold = releaseThreshold
     )
 }
 

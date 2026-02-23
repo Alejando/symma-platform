@@ -136,7 +136,7 @@ async function main(): Promise<void> {
   await prisma.patient.deleteMany({
     where: {
       NOT: {
-        email: { in: ['patient@symma.com', 'eyes@symma.com'] }
+        email: { in: ['patient@symma.com', 'eyes@symma.com', 'allmodules@symma.com'] }
       }
     }
   });
@@ -178,6 +178,7 @@ async function main(): Promise<void> {
   // 5. Special RFC Scenarios
   await seedMobileRFC029(admin.id);
   await seedMobileRFC030(admin.id);
+  await seedAllModulesTest(admin.id);
 }
 
 async function createRandomRoutine(patientId: string, availableExercises: (SeedExercise & { id: string })[]) {
@@ -368,6 +369,93 @@ async function seedMobileRFC030(therapistId: string) {
     }
   });
   console.log('  ✅ RFC-030 Data Ready');
+}
+
+/**
+ * Seeds a test patient with ALL mobile modules for comprehensive testing.
+ * Patient: allmodules@symma.com | Code: 123456
+ */
+async function seedAllModulesTest(therapistId: string) {
+  console.log('🧪 Seeding All Modules Test Patient...');
+  const PATIENT_ID = 'all-modules-test-patient';
+  const accessCodeHash = await bcrypt.hash('123456', 10);
+
+  await prisma.patient.upsert({
+    where: { id: PATIENT_ID },
+    update: { accessCodeHash },
+    create: {
+      id: PATIENT_ID,
+      email: 'allmodules@symma.com',
+      firstName: 'All',
+      lastName: 'Modules',
+      therapistId,
+      status: 'ACTIVE',
+      accessCodeHash,
+      diagnosis: 'All Modules Test',
+    }
+  });
+
+  // Create one exercise per mobile module
+  const allModuleExercises = [
+    { id: 'test_smile', keyName: 'test_smile', name: 'Sonrisa Amplia', description: 'Sonríe ampliamente mostrando los dientes', module: 'SMILE' as MobileModule, type: 'ISOMETRIC' as ExerciseType, holdSeconds: 3 },
+    { id: 'test_brows', keyName: 'test_brows', name: 'Elevar Cejas', description: 'Levanta las cejas lo más alto posible', module: 'BROWS' as MobileModule, type: 'ISOMETRIC' as ExerciseType, holdSeconds: 3 },
+    { id: 'test_jaw', keyName: 'test_jaw', name: 'Abrir Boca', description: 'Abre la boca ampliamente', module: 'JAW' as MobileModule, type: 'ISOMETRIC' as ExerciseType, holdSeconds: 3 },
+    { id: 'test_kiss', keyName: 'test_kiss', name: 'Beso', description: 'Frunce los labios como para dar un beso', module: 'KISS' as MobileModule, type: 'ISOMETRIC' as ExerciseType, holdSeconds: 3 },
+    { id: 'test_eyes_close', keyName: 'test_eyes_close', name: 'Cerrar Ojos', description: 'Cierra los ojos con fuerza', module: 'EYES' as MobileModule, type: 'ISOMETRIC' as ExerciseType, holdSeconds: 3 },
+    { id: 'test_eyes_open', keyName: 'test_eyes_open', name: 'Abrir Ojos', description: 'Abre los ojos lo más amplio posible', module: 'EYES_INVERSE' as MobileModule, type: 'ISOTONIC' as ExerciseType, holdSeconds: 0 },
+  ];
+
+  // Upsert exercises
+  for (const ex of allModuleExercises) {
+    await prisma.exercise.upsert({
+      where: { id: ex.id },
+      create: {
+        id: ex.id,
+        keyName: ex.keyName,
+        name: ex.name,
+        description: ex.description,
+        type: ex.type,
+        category: 'CORE',
+        mobileModule: ex.module,
+      },
+      update: {
+        name: ex.name,
+        description: ex.description,
+        mobileModule: ex.module,
+      }
+    });
+  }
+
+  // Clear old routine for this patient
+  await prisma.routine.deleteMany({ where: { patientId: PATIENT_ID } });
+
+  // Create routine with all exercises
+  await prisma.routine.create({
+    data: {
+      patientId: PATIENT_ID,
+      name: 'All Modules Test',
+      startDate: new Date(),
+      status: 'ACTIVE',
+      items: {
+        create: allModuleExercises.map((ex, i) => ({
+          exerciseId: ex.id,
+          orderIndex: i,
+          sets: 2,
+          repsPerSet: 5,
+          targetHoldSeconds: ex.holdSeconds,
+          restBetweenSets: 5,
+          difficultyLevel: 1.0,
+          strictMode: false,
+          allowSkip: true,
+        }))
+      }
+    }
+  });
+
+  console.log('  ✅ All Modules Test Patient Ready');
+  console.log('     📧 Email: allmodules@symma.com');
+  console.log('     🔑 Code: 123456');
+  console.log('     📋 Exercises: SMILE, BROWS, JAW, KISS, EYES, EYES_INVERSE');
 }
 
 main()

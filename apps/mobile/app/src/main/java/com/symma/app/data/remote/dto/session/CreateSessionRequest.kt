@@ -29,6 +29,6 @@ data class SessionItemRequest(
     @SerializedName("averageAccuracy")
     val averageAccuracy: Float? = null, // RFC-026: AI Metric
 
-    @SerializedName("skipped")
-    val skipped: Boolean = false
+    @SerializedName("seriesData")
+    val seriesData: Any? = null
 )

@@ -1,0 +1,157 @@
+openapi: 3.0.3
+info:
+  title: Symma Exercise Engine & Calibration Contract Notes
+  version: 0.1.0
+  description: |
+    Backward-compatible contract notes for release-gating and calibration reliability.
+    This spec captures only endpoints and fields relevant to this feature.
+servers:
+  - url: http://localhost:4001
+paths:
+  /mobile/routine/active:
+    get:
+      summary: Get active routine for mobile patient
+      responses:
+        '200':
+          description: Active routine payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActiveRoutineResponse'
+  /sessions:
+    post:
+      summary: Create completed session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+components:
+  schemas:
+    ActiveRoutineResponse:
+      type: object
+      required: [id, name, status, items]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, ARCHIVED]
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActiveRoutineItemResponse'
+    ActiveRoutineItemResponse:
+      type: object
+      required:
+        [id, orderIndex, sets, repsPerSet, targetHoldSeconds, restBetweenSets, strictMode, exercise]
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderIndex:
+          type: integer
+        sets:
+          type: integer
+          minimum: 1
+        repsPerSet:
+          type: integer
+          minimum: 1
+        targetHoldSeconds:
+          type: integer
+          minimum: 0
+        restBetweenSets:
+          type: integer
+          minimum: 0
+        strictMode:
+          type: boolean
+        # Optional additive fields for future remote configurability.
+        engageThreshold:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        releaseThreshold:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        exercise:
+          $ref: '#/components/schemas/ExerciseSummary'
+    ExerciseSummary:
+      type: object
+      required: [id, keyName, name, type]
+      properties:
+        id:
+          type: string
+          format: uuid
+        keyName:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [ISOTONIC, ISOMETRIC, MANUAL, RELAXATION]
+    CreateSessionRequest:
+      type: object
+      required: [routineId, startTime, endTime, items]
+      properties:
+        routineId:
+          type: string
+          format: uuid
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionItemRequest'
+    SessionItemRequest:
+      type: object
+      required: [exerciseId, repsCompleted]
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        repsCompleted:
+          type: integer
+          minimum: 0
+        averageAccuracy:
+          type: number
+          format: float
+        seriesData:
+          type: object
+          additionalProperties: true
+    SessionResponse:
+      type: object
+      required: [id, routineId, date, durationSeconds, score]
+      properties:
+        id:
+          type: string
+          format: uuid
+        routineId:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date-time
+        durationSeconds:
+          type: integer
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100

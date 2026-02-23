@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.symma.app.domain.logic.CalibrationUtils
 import com.symma.app.domain.logic.DistanceState
+import com.symma.app.presentation.components.camera.CameraPermissionWrapper
 import com.symma.app.presentation.components.camera.CameraPreview
 import com.symma.app.presentation.components.camera.FaceLandmarkerHelper
 
@@ -98,14 +99,15 @@ fun CalibrationScreen(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .onSizeChanged { size ->
-                screenWidth = size.width
-                screenHeight = size.height
-            }
-    ) {
+    CameraPermissionWrapper {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .onSizeChanged { size ->
+                    screenWidth = size.width
+                    screenHeight = size.height
+                }
+        ) {
         // Camera Preview (always shown except on complete)
         if (uiState.phase != CalibrationPhase.COMPLETE) {
             CameraPreview(
@@ -239,6 +241,7 @@ fun CalibrationScreen(
                     }
                 }
             }
+        }
         }
     }
 }
