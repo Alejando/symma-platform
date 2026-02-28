@@ -3,6 +3,9 @@ package com.symma.app.data.remote.dto.session
 import com.google.gson.annotations.SerializedName
 
 data class CreateSessionRequest(
+    @SerializedName("id")
+    val id: String? = null, // Client-generated UUID for idempotency
+    
     @SerializedName("routineId")
     val routineId: String,
     

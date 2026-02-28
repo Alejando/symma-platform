@@ -9,6 +9,13 @@ export interface SessionItemRequest {
 }
 
 export interface CreateSessionRequest {
+  /**
+   * Client-generated UUID for idempotency.
+   * When provided, the server will check if a session with this ID already exists.
+   * If found, returns the existing session (HTTP 200) instead of creating a duplicate.
+   * Optional for backward compatibility with clients that don't support offline-first sync.
+   */
+  id?: string;
   routineId: string;
   startTime: string;              // ISO 8601
   endTime: string;                // ISO 8601

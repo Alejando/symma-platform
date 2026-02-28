@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 
@@ -7,6 +7,19 @@ export class SessionsService {
   constructor(private readonly prisma: PrismaService) { }
 
   async create(patientId: string, createSessionDto: CreateSessionDto) {
+    // Idempotency check: if client provided an id, check if session already exists
+    if (createSessionDto.id) {
+      const existingSession = await this.prisma.session.findUnique({
+        where: { id: createSessionDto.id },
+        include: { items: true },
+      });
+
+      if (existingSession) {
+        // Return existing session for idempotency (client can treat this as success)
+        return existingSession;
+      }
+    }
+
     // Basic validations
     const routine = await this.prisma.routine.findUnique({
       where: { id: createSessionDto.routineId },
@@ -30,6 +43,7 @@ export class SessionsService {
 
     return this.prisma.session.create({
       data: {
+        ...(createSessionDto.id && { id: createSessionDto.id }),
         routineId: createSessionDto.routineId,
         date: start,
         durationSeconds,
@@ -40,10 +54,12 @@ export class SessionsService {
             exerciseId: item.exerciseId,
             repsCompleted: item.repsCompleted,
             difficulty: item.difficulty || 0,
-            averageAccuracy: item.averageAccuracy
+            averageAccuracy: item.averageAccuracy,
+            seriesData: item.seriesData ?? null,
           }))
         }
-      }
+      },
+      include: { items: true },
     });
   }
 }

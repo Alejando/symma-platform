@@ -7,9 +7,12 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.symma.app.data.local.dao.RoutineDao
+import com.symma.app.data.local.dao.SessionDao
 import com.symma.app.data.local.entity.ExerciseEntity
 import com.symma.app.data.local.entity.RoutineEntity
 import com.symma.app.data.local.entity.RoutineItemEntity
+import com.symma.app.data.local.entity.SessionEntity
+import com.symma.app.data.local.entity.SessionItemEntity
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -20,13 +23,16 @@ import javax.inject.Singleton
     entities = [
         RoutineEntity::class,
         ExerciseEntity::class,
-        RoutineItemEntity::class
+        RoutineItemEntity::class,
+        SessionEntity::class,
+        SessionItemEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class SymmaDatabase : RoomDatabase() {
     abstract fun routineDao(): RoutineDao
+    abstract fun sessionDao(): SessionDao
 }
 
 @Module
@@ -49,6 +55,12 @@ object DatabaseModule {
     @Singleton
     fun provideRoutineDao(database: SymmaDatabase): RoutineDao {
         return database.routineDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideSessionDao(database: SymmaDatabase): SessionDao {
+        return database.sessionDao()
     }
 
     @Provides

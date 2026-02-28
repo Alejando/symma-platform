@@ -2,80 +2,136 @@ package com.symma.app.data.repository
 
 import android.util.Log
 import com.symma.app.core.network.SymmaApiService
-import com.symma.app.data.remote.dto.session.CreateSessionRequest
+import com.symma.app.data.local.dao.SessionDao
+import com.symma.app.data.local.entity.SessionEntity
+import com.symma.app.data.local.entity.SessionItemEntity
+import com.symma.app.data.mapper.toCreateRequest
+import com.symma.app.data.mapper.toDomain
+import com.symma.app.data.mapper.toEntity
 import com.symma.app.data.remote.dto.session.SessionItemRequest
+import com.symma.app.domain.model.Session
+import com.symma.app.domain.model.SyncStatus
 import com.symma.app.domain.repository.SessionRepository
-import java.time.Instant
-import java.time.format.DateTimeFormatter
+import java.io.IOException
 import java.util.UUID
 import javax.inject.Inject
 
 private const val TAG = "SessionRepo"
 
 class SessionRepositoryImpl @Inject constructor(
+    private val sessionDao: SessionDao,
     private val apiService: SymmaApiService
 ) : SessionRepository {
 
-    override suspend fun submitSession(routineId: String, durationSeconds: Long): Result<Unit> {
+    override suspend fun saveSession(
+        routineId: String,
+        startTime: Long,
+        endTime: Long,
+        durationSeconds: Int,
+        score: Float,
+        items: List<SessionItemRequest>
+    ): Result<String> {
         return try {
-            val endTime = Instant.now()
-            val startTime = endTime.minusSeconds(durationSeconds)
+            val sessionId = UUID.randomUUID().toString()
             
-            // ISO-8601 formatting (Instant.toString() usually does this well enough for JSON)
-            val startTimeStr = startTime.toString()
-            val endTimeStr = endTime.toString()
-            
-            // Mock items for MVP - we assume all items in the routine were completed? 
-            // Or strictly following the simplified mock data approach from RFC/Implementation Plan:
-            // "Mock Data: ... assume all exercises were completed 100%."
-            // But we don't have the exercise IDs here unless we fetch the routine first.
-            // The RFC says: "items": [ { "exerciseId": "uuid", ... } ]
-            // The prompt says "It is acceptable to pass just the routineId and durationSeconds and assume all exercises were completed 100%."
-            // However, the backend expects "items". If I send empty items, it might fail validation?
-            // If I need exercise IDs, I would need to query the routine from Room.
-            // But for this specific task, simpler might be better. 
-            // I'll send an EMPTY list of items for now to see if backend accepts it, unless I can easily get items.
-            // Actually, `PlayerViewModel` has the items. Passing them all the way might be complex.
-            // Let's assume the backend handles empty items or we mock one generic item if forced.
-            // I'll send empty list for now. If backend complains, we'll need to fetch routine.
-            
-            val request = CreateSessionRequest(
+            val sessionEntity = SessionEntity(
+                id = sessionId,
                 routineId = routineId,
-                startTime = startTimeStr,
-                endTime = endTimeStr,
-                items = emptyList() // MVP simplification
+                startTime = startTime,
+                endTime = endTime,
+                durationSeconds = durationSeconds,
+                score = score,
+                syncStatus = SyncStatus.PENDING.name,
+                syncedAt = null,
+                createdAt = System.currentTimeMillis()
             )
             
-            Log.d(TAG, "Submitting Session: $request")
+            val itemEntities = items.map { it.toEntity(sessionId) }
+            
+            sessionDao.insertSession(sessionEntity)
+            sessionDao.insertSessionItems(itemEntities)
+            
+            Log.d(TAG, "Session saved locally with id: $sessionId")
+            Result.success(sessionId)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save session locally: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getPendingSessions(): List<Session> {
+        return try {
+            val pendingEntities = sessionDao.getPendingSessions()
+            pendingEntities.map { entity ->
+                val items = sessionDao.getItemsForSession(entity.id)
+                entity.toDomain(items)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to get pending sessions: ${e.message}", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun syncSession(sessionId: String): Result<Unit> {
+        return try {
+            val sessionEntities = sessionDao.getPendingSessions()
+            val sessionEntity = sessionEntities.find { it.id == sessionId }
+                ?: return Result.failure(Exception("Session not found: $sessionId"))
+            
+            val items = sessionDao.getItemsForSession(sessionId)
+            val request = sessionEntity.toCreateRequest(items)
+            
+            Log.d(TAG, "Syncing session: $sessionId")
             
             val response = apiService.createSession(request)
             
-            if (response.isSuccessful) {
-                Log.d(TAG, "Session submitted successfully!")
-                Result.success(Unit)
-            } else {
-                val errorMsg = "Failed to submit session: ${response.code()} ${response.message()}"
-                Log.e(TAG, errorMsg)
-                // For MVP offline strategy: we log and return success to UI so user isn't blocked?
-                // RFC says: "If Fail (No Internet)... just logging the failure and returning 'Success' to the UI is acceptable"
-                // So I will return Success (or maybe a specific "OfflineSaved" result if I was advanced).
-                // I'll adhere to RFC: Log failure but return Success mostly?
-                // Wait, validation errors (400) shouldn't be hidden. Network errors (Timeouts) should be hidden/cached.
-                // But the instruction says "returning 'Success' to the UI is acceptable".
-                // I will return Result.failure here so the ViewModel knows, BUT the ViewModel can decide to show success anyway or "Saved offline".
-                // Actually, let's follow the RFC literally: "return 'Success' to the UI is acceptable".
-                // So I will return success but log error.
-                
-                // EXCEPT if 4xx/5xx it might be permanent.
-                // Let's stick to standard Retrofit handling: return failure if not successful, 
-                // and let ViewModel decide to suppress it.
-               Result.failure(Exception(errorMsg))
+            when {
+                response.isSuccessful -> {
+                    Log.d(TAG, "Session synced successfully: $sessionId")
+                    markSynced(sessionId)
+                    Result.success(Unit)
+                }
+                response.code() == 409 -> {
+                    Log.d(TAG, "Session already exists on server (409): $sessionId")
+                    markSynced(sessionId)
+                    Result.success(Unit)
+                }
+                response.code() in 400..499 -> {
+                    val errorMsg = "Permanent error syncing session: ${response.code()}"
+                    Log.e(TAG, errorMsg)
+                    markError(sessionId)
+                    Result.failure(Exception(errorMsg))
+                }
+                else -> {
+                    val errorMsg = "Server error syncing session: ${response.code()}"
+                    Log.e(TAG, errorMsg)
+                    Result.failure(Exception(errorMsg))
+                }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Exception submitting session: ${e.message}", e)
-            // Network error -> treat as "Saved Offline" (Success for UI purposes)
-            // I'll return failure here and handle masking in ViewModel.
+        } catch (e: IOException) {
+            Log.e(TAG, "Network error syncing session: ${e.message}", e)
             Result.failure(e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error syncing session: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun markSynced(sessionId: String) {
+        try {
+            sessionDao.updateSyncStatus(sessionId, SyncStatus.SYNCED.name, System.currentTimeMillis())
+            Log.d(TAG, "Session marked as SYNCED: $sessionId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to mark session as synced: ${e.message}", e)
+        }
+    }
+
+    override suspend fun markError(sessionId: String) {
+        try {
+            sessionDao.updateSyncStatus(sessionId, SyncStatus.ERROR.name, null)
+            Log.d(TAG, "Session marked as ERROR: $sessionId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to mark session as error: ${e.message}", e)
         }
     }
 }

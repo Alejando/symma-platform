@@ -18,7 +18,7 @@ interface SymmaApiService {
     @GET("api/v1/mobile/routine/active")
     suspend fun getActiveRoutine(): Response<RoutineDto>
 
-    @POST("api/sessions")
+    @POST("api/v1/sessions")
     suspend fun createSession(
         @Body request: com.symma.app.data.remote.dto.session.CreateSessionRequest
     ): Response<Unit>

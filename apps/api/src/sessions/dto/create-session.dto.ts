@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsISO8601, IsArray, ValidateNested, IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsISO8601, IsArray, ValidateNested, IsNumber, IsOptional, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import type { CreateSessionRequest, SessionItemRequest } from '@symma/shared-types';
@@ -29,6 +29,11 @@ export class SessionItemDto implements SessionItemRequest {
 }
 
 export class CreateSessionDto implements CreateSessionRequest {
+  @ApiProperty({ required: false, description: 'Client-generated UUID for idempotency' })
+  @IsUUID()
+  @IsOptional()
+  id?: string;
+
   @ApiProperty()
   @IsString()
   @IsNotEmpty()

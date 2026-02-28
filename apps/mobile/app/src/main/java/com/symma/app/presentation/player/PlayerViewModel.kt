@@ -8,6 +8,7 @@ import com.symma.app.domain.model.Routine
 import com.symma.app.domain.model.RoutineItem
 import com.symma.app.domain.repository.CalibrationRepository
 import com.symma.app.domain.repository.RoutineRepository
+import com.symma.app.domain.usecase.SaveAndSyncSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -46,6 +47,7 @@ private const val MAX_FRAME_DELTA_MS = 200L
 class PlayerViewModel @Inject constructor(
     private val routineRepository: RoutineRepository,
     private val calibrationRepository: CalibrationRepository,
+    private val saveAndSyncSessionUseCase: SaveAndSyncSessionUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel(), FaceLandmarkerHelper.LandmarkerListener {
     
@@ -560,7 +562,8 @@ class PlayerViewModel @Inject constructor(
         // Handle case where we finish abruptly or the last exercise was just completed naturally in moveToNextExercise
         // (moveToNextExercise already added the last result)
         
-        val totalTimeSeconds = (System.currentTimeMillis() - sessionStartTime) / 1000
+        val endTime = System.currentTimeMillis()
+        val totalTimeSeconds = (endTime - sessionStartTime) / 1000
         
         Log.d(TAG, "🎉 SESSION COMPLETED!")
         Log.d(TAG, "  Routine ID: ${routine?.id}")
@@ -576,9 +579,29 @@ class PlayerViewModel @Inject constructor(
         
         viewModelScope.launch {
             _events.emit(PlayerEvent.PlaySuccess)
+            
+            // Save session locally and trigger sync
+            val overallScore = if (sessionResults.isNotEmpty()) {
+                sessionResults.mapNotNull { it.averageAccuracy }.average().toFloat()
+            } else {
+                0f
+            }
+            
+            val result = saveAndSyncSessionUseCase(
+                routineId = routine?.id ?: "",
+                startTime = sessionStartTime,
+                endTime = endTime,
+                durationSeconds = totalTimeSeconds.toInt(),
+                score = overallScore,
+                items = sessionResults.toList()
+            )
+            
+            if (result.isSuccess) {
+                Log.d(TAG, "✅ Session saved locally: ${result.getOrNull()}")
+            } else {
+                Log.e(TAG, "❌ Failed to save session: ${result.exceptionOrNull()?.message}")
+            }
         }
-        
-        // TODO: Trigger network upload here or in the UI layer based on the state
     }
     
     // ==================== PUBLIC CONTROLS ====================
