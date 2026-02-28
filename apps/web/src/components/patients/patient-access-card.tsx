@@ -7,6 +7,7 @@ import {
   revokePatientAccessCode,
   getPatientAccessCodeStatus,
 } from '@/lib/api';
+import { Button } from '@/components/ui/button';
 
 interface PatientAccessCardProps {
   patientId: string;
@@ -100,22 +101,24 @@ export function PatientAccessCard({ patientId }: PatientAccessCardProps) {
               Patient can log in to the mobile app using their PIN. You can regenerate a new PIN or revoke access.
             </p>
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="ghost"
                 onClick={handleGenerate}
                 disabled={generating}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-[#0d9488] bg-[#0d9488]/10 hover:bg-[#0d9488]/20 rounded-lg transition-colors disabled:opacity-50"
+                className="flex-1 text-sm font-medium text-[#0d9488] bg-[#0d9488]/10 hover:bg-[#0d9488]/20"
               >
                 <span className="material-symbols-outlined text-lg">refresh</span>
                 {generating ? 'Generating...' : 'Regenerate PIN'}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 onClick={handleRevoke}
                 disabled={revoking}
-                className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                className="text-sm font-medium text-red-600 hover:bg-red-50"
               >
                 <span className="material-symbols-outlined text-lg">block</span>
                 {revoking ? 'Revoking...' : 'Revoke'}
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
@@ -127,14 +130,14 @@ export function PatientAccessCard({ patientId }: PatientAccessCardProps) {
             <p className="text-xs text-gray-500">
               Generate a 6-digit PIN for the patient to log in to the mobile app.
             </p>
-            <button
+            <Button
               onClick={handleGenerate}
               disabled={generating}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-[#0d9488] hover:bg-[#0b847a] rounded-lg transition-colors disabled:opacity-50 shadow-sm"
+              className="w-full text-sm font-medium text-white bg-[#0d9488] hover:bg-[#0b847a] shadow-sm"
             >
               <span className="material-symbols-outlined text-lg">key</span>
               {generating ? 'Generating...' : 'Generate Mobile PIN'}
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -164,15 +167,15 @@ export function PatientAccessCard({ patientId }: PatientAccessCardProps) {
               </p>
             </div>
 
-            <button
+            <Button
               onClick={() => {
                 setShowPinModal(false);
                 setGeneratedPin(null);
               }}
-              className="w-full py-2.5 px-4 bg-[#0d9488] text-white font-medium rounded-lg hover:bg-[#0b847a] transition-colors"
+              className="w-full bg-[#0d9488] text-white font-medium hover:bg-[#0b847a]"
             >
               Done
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -8,6 +8,7 @@ import { getPatient, updatePatient } from '@/lib/api';
 import type { Patient, UpdatePatientDto, CreatePatientDto } from '@symma/shared-types';
 import { PatientDialog } from '@/components/patients';
 import { PatientContext } from '@/components/patients/patient-context';
+import { Button } from '@/components/ui/button';
 
 function getInitials(firstName: string, lastName: string) {
   return `${firstName[0]}${lastName[0]}`.toUpperCase();
@@ -123,13 +124,14 @@ export default function PatientLayout({
 
           {/* Action Buttons */}
           <div className="flex gap-2 md:gap-3 shrink-0 justify-end">
-            <button
+            <Button
+              variant="outline"
               onClick={handleEditClick}
-              className="flex items-center justify-center gap-1 md:gap-2 px-3 md:px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="text-sm font-medium text-gray-700"
             >
               <span className="material-symbols-outlined text-lg">edit</span>
               <span className="inline">Edit</span>
-            </button>
+            </Button>
             <Link
               href={`/dashboard/patients/${id}/routines/new`}
               className="flex items-center justify-center gap-1 md:gap-2 px-3 md:px-4 py-2 text-sm font-medium text-white bg-[#0d9488] rounded-lg hover:bg-[#0f766e] transition-colors shadow-sm"

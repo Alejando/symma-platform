@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { ExerciseResponse, Patient, CreateRoutineDto, RoutineResponse, UpdateRoutineDto, RoutineItemResponse, ExerciseType } from '@symma/shared-types';
+import { Button } from '@/components/ui/button';
 
 type Exercise = ExerciseResponse;
 type Routine = RoutineResponse;
@@ -206,20 +207,21 @@ export function RoutineBuilder({
           </span>
           <div className="flex items-center gap-2 flex-1 sm:flex-none justify-end">
             {onCancel && (
-              <button
+              <Button
+                variant="ghost"
                 onClick={onCancel}
-                className="px-3 md:px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                className="px-3 md:px-4 py-2 text-sm font-medium text-slate-600"
               >
                 Cancel
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               onClick={handleSubmit}
               disabled={loading || items.length === 0}
-              className="flex items-center justify-center h-10 px-4 md:px-6 rounded-lg bg-[#0d9488] text-white text-sm font-bold shadow-sm hover:bg-[#0b847a] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="h-10 px-4 md:px-6 bg-[#0d9488] text-white text-sm font-bold shadow-sm hover:bg-[#0b847a]"
             >
               {loading ? 'Saving...' : 'Save'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -279,28 +281,30 @@ export function RoutineBuilder({
                     {!isLocked && (
                       <>
                         <div className="hidden md:flex gap-1">
-                          <button onClick={() => moveItem(index, 'up')} disabled={index === 0} className="p-1 text-slate-300 hover:text-slate-600 disabled:opacity-30 rounded">
+                          <Button variant="ghost" size="icon-xs" onClick={() => moveItem(index, 'up')} disabled={index === 0} className="text-slate-300 hover:text-slate-600">
                             <span className="material-symbols-outlined text-lg">arrow_upward</span>
-                          </button>
-                          <button onClick={() => moveItem(index, 'down')} disabled={index === items.length - 1} className="p-1 text-slate-300 hover:text-slate-600 disabled:opacity-30 rounded">
+                          </Button>
+                          <Button variant="ghost" size="icon-xs" onClick={() => moveItem(index, 'down')} disabled={index === items.length - 1} className="text-slate-300 hover:text-slate-600">
                             <span className="material-symbols-outlined text-lg">arrow_downward</span>
-                          </button>
+                          </Button>
                         </div>
                         <div className="flex md:hidden gap-1">
-                          <button onClick={() => moveItem(index, 'up')} disabled={index === 0} className="p-1 hover:bg-slate-100 rounded">
+                          <Button variant="ghost" size="icon-xs" onClick={() => moveItem(index, 'up')} disabled={index === 0}>
                             <span className="material-symbols-outlined text-sm text-slate-400">arrow_upward</span>
-                          </button>
-                          <button onClick={() => moveItem(index, 'down')} disabled={index === items.length - 1} className="p-1 hover:bg-slate-100 rounded">
+                          </Button>
+                          <Button variant="ghost" size="icon-xs" onClick={() => moveItem(index, 'down')} disabled={index === items.length - 1}>
                             <span className="material-symbols-outlined text-sm text-slate-400">arrow_downward</span>
-                          </button>
+                          </Button>
                         </div>
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
                           onClick={() => handleRemoveItem(item.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                          className="text-slate-400 hover:text-red-500 hover:bg-red-50"
                           title="Remove exercise"
                         >
                           <span className="material-symbols-outlined text-[18px]">delete</span>
-                        </button>
+                        </Button>
                       </>
                     )}
                   </div>

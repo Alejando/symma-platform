@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { PatientDialog, PatientTable } from '@/components/patients';
 import type { Patient, CreatePatientDto, UpdatePatientDto } from '@symma/shared-types';
 import { getPatients, createPatient, updatePatient, deletePatient } from '@/lib/api';
+import { Button } from '@/components/ui/button';
 
 export default function PatientsPage() {
   const { data: session } = useSession();
@@ -80,13 +81,13 @@ export default function PatientsPage() {
             Manage your patient records and clinical information.
           </p>
         </div>
-        <button
+        <Button
           onClick={handleCreate}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0d9488] hover:bg-[#0b857a] text-white font-semibold rounded-lg transition-colors shadow-sm shrink-0"
+          className="bg-[#0d9488] hover:bg-[#0b857a] text-white font-semibold shadow-sm shrink-0"
         >
           <span className="material-symbols-outlined text-xl">person_add</span>
           <span>Add Patient</span>
-        </button>
+        </Button>
       </div>
 
       {/* Search and Filters */}
@@ -154,18 +155,20 @@ export default function PatientsPage() {
               ? They will be removed from your active patient list.
             </p>
             <div className="flex justify-end gap-3">
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="text-sm font-medium text-gray-700"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="destructive"
                 onClick={confirmDelete}
-                className="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                className="text-sm font-bold"
               >
                 Archive Patient
-              </button>
+              </Button>
             </div>
           </div>
         </div>

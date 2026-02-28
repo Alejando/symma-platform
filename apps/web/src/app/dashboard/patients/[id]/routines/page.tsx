@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { getPatientRoutines, cloneRoutine, deleteRoutine } from '@/lib/api';
 import type { Routine } from '@symma/shared-types';
+import { Button } from '@/components/ui/button';
 
 import { use } from 'react';
 
@@ -147,22 +148,26 @@ export default function PatientRoutinesPage({
                     <span className="material-symbols-outlined text-[18px]">edit</span>
                     <span className="hidden sm:inline">Edit</span>
                   </Link>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleClone(routine.id)}
                     disabled={actionLoading === routine.id}
-                    className="inline-flex items-center gap-1 px-2 md:px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+                    className="text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100"
                   >
                     <span className="material-symbols-outlined text-[18px]">content_copy</span>
                     <span className="hidden sm:inline">Clone</span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleDelete(routine.id, routine.name)}
                     disabled={actionLoading === routine.id}
-                    className="inline-flex items-center gap-1 px-2 md:px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 ml-auto"
+                    className="text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 ml-auto"
                   >
                     <span className="material-symbols-outlined text-[18px]">delete</span>
                     <span className="hidden sm:inline">Delete</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}

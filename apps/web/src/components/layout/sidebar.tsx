@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
+import { Button } from '@/components/ui/button';
 
 interface SidebarProps {
   userName: string;
@@ -58,20 +59,21 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white border-b border-[#e7f3f2] px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={() => setIsOpen(true)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <span className="material-symbols-outlined text-gray-600">menu</span>
-          </button>
+          </Button>
           <span className="material-symbols-outlined text-[#0d9488] text-2xl">medical_services</span>
           <span className="font-bold text-[#0d1b1a]">Symma</span>
         </div>
         <div className="flex items-center gap-2">
-          <button className="relative p-2 text-gray-400 hover:text-gray-500 rounded-full hover:bg-gray-100">
+          <Button variant="ghost" size="icon-sm" className="relative text-gray-400 hover:text-gray-500">
             <span className="material-symbols-outlined text-xl">notifications</span>
             <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-[#E11D48] ring-2 ring-white"></span>
-          </button>
+          </Button>
           <div className="h-8 w-8 rounded-full bg-[#0d9488]/20 flex items-center justify-center">
             <span className="text-[#0d9488] font-bold text-xs">{initials}</span>
           </div>
@@ -93,12 +95,14 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
             <div className={`flex items-center gap-2 mb-1 ${justifyClass}`}>
               <span className="material-symbols-outlined text-[#0d9488] text-3xl">medical_services</span>
               <h1 className={`text-[#0d1b1a] text-xl font-bold leading-normal tracking-tight ${textClass}`}>Symma</h1>
-              <button
+              <Button
+                variant="ghost"
+                size="icon-xs"
                 onClick={() => setIsOpen(false)}
-                className="lg:hidden ml-auto p-1 hover:bg-gray-100 rounded"
+                className="lg:hidden ml-auto"
               >
                 <span className="material-symbols-outlined text-gray-400">close</span>
-              </button>
+              </Button>
             </div>
             <p className={`text-[#4c9a93] text-xs font-medium uppercase tracking-wider pl-10 ${textClass}`}>Therapist Portal</p>
           </div>
@@ -131,9 +135,10 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
         {/* Bottom section with collapse toggle and logout */}
         <div className={`p-6 border-t border-[#e7f3f2] space-y-2 ${isCollapsed ? 'lg:p-3 xl:p-6' : ''}`}>
           {/* Collapse Toggle - Only visible on lg screens, hidden on xl+ */}
-          <button
+          <Button
+            variant="ghost"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className={`hidden lg:flex xl:hidden items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors w-full ${isCollapsed ? 'justify-center' : 'justify-start'}`}
+            className={`hidden lg:flex xl:hidden items-center gap-3 px-3 py-2.5 hover:bg-gray-100 text-gray-500 w-full ${isCollapsed ? 'justify-center' : 'justify-start'}`}
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <span
@@ -143,17 +148,18 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
               chevron_right
             </span>
             {!isCollapsed && <span className="text-sm font-medium">Collapse</span>}
-          </button>
+          </Button>
 
           {/* Logout button */}
-          <button
+          <Button
+            variant="ghost"
             onClick={() => signOut({ callbackUrl: '/login' })}
             title="Log Out"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors group w-full ${justifyClass}`}
+            className={`flex items-center gap-3 px-3 py-2.5 hover:bg-red-50 text-gray-600 hover:text-red-600 group w-full ${justifyClass}`}
           >
             <span className="material-symbols-outlined group-hover:text-red-600 transition-colors">logout</span>
             <span className={`text-sm font-medium ${textClass}`}>Log Out</span>
-          </button>
+          </Button>
         </div>
       </aside>
     </>
@@ -182,10 +188,10 @@ export function Header({ userName, userRole }: SidebarProps) {
         </div>
       </div>
       <div className="flex items-center gap-6">
-        <button className="relative p-2 text-gray-400 hover:text-gray-500 focus:outline-none focus:text-gray-500 transition duration-150 ease-in-out rounded-full hover:bg-gray-100">
+        <Button variant="ghost" size="icon" className="relative text-gray-400 hover:text-gray-500">
           <span className="material-symbols-outlined">notifications</span>
           <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-[#E11D48] ring-2 ring-white"></span>
-        </button>
+        </Button>
         <div className="flex items-center gap-3 pl-6 border-l border-gray-200">
           <div className="text-right">
             <p className="text-sm font-semibold text-gray-900 leading-none">{userName}</p>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -110,30 +111,30 @@ export default function LoginPage() {
                     required
                     autoComplete="current-password"
                   />
-                  <button
+                  <Button
                     type="button"
-                    className="absolute right-0 top-0 bottom-0 flex items-center pr-3 cursor-pointer text-[#4c9a93] hover:text-[#0d9488] transition-colors"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="absolute right-0 top-0 bottom-0 pr-3 text-[#4c9a93] hover:text-[#0d9488] hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     <span className="material-symbols-outlined text-[20px]">
                       {showPassword ? 'visibility' : 'visibility_off'}
                     </span>
-                  </button>
+                  </Button>
                 </div>
               </label>
             </div>
 
             {/* Submit Button */}
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
                 disabled={loading}
-                className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-4 bg-[#0d9488] hover:bg-[#0b857a] disabled:bg-[#0d9488]/50 text-white text-sm font-bold leading-normal tracking-[0.015em] transition-all shadow-md shadow-[#0d9488]/20"
+                className="w-full h-11 bg-[#0d9488] hover:bg-[#0b857a] disabled:bg-[#0d9488]/50 text-white text-sm font-bold tracking-[0.015em] shadow-md shadow-[#0d9488]/20"
               >
-                <span className="truncate">
-                  {loading ? 'Signing in...' : 'Sign In'}
-                </span>
-              </button>
+                {loading ? 'Signing in...' : 'Sign In'}
+              </Button>
             </div>
 
             {/* Footer Sign Up Link */}
