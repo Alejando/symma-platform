@@ -20,7 +20,7 @@ import type { AuthenticatedRequest } from '../auth/types';
 @Controller('routines')
 @UseGuards(JwtAuthGuard)
 export class RoutinesController {
-  constructor(private readonly routinesService: RoutinesService) { }
+  constructor(private readonly routinesService: RoutinesService) {}
 
   @Post()
   create(

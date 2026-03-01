@@ -1,0 +1,520 @@
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/_components/RiskList.tsx
+  45:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/exercises/components/exercise-dialog.tsx
+  26:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  68:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/exercises/page.tsx
+  31:6   warning  React Hook useEffect has a missing dependency: 'fetchExercises'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  54:37  error    Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/page.tsx
+  20:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/layout.tsx
+  5:23  warning  'useRouter' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx
+   3:10  warning  'use' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+  43:8   error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:43:8
+  41 |     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">
+  42 |       {/* Personal Information */}
+> 43 |       <InfoCard title="Personal Information">
+     |        ^^^^^^^^ This component is created during render
+  44 |         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+  45 |           <LabelValue label="First Name" value={patient.firstName} />
+  46 |           <LabelValue label="Last Name" value={patient.lastName} />
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:24:20
+  22 |   }
+  23 |
+> 24 |   const InfoCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
+     |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 25 |     <div className="bg-white border border-[#e7f3f2] rounded-xl p-4 md:p-6 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 26 |       <h3 className="text-base md:text-lg font-semibold text-[#0d1b1a] mb-3 md:mb-4 flex items-center gap-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 27 |         {title}
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |       </h3>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 29 |       {children}
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 30 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |   );
+     | ^^^^ The component is created during render here
+  32 |
+  33 |   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  34 |     <div className="mb-3 last:mb-0">  react-hooks/static-components
+  45:12  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:45:12
+  43 |       <InfoCard title="Personal Information">
+  44 |         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+> 45 |           <LabelValue label="First Name" value={patient.firstName} />
+     |            ^^^^^^^^^^ This component is created during render
+  46 |           <LabelValue label="Last Name" value={patient.lastName} />
+  47 |           <LabelValue label="Email" value={patient.email} />
+  48 |           <LabelValue label="Phone" value={formatPhoneNumber(patient.phoneNumber)} />
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:33:22
+  31 |   );
+  32 |
+> 33 |   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |     <div className="mb-3 last:mb-0">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |       <div className="text-gray-900 font-medium text-sm md:text-base break-words">{value || '-'}</div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 37 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |   );
+     | ^^^^ The component is created during render here
+  39 |
+  40 |   return (
+  41 |     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">                                                                                                                                                                                                                                                                                                                                                                                                                          react-hooks/static-components
+  46:12  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:46:12
+  44 |         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+  45 |           <LabelValue label="First Name" value={patient.firstName} />
+> 46 |           <LabelValue label="Last Name" value={patient.lastName} />
+     |            ^^^^^^^^^^ This component is created during render
+  47 |           <LabelValue label="Email" value={patient.email} />
+  48 |           <LabelValue label="Phone" value={formatPhoneNumber(patient.phoneNumber)} />
+  49 |           <LabelValue
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:33:22
+  31 |   );
+  32 |
+> 33 |   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |     <div className="mb-3 last:mb-0">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |       <div className="text-gray-900 font-medium text-sm md:text-base break-words">{value || '-'}</div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 37 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |   );
+     | ^^^^ The component is created during render here
+  39 |
+  40 |   return (
+  41 |     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">                                                                                                                                                                                                                                                                                                                                                                                                                                                  react-hooks/static-components
+  47:12  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:47:12
+  45 |           <LabelValue label="First Name" value={patient.firstName} />
+  46 |           <LabelValue label="Last Name" value={patient.lastName} />
+> 47 |           <LabelValue label="Email" value={patient.email} />
+     |            ^^^^^^^^^^ This component is created during render
+  48 |           <LabelValue label="Phone" value={formatPhoneNumber(patient.phoneNumber)} />
+  49 |           <LabelValue
+  50 |             label="Date of Birth"
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:33:22
+  31 |   );
+  32 |
+> 33 |   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |     <div className="mb-3 last:mb-0">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |       <div className="text-gray-900 font-medium text-sm md:text-base break-words">{value || '-'}</div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 37 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |   );
+     | ^^^^ The component is created during render here
+  39 |
+  40 |   return (
+  41 |     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         react-hooks/static-components
+  48:12  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:48:12
+  46 |           <LabelValue label="Last Name" value={patient.lastName} />
+  47 |           <LabelValue label="Email" value={patient.email} />
+> 48 |           <LabelValue label="Phone" value={formatPhoneNumber(patient.phoneNumber)} />
+     |            ^^^^^^^^^^ This component is created during render
+  49 |           <LabelValue
+  50 |             label="Date of Birth"
+  51 |             value={patient.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString() : 'N/A'}
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:33:22
+  31 |   );
+  32 |
+> 33 |   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |     <div className="mb-3 last:mb-0">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |       <div className="text-gray-900 font-medium text-sm md:text-base break-words">{value || '-'}</div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 37 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |   );
+     | ^^^^ The component is created during render here
+  39 |
+  40 |   return (
+  41 |     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">                                                                                                                                                                                                                                                                                                                                                                                                                                                          react-hooks/static-components
+  49:12  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:49:12
+  47 |           <LabelValue label="Email" value={patient.email} />
+  48 |           <LabelValue label="Phone" value={formatPhoneNumber(patient.phoneNumber)} />
+> 49 |           <LabelValue
+     |            ^^^^^^^^^^ This component is created during render
+  50 |             label="Date of Birth"
+  51 |             value={patient.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString() : 'N/A'}
+  52 |           />
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:33:22
+  31 |   );
+  32 |
+> 33 |   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |     <div className="mb-3 last:mb-0">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |       <div className="text-gray-900 font-medium text-sm md:text-base break-words">{value || '-'}</div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 37 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |   );
+     | ^^^^ The component is created during render here
+  39 |
+  40 |   return (
+  41 |     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/static-components
+  53:12  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:53:12
+  51 |             value={patient.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString() : 'N/A'}
+  52 |           />
+> 53 |           <LabelValue label="Gender" value={<span className="capitalize">{patient.gender?.toLowerCase()}</span>} />
+     |            ^^^^^^^^^^ This component is created during render
+  54 |         </div>
+  55 |       </InfoCard>
+  56 |
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:33:22
+  31 |   );
+  32 |
+> 33 |   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |     <div className="mb-3 last:mb-0">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |       <div className="text-gray-900 font-medium text-sm md:text-base break-words">{value || '-'}</div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 37 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |   );
+     | ^^^^ The component is created during render here
+  39 |
+  40 |   return (
+  41 |     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       react-hooks/static-components
+  58:8   error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:58:8
+  56 |
+  57 |       {/* Emergency Contact */}
+> 58 |       <InfoCard title="Emergency Contact">
+     |        ^^^^^^^^ This component is created during render
+  59 |         <div className="space-y-4">
+  60 |           <div className="bg-red-50 p-4 rounded-lg border border-red-100 flex items-start gap-3">
+  61 |             <span className="material-symbols-outlined text-red-500 mt-0.5">contact_emergency</span>
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:24:20
+  22 |   }
+  23 |
+> 24 |   const InfoCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
+     |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 25 |     <div className="bg-white border border-[#e7f3f2] rounded-xl p-4 md:p-6 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 26 |       <h3 className="text-base md:text-lg font-semibold text-[#0d1b1a] mb-3 md:mb-4 flex items-center gap-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 27 |         {title}
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |       </h3>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 29 |       {children}
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 30 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |   );
+     | ^^^^ The component is created during render here
+  32 |
+  33 |   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  34 |     <div className="mb-3 last:mb-0">                                                                       react-hooks/static-components
+  63:16  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:63:16
+  61 |             <span className="material-symbols-outlined text-red-500 mt-0.5">contact_emergency</span>
+  62 |             <div>
+> 63 |               <LabelValue label="Name" value={patient.emergencyContactName} />
+     |                ^^^^^^^^^^ This component is created during render
+  64 |               <div className="h-2"></div>
+  65 |               <LabelValue label="Phone" value={formatPhoneNumber(patient.emergencyContactPhone)} />
+  66 |             </div>
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:33:22
+  31 |   );
+  32 |
+> 33 |   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |     <div className="mb-3 last:mb-0">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |       <div className="text-gray-900 font-medium text-sm md:text-base break-words">{value || '-'}</div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 37 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |   );
+     | ^^^^ The component is created during render here
+  39 |
+  40 |   return (
+  41 |     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/static-components
+  65:16  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:65:16
+  63 |               <LabelValue label="Name" value={patient.emergencyContactName} />
+  64 |               <div className="h-2"></div>
+> 65 |               <LabelValue label="Phone" value={formatPhoneNumber(patient.emergencyContactPhone)} />
+     |                ^^^^^^^^^^ This component is created during render
+  66 |             </div>
+  67 |           </div>
+  68 |           {!patient.emergencyContactName && (
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:33:22
+  31 |   );
+  32 |
+> 33 |   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |     <div className="mb-3 last:mb-0">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |       <div className="text-gray-900 font-medium text-sm md:text-base break-words">{value || '-'}</div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 37 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |   );
+     | ^^^^ The component is created during render here
+  39 |
+  40 |   return (
+  41 |     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           react-hooks/static-components
+  75:8   error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:75:8
+  73 |
+  74 |       {/* Clinical Details */}
+> 75 |       <InfoCard title="Clinical Details">
+     |        ^^^^^^^^ This component is created during render
+  76 |         <div className="space-y-4">
+  77 |           <LabelValue label="Primary Diagnosis" value={patient.diagnosis} />
+  78 |           <LabelValue
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:24:20
+  22 |   }
+  23 |
+> 24 |   const InfoCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
+     |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 25 |     <div className="bg-white border border-[#e7f3f2] rounded-xl p-4 md:p-6 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 26 |       <h3 className="text-base md:text-lg font-semibold text-[#0d1b1a] mb-3 md:mb-4 flex items-center gap-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 27 |         {title}
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |       </h3>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 29 |       {children}
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 30 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |   );
+     | ^^^^ The component is created during render here
+  32 |
+  33 |   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  34 |     <div className="mb-3 last:mb-0">                                                                                                                                                                             react-hooks/static-components
+  77:12  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:77:12
+  75 |       <InfoCard title="Clinical Details">
+  76 |         <div className="space-y-4">
+> 77 |           <LabelValue label="Primary Diagnosis" value={patient.diagnosis} />
+     |            ^^^^^^^^^^ This component is created during render
+  78 |           <LabelValue
+  79 |             label="Initial Paralysis Degree"
+  80 |             value={
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:33:22
+  31 |   );
+  32 |
+> 33 |   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |     <div className="mb-3 last:mb-0">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |       <div className="text-gray-900 font-medium text-sm md:text-base break-words">{value || '-'}</div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 37 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |   );
+     | ^^^^ The component is created during render here
+  39 |
+  40 |   return (
+  41 |     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            react-hooks/static-components
+  78:12  error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:78:12
+  76 |         <div className="space-y-4">
+  77 |           <LabelValue label="Primary Diagnosis" value={patient.diagnosis} />
+> 78 |           <LabelValue
+     |            ^^^^^^^^^^ This component is created during render
+  79 |             label="Initial Paralysis Degree"
+  80 |             value={
+  81 |               patient.initialParalysisDegree
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:33:22
+  31 |   );
+  32 |
+> 33 |   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |     <div className="mb-3 last:mb-0">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |       <div className="text-gray-900 font-medium text-sm md:text-base break-words">{value || '-'}</div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 37 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |   );
+     | ^^^^ The component is created during render here
+  39 |
+  40 |   return (
+  41 |     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         react-hooks/static-components
+  96:8   error    Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:96:8
+  94 |
+  95 |       {/* Activity Summary (Placeholder) */}
+> 96 |       <InfoCard title="Quick Stats">
+     |        ^^^^^^^^ This component is created during render
+  97 |         <div className="grid grid-cols-2 gap-4">
+  98 |           <div className="bg-[#0d9488]/5 p-4 rounded-lg text-center">
+  99 |             <span className="material-symbols-outlined text-[#0d9488] text-2xl mb-1">check_circle</span>
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/page.tsx:24:20
+  22 |   }
+  23 |
+> 24 |   const InfoCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
+     |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 25 |     <div className="bg-white border border-[#e7f3f2] rounded-xl p-4 md:p-6 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 26 |       <h3 className="text-base md:text-lg font-semibold text-[#0d1b1a] mb-3 md:mb-4 flex items-center gap-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 27 |         {title}
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |       </h3>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 29 |       {children}
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 30 |     </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |   );
+     | ^^^^ The component is created during render here
+  32 |
+  33 |   const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  34 |     <div className="mb-3 last:mb-0">                                                                           react-hooks/static-components
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/routines/[routineId]/edit/page.tsx
+  9:10  warning  'MobileModule' is defined but never used  @typescript-eslint/no-unused-vars
+  9:24  warning  'ExerciseType' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/routines/new/page.tsx
+  9:10  warning  'MobileModule' is defined but never used  @typescript-eslint/no-unused-vars
+  9:24  warning  'ExerciseType' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/dashboard/patients/[id]/routines/page.tsx
+   40:6   warning  React Hook useEffect has a missing dependency: 'loadRoutines'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  121:21  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                  react/no-unescaped-entities
+  121:46  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                  react/no-unescaped-entities
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/app/layout.tsx
+  24:9  warning  Custom fonts not added in `pages/_document.js` will only load for a single page. This is discouraged. See: https://nextjs.org/docs/messages/no-page-custom-font  @next/next/no-page-custom-font
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/components/layout/sidebar.tsx
+  24:37  warning  'userRole' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/components/routines/routine-builder.test.tsx
+  1:26  warning  'fireEvent' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/components/routines/routine-builder.tsx
+    4:116  warning  'ExerciseType' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+    9:6    warning  'RoutineItem' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+   67:7    error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/alejandroprado/pratum/symma-platform/apps/web/src/components/routines/routine-builder.tsx:67:7
+  65 |   useEffect(() => {
+  66 |     if (initialData) {
+> 67 |       setName(initialData.name);
+     |       ^^^^^^^ Avoid calling setState() directly within an effect
+  68 |       setPatientId(initialData.patientId);
+  69 |       setStartDate(new Date(initialData.startDate).toISOString().split('T')[0]);
+  70 |       setEndDate(initialData.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : '');  react-hooks/set-state-in-effect
+  387:102  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  397:101  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+
+✖ 37 problems (23 errors, 14 warnings)
+
+undefined
+/Users/alejandroprado/pratum/symma-platform/apps/web:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: eslint .

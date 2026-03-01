@@ -2,12 +2,16 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
-import type { PaginatedResponse, PatientResponse, PatientStatus } from '@symma/shared-types';
+import type {
+  PaginatedResponse,
+  PatientResponse,
+  PatientStatus,
+} from '@symma/shared-types';
 import * as crypto from 'crypto';
 
 @Injectable()
 export class PatientsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(therapistId: string, createPatientDto: CreatePatientDto) {
     return this.prisma.patient.create({
@@ -122,7 +126,7 @@ export class PatientsService {
     // Handle date conversion if present
     const data: Record<string, unknown> = { ...updatePatientDto };
     if ('dateOfBirth' in updatePatientDto && updatePatientDto.dateOfBirth) {
-      data.dateOfBirth = new Date(updatePatientDto.dateOfBirth as string);
+      data.dateOfBirth = new Date(updatePatientDto.dateOfBirth);
     }
 
     return this.prisma.patient.update({
@@ -146,7 +150,10 @@ export class PatientsService {
    * Generate a 6-digit access PIN for patient mobile login.
    * Uses SHA-256 for deterministic lookup + Bcrypt for legacy support.
    */
-  async generateAccessCode(therapistId: string, patientId: string): Promise<{ accessCode: string }> {
+  async generateAccessCode(
+    therapistId: string,
+    patientId: string,
+  ): Promise<{ accessCode: string }> {
     // Verify ownership
     await this.findOne(therapistId, patientId);
 
@@ -157,7 +164,10 @@ export class PatientsService {
     // Retry loop to ensure uniqueness
     while (!isUnique) {
       accessCode = Math.floor(100000 + Math.random() * 900000).toString();
-      accessCodeHash = crypto.createHash('sha256').update(accessCode).digest('hex');
+      accessCodeHash = crypto
+        .createHash('sha256')
+        .update(accessCode)
+        .digest('hex');
 
       // Check for collision
       const existing = await this.prisma.patient.findUnique({
@@ -190,7 +200,10 @@ export class PatientsService {
   /**
    * Revoke patient's mobile access by removing the PIN hash.
    */
-  async revokeAccessCode(therapistId: string, patientId: string): Promise<void> {
+  async revokeAccessCode(
+    therapistId: string,
+    patientId: string,
+  ): Promise<void> {
     // Verify ownership
     await this.findOne(therapistId, patientId);
 
@@ -207,7 +220,10 @@ export class PatientsService {
   /**
    * Check if patient has an active access code.
    */
-  async hasAccessCode(therapistId: string, patientId: string): Promise<boolean> {
+  async hasAccessCode(
+    therapistId: string,
+    patientId: string,
+  ): Promise<boolean> {
     const patient = await this.findOne(therapistId, patientId);
     return !!patient.accessCodeHash; // Check the new field
   }

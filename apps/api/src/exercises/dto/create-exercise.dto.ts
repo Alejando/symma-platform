@@ -1,4 +1,11 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, ValidateIf } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+  ValidateIf,
+} from 'class-validator';
 import type {
   CreateExerciseRequest,
   ExerciseType,
@@ -7,9 +14,25 @@ import type {
   ExerciseDefaultConfig,
 } from '@symma/shared-types';
 
-const EXERCISE_TYPE_VALUES: ExerciseType[] = ['ISOTONIC', 'ISOMETRIC', 'MANUAL', 'RELAXATION'];
-const EXERCISE_CATEGORY_VALUES: ExerciseCategory[] = ['WARMUP', 'CORE', 'COOLDOWN'];
-const MOBILE_MODULE_VALUES: MobileModule[] = ['EYES', 'EYES_INVERSE', 'BROWS', 'JAW', 'SMILE', 'KISS'];
+const EXERCISE_TYPE_VALUES: ExerciseType[] = [
+  'ISOTONIC',
+  'ISOMETRIC',
+  'MANUAL',
+  'RELAXATION',
+];
+const EXERCISE_CATEGORY_VALUES: ExerciseCategory[] = [
+  'WARMUP',
+  'CORE',
+  'COOLDOWN',
+];
+const MOBILE_MODULE_VALUES: MobileModule[] = [
+  'EYES',
+  'EYES_INVERSE',
+  'BROWS',
+  'JAW',
+  'SMILE',
+  'KISS',
+];
 const MOBILE_SUPPORTED_TYPES: ExerciseType[] = ['ISOTONIC', 'ISOMETRIC'];
 
 export class CreateExerciseDto implements CreateExerciseRequest {

@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RoutinesService } from './routines.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateRoutineDto, CreateRoutineItemDto } from './dto/create-routine.dto';
+import {
+  CreateRoutineDto,
+  CreateRoutineItemDto,
+} from './dto/create-routine.dto';
 import { MobileModule, ExerciseType } from '@prisma/client';
 
 describe('RoutinesService', () => {
@@ -66,25 +69,29 @@ describe('RoutinesService', () => {
 
       const expectedResult = { id: 'routine-id', ...createRoutineDto };
 
-      (prisma.patient.findFirst as jest.Mock).mockResolvedValue({ id: 'patient-id' });
+      (prisma.patient.findFirst as jest.Mock).mockResolvedValue({
+        id: 'patient-id',
+      });
       (prisma.routine.create as jest.Mock).mockResolvedValue(expectedResult);
 
       const result = await service.create('therapist-id', createRoutineDto);
 
-      expect(prisma.routine.create).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({
-          items: {
-            create: expect.arrayContaining([
-              expect.objectContaining({
-                sets: 3,
-                repsPerSet: 10,
-                exerciseId: 'exercise-id',
-                targetHoldSeconds: 5,
-              }),
-            ]),
-          },
+      expect(prisma.routine.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            items: {
+              create: expect.arrayContaining([
+                expect.objectContaining({
+                  sets: 3,
+                  repsPerSet: 10,
+                  exerciseId: 'exercise-id',
+                  targetHoldSeconds: 5,
+                }),
+              ]),
+            },
+          }),
         }),
-      }));
+      );
       expect(result).toEqual(expectedResult);
     });
   });

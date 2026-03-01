@@ -118,7 +118,7 @@ export default function PatientRoutinesPage({
 
                 {routine.therapistNotes && (
                   <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100 italic">
-                    "{routine.therapistNotes}"
+                    &quot;{routine.therapistNotes}&quot;
                   </div>
                 )}
 

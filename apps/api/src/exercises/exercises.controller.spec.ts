@@ -48,7 +48,9 @@ describe('ExercisesController', () => {
     it('should return an array of exercises', async () => {
       const result = [{ id: exerciseId, ...createDto }];
       mockExercisesService.findAll.mockResolvedValue(result);
-      expect(await controller.findAll(undefined, undefined, undefined)).toBe(result);
+      expect(await controller.findAll(undefined, undefined, undefined)).toBe(
+        result,
+      );
     });
   });
 

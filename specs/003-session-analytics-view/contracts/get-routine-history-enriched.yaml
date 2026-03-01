@@ -1,0 +1,138 @@
+openapi: 3.1.0
+info:
+  title: Routine History (Enriched) API
+  version: 2.0.0
+  description: |
+    Updated endpoint: GET /api/v1/routines/:id/history now includes lightweight
+    session item summaries (exerciseId + averageAccuracy) per session for use
+    in chart tooltips. This is a backward-compatible additive change — the
+    `items` field was already optional in SessionResponse.
+
+paths:
+  /api/v1/routines/{id}/history:
+    get:
+      summary: Get routine session history (enriched)
+      operationId: getRoutineHistory
+      tags:
+        - Analytics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUID of the routine
+      responses:
+        "200":
+          description: |
+            Ordered list of sessions (most recent first, max 20).
+            Each session includes lightweight item summaries for tooltip rendering.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoutineHistoryItem"
+              example:
+                - id: "550e8400-e29b-41d4-a716-446655440000"
+                  date: "2026-02-22T10:00:00.000Z"
+                  durationSeconds: 900
+                  score: 85
+                  isSynced: true
+                  items:
+                    - exerciseId: "880e8400-e29b-41d4-a716-446655440003"
+                      averageAccuracy: 88.5
+                    - exerciseId: "881e8400-e29b-41d4-a716-446655440005"
+                      averageAccuracy: null
+                - id: "550e8400-e29b-41d4-a716-446655440001"
+                  date: "2026-02-21T10:00:00.000Z"
+                  durationSeconds: 780
+                  score: 72
+                  isSynced: true
+                  items:
+                    - exerciseId: "880e8400-e29b-41d4-a716-446655440003"
+                      averageAccuracy: 74.0
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Routine not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HistoryItemSummary:
+      type: object
+      required:
+        - exerciseId
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        averageAccuracy:
+          type: number
+          format: float
+          nullable: true
+          minimum: 0
+          maximum: 100
+
+    RoutineHistoryItem:
+      type: object
+      required:
+        - id
+        - date
+        - durationSeconds
+        - score
+        - isSynced
+        - items
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date-time
+          description: ISO 8601 session execution timestamp
+        durationSeconds:
+          type: integer
+          minimum: 0
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Overall session score as integer percentage (0–100)
+        isSynced:
+          type: boolean
+        items:
+          type: array
+          description: Lightweight per-exercise summaries for chart tooltip use
+          items:
+            $ref: "#/components/schemas/HistoryItemSummary"
+
+    ErrorResponse:
+      type: object
+      required:
+        - statusCode
+        - message
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        error:
+          type: string

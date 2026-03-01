@@ -4,9 +4,11 @@ import { ActiveRoutineResponseDto } from './dto/active-routine-response.dto';
 
 @Injectable()
 export class MobileService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-  async getActiveRoutine(patientId: string): Promise<ActiveRoutineResponseDto | null> {
+  async getActiveRoutine(
+    patientId: string,
+  ): Promise<ActiveRoutineResponseDto | null> {
     const routine = await this.prisma.routine.findFirst({
       where: {
         patientId,

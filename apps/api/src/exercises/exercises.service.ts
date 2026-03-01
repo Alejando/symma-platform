@@ -4,7 +4,7 @@ import type { PaginatedResponse } from '@symma/shared-types';
 
 @Injectable()
 export class ExercisesService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAll(
     options: { search?: string; page?: number; limit?: number } = {},

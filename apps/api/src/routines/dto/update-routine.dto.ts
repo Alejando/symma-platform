@@ -7,11 +7,9 @@ import {
   Min,
   IsOptional,
   IsString,
-
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateRoutineDto } from './create-routine.dto';
-
 
 export class UpdateRoutineItemDto {
   @IsOptional()
@@ -46,8 +44,6 @@ export class UpdateRoutineItemDto {
 
   @IsOptional()
   allowSkip?: boolean;
-
-
 }
 
 export class UpdateRoutineDto extends PartialType(

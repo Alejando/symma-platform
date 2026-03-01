@@ -1,10 +1,28 @@
 'use client';
 
-import { use } from 'react';
-
 import { usePatient } from "@/components/patients/patient-context";
 import { PatientAccessCard } from "@/components/patients/patient-access-card";
 import { formatPhoneNumber } from "@/lib/utils";
+
+function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white border border-[#e7f3f2] rounded-xl p-4 md:p-6 shadow-sm">
+      <h3 className="text-base md:text-lg font-semibold text-[#0d1b1a] mb-3 md:mb-4 flex items-center gap-2">
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+function LabelValue({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="mb-3 last:mb-0">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+      <div className="text-gray-900 font-medium text-sm md:text-base break-words">{value || '-'}</div>
+    </div>
+  );
+}
 
 export default function PatientOverviewPage() {
   const { patient, loading } = usePatient();
@@ -20,22 +38,6 @@ export default function PatientOverviewPage() {
   if (!patient) {
     return <div className="text-gray-500">Patient details not found.</div>;
   }
-
-  const InfoCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="bg-white border border-[#e7f3f2] rounded-xl p-4 md:p-6 shadow-sm">
-      <h3 className="text-base md:text-lg font-semibold text-[#0d1b1a] mb-3 md:mb-4 flex items-center gap-2">
-        {title}
-      </h3>
-      {children}
-    </div>
-  );
-
-  const LabelValue = ({ label, value }: { label: string; value: React.ReactNode }) => (
-    <div className="mb-3 last:mb-0">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-      <div className="text-gray-900 font-medium text-sm md:text-base break-words">{value || '-'}</div>
-    </div>
-  );
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">

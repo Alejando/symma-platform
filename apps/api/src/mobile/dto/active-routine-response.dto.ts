@@ -19,7 +19,11 @@ export class ActiveRoutineExerciseDto {
   @ApiProperty()
   category: string;
 
-  @ApiProperty({ required: false, description: 'Mobile module for strategy selection (SMILE, BROWS, JAW, KISS, EYES, EYES_INVERSE)' })
+  @ApiProperty({
+    required: false,
+    description:
+      'Mobile module for strategy selection (SMILE, BROWS, JAW, KISS, EYES, EYES_INVERSE)',
+  })
   mobileModule: string | null;
 
   @ApiProperty({ required: false })
@@ -42,7 +46,9 @@ export class ActiveRoutineItemDto {
   @ApiProperty({ description: 'Number of repetitions per set' })
   repsPerSet: number;
 
-  @ApiProperty({ description: 'Hold time in seconds (0 for isotonic exercises)' })
+  @ApiProperty({
+    description: 'Hold time in seconds (0 for isotonic exercises)',
+  })
   targetHoldSeconds: number;
 
   @ApiProperty({ description: 'Rest time between sets in seconds' })

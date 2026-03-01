@@ -1,7 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { ExerciseResponse, MobileModule, ExerciseType } from '@symma/shared-types';
+import type {
+  CreateExerciseRequest,
+  ExerciseCategory,
+  ExerciseResponse,
+  MobileModule,
+  ExerciseType,
+  UpdateExerciseRequest,
+} from '@symma/shared-types';
 import { Button } from '@/components/ui/button';
 
 type Exercise = ExerciseResponse;
@@ -23,20 +30,31 @@ interface ExerciseDialogProps {
   isOpen: boolean;
   onClose: () => void;
   exercise?: Exercise | null;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: CreateExerciseRequest | UpdateExerciseRequest) => Promise<void>;
 }
+
+type ExerciseFormData = {
+  keyName: string;
+  name: string;
+  description: string;
+  type: ExerciseType;
+  category: ExerciseCategory;
+  mobileModule?: MobileModule;
+  assetAnimationUrl: string;
+  assetTutorialVideoUrl: string;
+};
 
 export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: ExerciseDialogProps) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ExerciseFormData>({
     keyName: '',
     name: '',
     description: '',
-    type: 'ISOMETRIC' as ExerciseType,
+    type: 'ISOMETRIC',
     category: 'CORE',
-    mobileModule: 'EYES' as MobileModule,
+    mobileModule: 'EYES',
     assetAnimationUrl: '',
     assetTutorialVideoUrl: '',
   });
@@ -65,7 +83,7 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
       const updated = { ...prev, [name]: value };
       // Clear mobileModule if type doesn't support it
       if (name === 'type' && !MOBILE_SUPPORTED_TYPES.includes(value as ExerciseType)) {
-        updated.mobileModule = undefined as any;
+        updated.mobileModule = undefined;
       }
       return updated;
     });

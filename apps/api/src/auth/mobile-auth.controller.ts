@@ -6,7 +6,7 @@ import { MobileLoginDto } from './dto/mobile-login.dto';
 @ApiTags('Mobile Auth')
 @Controller('auth/patient')
 export class MobileAuthController {
-  constructor(private readonly patientAuthService: PatientAuthService) { }
+  constructor(private readonly patientAuthService: PatientAuthService) {}
 
   @Post('login')
   @HttpCode(HttpStatus.OK)

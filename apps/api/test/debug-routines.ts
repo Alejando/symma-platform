@@ -15,15 +15,17 @@ async function bootstrap() {
     console.log('Therapist:', therapist.id);
 
     const patient = await prismaService.patient.findFirst({
-      where: { therapistId: therapist.id }
+      where: { therapistId: therapist.id },
     });
     if (!patient) throw new Error('No patient found for therapist');
     console.log('Patient:', patient.id);
 
     console.log('Calling findAllByPatient...');
-    const routines = await routinesService.findAllByPatient(therapist.id, patient.id);
+    const routines = await routinesService.findAllByPatient(
+      therapist.id,
+      patient.id,
+    );
     console.log('Result:', JSON.stringify(routines, null, 2));
-
   } catch (error) {
     console.error('ERROR CAUGHT:');
     console.error(error);

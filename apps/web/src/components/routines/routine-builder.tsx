@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { ExerciseResponse, Patient, CreateRoutineDto, RoutineResponse, UpdateRoutineDto, RoutineItemResponse, ExerciseType } from '@symma/shared-types';
 import { Button } from '@/components/ui/button';
 
@@ -60,17 +60,6 @@ export function RoutineBuilder({
       : ''
   );
   const [therapistNotes, setTherapistNotes] = useState(initialData?.therapistNotes || '');
-
-  // Update state when initialData changes (for edit mode)
-  useEffect(() => {
-    if (initialData) {
-      setName(initialData.name);
-      setPatientId(initialData.patientId);
-      setStartDate(new Date(initialData.startDate).toISOString().split('T')[0]);
-      setEndDate(initialData.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : '');
-      setTherapistNotes(initialData.therapistNotes || '');
-    }
-  }, [initialData]);
 
   // Keep these handlers here or pass them? Logic is here, state update via prop.
   const handleRemoveItem = (itemId: string) => {
@@ -384,7 +373,7 @@ export function RoutineBuilder({
                       <input
                         type="checkbox"
                         checked={item.strictMode}
-                        onChange={(e) => handleUpdateItem(item.id, 'strictMode', e.target.checked as any)}
+                        onChange={(e) => handleUpdateItem(item.id, 'strictMode', e.target.checked)}
                         disabled={isLocked}
                         className="rounded border-slate-300 text-[#0d9488] focus:ring-[#0d9488]"
                       />
@@ -394,7 +383,7 @@ export function RoutineBuilder({
                       <input
                         type="checkbox"
                         checked={item.allowSkip}
-                        onChange={(e) => handleUpdateItem(item.id, 'allowSkip', e.target.checked as any)}
+                        onChange={(e) => handleUpdateItem(item.id, 'allowSkip', e.target.checked)}
                         disabled={isLocked}
                         className="rounded border-slate-300 text-[#0d9488] focus:ring-[#0d9488]"
                       />

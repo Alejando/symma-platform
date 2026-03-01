@@ -12,7 +12,10 @@ import {
   IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import type { CreateRoutineRequest, RoutineItemRequest } from '@symma/shared-types';
+import type {
+  CreateRoutineRequest,
+  RoutineItemRequest,
+} from '@symma/shared-types';
 
 export class CreateRoutineItemDto implements RoutineItemRequest {
   @IsString()
@@ -44,8 +47,6 @@ export class CreateRoutineItemDto implements RoutineItemRequest {
 
   @IsOptional()
   allowSkip?: boolean;
-
-
 }
 
 export class CreateRoutineDto implements CreateRoutineRequest {

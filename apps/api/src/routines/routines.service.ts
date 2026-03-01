@@ -11,7 +11,7 @@ import type { PaginatedResponse } from '@symma/shared-types';
 
 @Injectable()
 export class RoutinesService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(therapistId: string, createRoutineDto: CreateRoutineDto) {
     // Validate dates
@@ -56,7 +56,6 @@ export class RoutinesService {
             restBetweenSets: item.restBetweenSets ?? 60,
             strictMode: item.strictMode ?? false,
             allowSkip: item.allowSkip ?? true,
-
           })),
         },
       },
@@ -216,7 +215,6 @@ export class RoutinesService {
               restBetweenSets: item.restBetweenSets ?? 60,
               strictMode: item.strictMode ?? false,
               allowSkip: item.allowSkip ?? true,
-
             },
           }),
         ),
@@ -284,7 +282,6 @@ export class RoutinesService {
             restBetweenSets: item.restBetweenSets,
             strictMode: item.strictMode,
             allowSkip: item.allowSkip,
-
           })),
         },
       },

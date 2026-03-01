@@ -5,7 +5,6 @@ import { NotFoundException } from '@nestjs/common';
 
 describe('AnalyticsController', () => {
   let controller: AnalyticsController;
-  let prismaService: PrismaService;
 
   const mockPrismaService = {
     routine: {
@@ -28,7 +27,6 @@ describe('AnalyticsController', () => {
     }).compile();
 
     controller = module.get<AnalyticsController>(AnalyticsController);
-    prismaService = module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {
@@ -83,6 +81,63 @@ describe('AnalyticsController', () => {
       expect(result.summary.avgScore).toBe(0);
       expect(result.summary.currentStreak).toBe(0);
       expect(result.chartData).toHaveLength(0);
+    });
+  });
+
+  describe('getRoutineHistory', () => {
+    it('should return enriched history with item summaries', async () => {
+      const routineId = 'routine-history-1';
+      mockPrismaService.routine.findUnique.mockResolvedValue({ id: routineId });
+      mockPrismaService.session.findMany.mockResolvedValue([
+        {
+          id: 'session-1',
+          date: new Date('2026-02-22T10:00:00.000Z'),
+          durationSeconds: 900,
+          score: 0.85,
+          isSynced: true,
+          items: [
+            { exerciseId: 'exercise-1', averageAccuracy: 88.5 },
+            { exerciseId: 'exercise-2', averageAccuracy: null },
+          ],
+        },
+      ]);
+
+      const result = await controller.getRoutineHistory(routineId);
+
+      expect(mockPrismaService.session.findMany).toHaveBeenCalledWith({
+        where: { routineId },
+        orderBy: { date: 'desc' },
+        take: 20,
+        include: {
+          items: {
+            select: {
+              exerciseId: true,
+              averageAccuracy: true,
+            },
+          },
+        },
+      });
+      expect(result).toEqual([
+        {
+          id: 'session-1',
+          date: '2026-02-22T10:00:00.000Z',
+          durationSeconds: 900,
+          score: 85,
+          isSynced: true,
+          items: [
+            { exerciseId: 'exercise-1', averageAccuracy: 88.5 },
+            { exerciseId: 'exercise-2', averageAccuracy: null },
+          ],
+        },
+      ]);
+    });
+
+    it('should throw NotFoundException if routine does not exist', async () => {
+      mockPrismaService.routine.findUnique.mockResolvedValue(null);
+
+      await expect(controller.getRoutineHistory('invalid-id')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

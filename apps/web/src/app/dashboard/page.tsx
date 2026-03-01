@@ -4,6 +4,10 @@ import { DashboardKPIs } from './_components/DashboardKPIs';
 import { DashboardActions } from './_components/DashboardActions';
 import { RiskList } from './_components/RiskList';
 
+type SessionUserWithAccessToken = {
+  accessToken?: string;
+};
+
 export default async function DashboardPage() {
   const session = await auth();
   const firstName = session?.user?.name?.split(' ')[0] || 'Doctor';
@@ -17,7 +21,7 @@ export default async function DashboardPage() {
   let dashboardData = null;
 
   // Safe access to accessToken with potential type issue fallback
-  const accessToken = (session?.user as any)?.accessToken;
+  const accessToken = (session?.user as SessionUserWithAccessToken | undefined)?.accessToken;
 
   if (accessToken) {
     try {

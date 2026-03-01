@@ -9,7 +9,7 @@ export class PatientAuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-  ) { }
+  ) {}
 
   /**
    * Hashes the access code using SHA-256 (Deterministic for lookup)

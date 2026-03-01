@@ -9,4 +9,4 @@ import { RoutinesModule } from '../routines/routines.module';
   providers: [PatientsService],
   exports: [PatientsService],
 })
-export class PatientsModule { }
+export class PatientsModule {}

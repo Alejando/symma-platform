@@ -73,7 +73,12 @@ describe('PatientsController', () => {
     it('should return patients for authenticated therapist', async () => {
       mockPatientsService.findAll.mockResolvedValue([mockPatient]);
 
-      const result = await controller.findAll(mockRequest, undefined, undefined, undefined);
+      const result = await controller.findAll(
+        mockRequest,
+        undefined,
+        undefined,
+        undefined,
+      );
 
       expect(service.findAll).toHaveBeenCalledWith('therapist-123', {
         search: undefined,

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { getExercises, createExercise, updateExercise, deleteExercise } from '@/lib/api';
-import type { Exercise } from '@symma/shared-types';
+import type { CreateExerciseRequest, Exercise, UpdateExerciseRequest } from '@symma/shared-types';
 import { ExerciseDialog } from './components/exercise-dialog';
 import { Button } from '@/components/ui/button';
 
@@ -51,16 +51,20 @@ export default function ExercisesPage() {
     }
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: CreateExerciseRequest | UpdateExerciseRequest) => {
     if (!session?.user?.accessToken) return;
     try {
       if (selectedExercise) {
         // Update
-        const updated = await updateExercise(session.user.accessToken, selectedExercise.id, data);
+        const updated = await updateExercise(
+          session.user.accessToken,
+          selectedExercise.id,
+          data as UpdateExerciseRequest,
+        );
         setExercises(prev => prev.map(e => e.id === updated.id ? updated : e));
       } else {
         // Create
-        const created = await createExercise(session.user.accessToken, data);
+        const created = await createExercise(session.user.accessToken, data as CreateExerciseRequest);
         setExercises(prev => [...prev, created]);
       }
     } catch (error) {

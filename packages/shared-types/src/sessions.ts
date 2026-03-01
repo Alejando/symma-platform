@@ -34,6 +34,10 @@ export interface SessionItemResponse {
   seriesData: unknown | null;
 }
 
+export interface SessionItemDetailResponse extends SessionItemResponse {
+  exerciseName: string;
+}
+
 export interface SessionResponse {
   id: string;
   routineId: string;
@@ -42,4 +46,19 @@ export interface SessionResponse {
   score: number;                  // int, 0–100
   createdAt: string;
   items?: SessionItemResponse[];
+}
+
+export interface SessionDetailResponse {
+  id: string;
+  routineId: string;
+  date: string;
+  durationSeconds: number;
+  score: number;
+  isSynced: boolean;
+  createdAt: string;
+  items: SessionItemDetailResponse[];
+  navigation: {
+    previousSessionId: string | null;
+    nextSessionId: string | null;
+  };
 }

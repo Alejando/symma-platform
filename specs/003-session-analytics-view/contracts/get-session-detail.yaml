@@ -1,0 +1,199 @@
+openapi: 3.1.0
+info:
+  title: Session Detail API
+  version: 1.0.0
+  description: |
+    New endpoint: retrieve full session detail including exercise items,
+    exercise names, and prev/next navigation hints.
+
+paths:
+  /api/v1/sessions/{id}:
+    get:
+      summary: Get session detail
+      operationId: getSessionDetail
+      tags:
+        - Sessions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUID of the session to retrieve
+      responses:
+        "200":
+          description: Session detail with exercise items and navigation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDetailResponse"
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                routineId: "660e8400-e29b-41d4-a716-446655440001"
+                date: "2026-02-22T10:00:00.000Z"
+                durationSeconds: 900
+                score: 85
+                isSynced: true
+                createdAt: "2026-02-22T10:15:00.000Z"
+                items:
+                  - id: "770e8400-e29b-41d4-a716-446655440002"
+                    sessionId: "550e8400-e29b-41d4-a716-446655440000"
+                    exerciseId: "880e8400-e29b-41d4-a716-446655440003"
+                    exerciseName: "Smile Stretch"
+                    repsCompleted: 10
+                    difficulty: 1
+                    averageAccuracy: 88.5
+                    seriesData:
+                      reps: [82, 85, 90, 88, 91, 87, 89, 92, 86, 90]
+                  - id: "771e8400-e29b-41d4-a716-446655440004"
+                    sessionId: "550e8400-e29b-41d4-a716-446655440000"
+                    exerciseId: "881e8400-e29b-41d4-a716-446655440005"
+                    exerciseName: "Brow Raise"
+                    repsCompleted: 10
+                    difficulty: 1
+                    averageAccuracy: null
+                    seriesData: null
+                navigation:
+                  previousSessionId: "550e8400-e29b-41d4-a716-446655440010"
+                  nextSessionId: null
+        "401":
+          description: Unauthorized — missing or invalid JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden — session belongs to a patient not owned by this therapist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SessionItemDetailResponse:
+      type: object
+      required:
+        - id
+        - sessionId
+        - exerciseId
+        - exerciseName
+        - repsCompleted
+        - difficulty
+      properties:
+        id:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+          format: uuid
+        exerciseId:
+          type: string
+          format: uuid
+        exerciseName:
+          type: string
+          description: Display name joined from Exercise model
+        repsCompleted:
+          type: integer
+          minimum: 0
+        difficulty:
+          type: integer
+          minimum: 0
+        averageAccuracy:
+          type: number
+          format: float
+          nullable: true
+          minimum: 0
+          maximum: 100
+          description: Per-exercise symmetry score 0–100, null if not recorded
+        seriesData:
+          nullable: true
+          description: Per-rep accuracy data; shape is { reps: number[] } when present
+
+    NavigationHints:
+      type: object
+      required:
+        - previousSessionId
+        - nextSessionId
+      properties:
+        previousSessionId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Chronologically older adjacent session ID, null if this is the oldest
+        nextSessionId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Chronologically newer adjacent session ID, null if this is the most recent
+
+    SessionDetailResponse:
+      type: object
+      required:
+        - id
+        - routineId
+        - date
+        - durationSeconds
+        - score
+        - isSynced
+        - createdAt
+        - items
+        - navigation
+      properties:
+        id:
+          type: string
+          format: uuid
+        routineId:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date-time
+          description: ISO 8601 session execution timestamp
+        durationSeconds:
+          type: integer
+          minimum: 0
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Overall session score as integer percentage (0–100)
+        isSynced:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionItemDetailResponse"
+        navigation:
+          $ref: "#/components/schemas/NavigationHints"
+
+    ErrorResponse:
+      type: object
+      required:
+        - statusCode
+        - message
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        error:
+          type: string

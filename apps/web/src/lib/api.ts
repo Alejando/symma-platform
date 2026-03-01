@@ -1,4 +1,18 @@
-import type { Patient, CreatePatientDto, UpdatePatientDto, Exercise, CreateRoutineDto, UpdateRoutineDto, Routine } from '@symma/shared-types';
+import type {
+  Patient,
+  CreatePatientDto,
+  UpdatePatientDto,
+  Exercise,
+  CreateExerciseRequest,
+  UpdateExerciseRequest,
+  CreateRoutineDto,
+  UpdateRoutineDto,
+  Routine,
+  RoutineHistoryResponse,
+  RoutineStatsResponse,
+  SessionDetailResponse,
+  DashboardStatsResponse,
+} from '@symma/shared-types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
 
@@ -93,16 +107,21 @@ export async function getPatientRoutines(token: string, patientId: string): Prom
   return response.json();
 }
 
-export async function getRoutineStats(token: string, routineId: string): Promise<any> {
+export async function getRoutineStats(token: string, routineId: string): Promise<RoutineStatsResponse> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}/stats`, token);
   return response.json();
 }
 
-export async function getRoutineHistory(token: string, routineId: string): Promise<any[]> {
+export async function getRoutineHistory(token: string, routineId: string): Promise<RoutineHistoryResponse> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}/history`, token);
   return response.json();
 }
-export async function createExercise(token: string, data: any): Promise<Exercise> {
+
+export async function getSessionDetail(token: string, sessionId: string): Promise<SessionDetailResponse> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/sessions/${sessionId}`, token);
+  return response.json();
+}
+export async function createExercise(token: string, data: CreateExerciseRequest): Promise<Exercise> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/exercises`, token, {
     method: 'POST',
     body: JSON.stringify(data),
@@ -110,7 +129,7 @@ export async function createExercise(token: string, data: any): Promise<Exercise
   return response.json();
 }
 
-export async function updateExercise(token: string, id: string, data: any): Promise<Exercise> {
+export async function updateExercise(token: string, id: string, data: UpdateExerciseRequest): Promise<Exercise> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/exercises/${id}`, token, {
     method: 'PATCH',
     body: JSON.stringify(data),
@@ -190,7 +209,7 @@ export async function getPatientAccessCodeStatus(
 }
 
 
-export async function getDashboardStats(token: string): Promise<any> {
+export async function getDashboardStats(token: string): Promise<DashboardStatsResponse> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/dashboard/stats`, token);
   return response.json();
 }
