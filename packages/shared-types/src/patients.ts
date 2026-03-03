@@ -54,7 +54,6 @@ export interface PatientResponse {
   clinicalNotes: string | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
-  avatarUrl: string | null;
   createdAt: string;                   // ISO 8601
   updatedAt: string;                   // ISO 8601
 }

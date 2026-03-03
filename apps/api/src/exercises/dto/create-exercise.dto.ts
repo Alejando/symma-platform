@@ -11,7 +11,6 @@ import type {
   ExerciseType,
   ExerciseCategory,
   MobileModule,
-  ExerciseDefaultConfig,
 } from '@symma/shared-types';
 
 const EXERCISE_TYPE_VALUES: ExerciseType[] = [
@@ -63,9 +62,6 @@ export class CreateExerciseDto implements CreateExerciseRequest {
   @IsUrl()
   @IsOptional()
   assetTutorialVideoUrl?: string;
-
-  @IsOptional()
-  defaultConfig?: ExerciseDefaultConfig;
 
   @ValidateIf((o) => MOBILE_SUPPORTED_TYPES.includes(o.type))
   @IsIn(MOBILE_MODULE_VALUES)

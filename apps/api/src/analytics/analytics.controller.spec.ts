@@ -96,8 +96,8 @@ describe('AnalyticsController', () => {
           score: 0.85,
           isSynced: true,
           items: [
-            { exerciseId: 'exercise-1', averageAccuracy: 88.5 },
-            { exerciseId: 'exercise-2', averageAccuracy: null },
+            { exerciseId: 'exercise-1', repsCompleted: 10, averageAccuracy: 88.5, exercise: { name: 'Smile Stretch' } },
+            { exerciseId: 'exercise-2', repsCompleted: 8, averageAccuracy: null, exercise: { name: 'Jaw Release' } },
           ],
         },
       ]);
@@ -112,7 +112,13 @@ describe('AnalyticsController', () => {
           items: {
             select: {
               exerciseId: true,
+              repsCompleted: true,
               averageAccuracy: true,
+              exercise: {
+                select: {
+                  name: true,
+                },
+              },
             },
           },
         },
@@ -125,8 +131,8 @@ describe('AnalyticsController', () => {
           score: 85,
           isSynced: true,
           items: [
-            { exerciseId: 'exercise-1', averageAccuracy: 88.5 },
-            { exerciseId: 'exercise-2', averageAccuracy: null },
+            { exerciseId: 'exercise-1', exerciseName: 'Smile Stretch', repsCompleted: 10, averageAccuracy: 88.5 },
+            { exerciseId: 'exercise-2', exerciseName: 'Jaw Release', repsCompleted: 8, averageAccuracy: null },
           ],
         },
       ]);

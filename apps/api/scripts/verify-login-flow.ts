@@ -24,7 +24,7 @@ async function verify() {
     // 1. Setup: Create Clinic -> Therapist -> Patient
     console.log('1️⃣  Setting up Dependencies...');
     const clinic = await prisma.clinic.create({
-      data: { name: 'Test Clinic Hotfix', address: '123 Test St' }
+      data: { name: 'Test Clinic Hotfix' }
     });
 
     const therapist = await prisma.therapist.create({
@@ -57,8 +57,7 @@ async function verify() {
     console.log('3️⃣  Verifying DB State...');
     const updatedPatient = await prisma.patient.findUnique({ where: { id: patient.id } });
     if (!updatedPatient?.accessCodeHash) throw new Error('❌ accessCodeHash NOT found in DB');
-    if (!updatedPatient?.authPinHash) throw new Error('❌ authPinHash NOT found in DB');
-    console.log('   ✅ Hashes stored successfully');
+    console.log('   ✅ accessCodeHash stored successfully');
 
     // 4. Attempt Login
     console.log('4️⃣  Attempting Login with Access Code...');

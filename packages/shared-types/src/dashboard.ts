@@ -9,7 +9,6 @@ export interface AtRiskPatientResponse {
   id: string;
   name: string;
   daysInactive: number;          // int
-  avatarUrl: string | null;
 }
 
 export interface DashboardStatsResponse {

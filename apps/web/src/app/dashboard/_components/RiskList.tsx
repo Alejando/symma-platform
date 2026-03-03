@@ -5,7 +5,6 @@ interface AtRiskPatient {
   id: string;
   name: string;
   daysInactive: number;
-  avatarUrl?: string | null;
 }
 
 export function RiskList({ patients }: { patients: AtRiskPatient[] }) {
@@ -41,13 +40,9 @@ export function RiskList({ patients }: { patients: AtRiskPatient[] }) {
             className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors group"
           >
             <div className="flex items-center gap-3">
-              {patient.avatarUrl ? (
-                <img src={patient.avatarUrl} alt={patient.name} className="w-10 h-10 rounded-full object-cover border border-gray-200" />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-sm">
-                  {patient.name.charAt(0)}
-                </div>
-              )}
+              <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-teal-700 font-bold text-sm border border-teal-100">
+                {patient.name.split(' ').map((n) => n.charAt(0)).join('').slice(0, 2).toUpperCase()}
+              </div>
               <div>
                 <p className="font-semibold text-[#0d1b1a] group-hover:text-[#0d9488] transition-colors">{patient.name}</p>
                 <p className="text-xs text-gray-500">Active Routine</p>

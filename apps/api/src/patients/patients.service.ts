@@ -75,7 +75,6 @@ export class PatientsService {
     clinicalNotes: string | null;
     emergencyContactName: string | null;
     emergencyContactPhone: string | null;
-    avatarUrl: string | null;
     createdAt: Date;
     updatedAt: Date;
   }): PatientResponse {
@@ -94,7 +93,6 @@ export class PatientsService {
       clinicalNotes: patient.clinicalNotes,
       emergencyContactName: patient.emergencyContactName,
       emergencyContactPhone: patient.emergencyContactPhone,
-      avatarUrl: patient.avatarUrl,
       createdAt: patient.createdAt.toISOString(),
       updatedAt: patient.updatedAt.toISOString(),
     };
@@ -179,16 +177,10 @@ export class PatientsService {
       }
     }
 
-    // Hash the PIN using bcrypt (keeping for backward compat if needed, though login uses SHA-256)
-    const bcrypt = await import('bcrypt');
-    const saltRounds = 10;
-    const authPinHash = await bcrypt.hash(accessCode, saltRounds);
-
-    // Update patient with BOTH hashes
+    // Update patient with access code hash
     await this.prisma.patient.update({
       where: { id: patientId },
       data: {
-        authPinHash,
         accessCodeHash,
       },
     });
@@ -211,7 +203,6 @@ export class PatientsService {
     await this.prisma.patient.update({
       where: { id: patientId },
       data: {
-        authPinHash: null,
         accessCodeHash: null,
       },
     });

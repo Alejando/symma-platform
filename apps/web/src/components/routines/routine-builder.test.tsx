@@ -14,10 +14,6 @@ const mockExercise: ExerciseResponse = {
   assetAnimationUrl: 'http://test.com',
   assetTutorialVideoUrl: 'http://test.com',
   createdAt: new Date().toISOString(),
-  defaultConfig: {
-    holdTime: 5,
-    restTime: 60,
-  },
 };
 
 const mockPatient: Patient = {
@@ -35,7 +31,6 @@ const mockPatient: Patient = {
   clinicalNotes: null,
   emergencyContactName: null,
   emergencyContactPhone: null,
-  avatarUrl: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };

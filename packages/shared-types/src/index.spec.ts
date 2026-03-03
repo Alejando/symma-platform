@@ -31,7 +31,6 @@ import type {
   RoutineItemResponse,
   RoutineResponse,
   // Exercises
-  ExerciseDefaultConfig,
   CreateExerciseRequest,
   UpdateExerciseRequest,
   ExerciseResponse,
@@ -146,7 +145,6 @@ describe('@symma/shared-types barrel exports', () => {
       clinicalNotes: null,
       emergencyContactName: null,
       emergencyContactPhone: null,
-      avatarUrl: null,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
     };
@@ -181,7 +179,6 @@ describe('@symma/shared-types barrel exports', () => {
   });
 
   it('exports exercise contracts', () => {
-    const config: ExerciseDefaultConfig = { threshold: 0.5, holdTime: 3 };
     const createReq: CreateExerciseRequest = {
       keyName: 'smile_hold',
       name: 'Smile Hold',
@@ -190,7 +187,6 @@ describe('@symma/shared-types barrel exports', () => {
     };
     const updateReq: UpdateExerciseRequest = { name: 'Updated Smile Hold' };
 
-    expect(config.threshold).toBe(0.5);
     expect(createReq.type).toBe('ISOMETRIC');
     expect(updateReq.name).toBe('Updated Smile Hold');
   });
@@ -267,7 +263,6 @@ describe('@symma/shared-types barrel exports', () => {
       id: 'p1',
       name: 'John Doe',
       daysInactive: 7,
-      avatarUrl: null,
     };
     const dashboard: DashboardStatsResponse = {
       metrics: {
@@ -300,7 +295,6 @@ describe('@symma/shared-types barrel exports', () => {
       clinicalNotes: null,
       emergencyContactName: null,
       emergencyContactPhone: null,
-      avatarUrl: null,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       name: 'Morning',

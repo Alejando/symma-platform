@@ -2,12 +2,6 @@
 
 import type { ExerciseType, ExerciseCategory, MobileModule } from './enums';
 
-export interface ExerciseDefaultConfig {
-  threshold?: number;    // float, 0–1
-  holdTime?: number;     // int, seconds
-  restTime?: number;     // int, seconds
-}
-
 export interface CreateExerciseRequest {
   keyName: string;
   name: string;
@@ -17,7 +11,6 @@ export interface CreateExerciseRequest {
   mobileModule?: MobileModule;
   assetAnimationUrl?: string;
   assetTutorialVideoUrl?: string;
-  defaultConfig?: ExerciseDefaultConfig;
 }
 
 export interface UpdateExerciseRequest {
@@ -29,7 +22,6 @@ export interface UpdateExerciseRequest {
   mobileModule?: MobileModule;
   assetAnimationUrl?: string;
   assetTutorialVideoUrl?: string;
-  defaultConfig?: ExerciseDefaultConfig;
 }
 
 export interface ExerciseResponse {
@@ -42,6 +34,5 @@ export interface ExerciseResponse {
   mobileModule: MobileModule | null;
   assetAnimationUrl: string | null;
   assetTutorialVideoUrl: string | null;
-  defaultConfig: ExerciseDefaultConfig | null;
   createdAt: string;
 }

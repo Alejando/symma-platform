@@ -49,7 +49,6 @@ export class DashboardService {
             id: true,
             firstName: true,
             lastName: true,
-            avatarUrl: true,
           },
         }),
 
@@ -103,7 +102,6 @@ export class DashboardService {
           id: p.id,
           name: `${p.firstName} ${p.lastName}`,
           daysInactive: daysInactive || 3, // At least 3 by definition of the query
-          avatarUrl: p.avatarUrl,
         };
       }),
     );
