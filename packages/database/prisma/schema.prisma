@@ -186,7 +186,6 @@ model SessionItem {
   sessionId       String   @map("session_id")
   exerciseId      String   @map("exercise_id")
   repsCompleted   Int      @map("reps_completed")
-  difficulty      Int      @default(0)
   averageAccuracy Float?   @map("average_accuracy") // RFC-026: AI Metric
   seriesData      Json?    @map("series_data")      // RFC-030: Detailed Series Data
   session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)

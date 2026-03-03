@@ -57,7 +57,6 @@ describe("SessionDetailPage", () => {
           exerciseId: "exercise-1",
           exerciseName: "Smile Stretch",
           repsCompleted: 10,
-          difficulty: 1,
           averageAccuracy: null,
           seriesData: null,
         },

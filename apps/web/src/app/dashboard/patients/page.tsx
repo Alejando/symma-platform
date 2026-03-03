@@ -5,10 +5,12 @@ import { useSession } from 'next-auth/react';
 import { PatientDialog, PatientTable } from '@/components/patients';
 import type { Patient, CreatePatientDto, UpdatePatientDto } from '@symma/shared-types';
 import { getPatients, createPatient, updatePatient, deletePatient } from '@/lib/api';
+import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import { Button } from '@/components/ui/button';
 
 export default function PatientsPage() {
   const { data: session } = useSession();
+  const handleAuthError = useAuthErrorHandler();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -23,7 +25,9 @@ export default function PatientsPage() {
       const data = await getPatients(session.user.accessToken, search || undefined);
       setPatients(data);
     } catch (error) {
-      console.error('Failed to fetch patients:', error);
+      if (!handleAuthError(error)) {
+        console.error('Failed to fetch patients:', error);
+      }
     } finally {
       setLoading(false);
     }
@@ -54,19 +58,27 @@ export default function PatientsPage() {
       setDeleteConfirm(null);
       fetchPatients();
     } catch (error) {
-      console.error('Failed to delete patient:', error);
+      if (!handleAuthError(error)) {
+        console.error('Failed to delete patient:', error);
+      }
     }
   };
 
   const handleSubmit = async (data: CreatePatientDto | UpdatePatientDto) => {
     if (!session?.user?.accessToken) return;
 
-    if (selectedPatient) {
-      await updatePatient(session.user.accessToken, selectedPatient.id, data);
-    } else {
-      await createPatient(session.user.accessToken, data as CreatePatientDto);
+    try {
+      if (selectedPatient) {
+        await updatePatient(session.user.accessToken, selectedPatient.id, data);
+      } else {
+        await createPatient(session.user.accessToken, data as CreatePatientDto);
+      }
+      fetchPatients();
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        console.error('Failed to save patient:', error);
+      }
     }
-    fetchPatients();
   };
 
   return (

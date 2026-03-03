@@ -158,7 +158,6 @@ export default function SessionDetailPage() {
                 <TableRow>
                   <TableHead>Exercise</TableHead>
                   <TableHead>Reps</TableHead>
-                  <TableHead>Difficulty</TableHead>
                   <TableHead>Accuracy</TableHead>
                 </TableRow>
               </TableHeader>
@@ -171,14 +170,13 @@ export default function SessionDetailPage() {
                       <TableRow>
                         <TableCell>{item.exerciseName}</TableCell>
                         <TableCell>{item.repsCompleted}</TableCell>
-                        <TableCell>{item.difficulty}</TableCell>
                         <TableCell>
                           {item.averageAccuracy === null ? "N/A" : `${item.averageAccuracy.toFixed(1)}%`}
                         </TableCell>
                       </TableRow>
                       {repSeries.length > 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4}>
+                          <TableCell colSpan={3}>
                             <details>
                               <summary className="cursor-pointer text-xs text-muted-foreground">
                                 View rep-by-rep series

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { getPatient, updatePatient } from '@/lib/api';
+import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import type { Patient, UpdatePatientDto, CreatePatientDto } from '@symma/shared-types';
 import { PatientDialog } from '@/components/patients';
 import { PatientContext } from '@/components/patients/patient-context';
@@ -57,6 +58,8 @@ export default function PatientLayout({
     }
   };
 
+  const handleAuthError = useAuthErrorHandler();
+
   useEffect(() => {
     async function loadPatient() {
       if (session?.user?.accessToken) {
@@ -64,14 +67,16 @@ export default function PatientLayout({
           const data = await getPatient(session.user.accessToken, id);
           setPatient(data);
         } catch (error) {
-          console.error('Failed to load patient:', error);
+          if (!handleAuthError(error)) {
+            console.error('Failed to load patient:', error);
+          }
         } finally {
           setLoading(false);
         }
       }
     }
     loadPatient();
-  }, [session, id]);
+  }, [session, id, handleAuthError]);
 
   if (loading) {
     return <div className="p-8">Loading...</div>;

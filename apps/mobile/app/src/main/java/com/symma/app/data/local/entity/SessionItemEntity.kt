@@ -32,9 +32,6 @@ data class SessionItemEntity(
     @ColumnInfo(name = "reps_completed")
     val repsCompleted: Int,
 
-    @ColumnInfo(name = "difficulty")
-    val difficulty: Int = 0,
-
     @ColumnInfo(name = "average_accuracy")
     val averageAccuracy: Float? = null,
 

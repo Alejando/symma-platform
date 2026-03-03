@@ -25,11 +25,6 @@ export class SessionItemDto implements SessionItemRequest {
   @IsNumber()
   repsCompleted: number;
 
-  @ApiProperty({ required: false, default: 0 })
-  @IsNumber()
-  @IsOptional()
-  difficulty?: number;
-
   @ApiProperty({
     required: false,
     description: 'Average symmetry score (0-100)',

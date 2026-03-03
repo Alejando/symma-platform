@@ -42,7 +42,6 @@ class SessionRepositoryImplTest {
             SessionItemRequest(
                 exerciseId = "exercise-1",
                 repsCompleted = 10,
-                difficulty = 1,
                 averageAccuracy = 85f
             )
         )

@@ -9,6 +9,6 @@ export class DashboardController {
 
   @Get('stats')
   async getStats(@Request() req) {
-    return this.dashboardService.getStats(req.user.id);
+    return this.dashboardService.getStats(req.user.userId);
   }
 }

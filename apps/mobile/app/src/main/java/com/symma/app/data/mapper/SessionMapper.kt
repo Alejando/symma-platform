@@ -25,7 +25,6 @@ fun SessionItemRequest.toEntity(sessionId: String): SessionItemEntity {
         sessionId = sessionId,
         exerciseId = exerciseId,
         repsCompleted = repsCompleted,
-        difficulty = difficulty,
         averageAccuracy = averageAccuracy,
         seriesData = seriesData?.let { gson.toJson(it) }
     )
@@ -45,7 +44,6 @@ fun SessionItemEntity.toSessionItemRequest(): SessionItemRequest {
     return SessionItemRequest(
         exerciseId = exerciseId,
         repsCompleted = repsCompleted,
-        difficulty = difficulty,
         averageAccuracy = averageAccuracy,
         seriesData = seriesData?.let { gson.fromJson(it, Any::class.java) }
     )
@@ -69,7 +67,6 @@ fun SessionItemEntity.toDomain(): SessionItem {
         id = id,
         exerciseId = exerciseId,
         repsCompleted = repsCompleted,
-        difficulty = difficulty,
         averageAccuracy = averageAccuracy
     )
 }

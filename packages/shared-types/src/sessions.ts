@@ -3,7 +3,6 @@
 export interface SessionItemRequest {
   exerciseId: string;
   repsCompleted: number;          // int
-  difficulty?: number;            // int, default 0
   averageAccuracy?: number;       // float, 0–100 (symmetry score)
   seriesData?: unknown;           // JSON blob — detailed per-rep data
 }
@@ -29,7 +28,6 @@ export interface SessionItemResponse {
   sessionId: string;
   exerciseId: string;
   repsCompleted: number;
-  difficulty: number;
   averageAccuracy: number | null;
   seriesData: unknown | null;
 }

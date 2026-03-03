@@ -3,17 +3,18 @@ import { NextResponse } from 'next/server';
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
+  const isTokenExpired = req.auth?.error === 'TokenExpired';
   const { pathname } = req.nextUrl;
 
-  // Protected routes
+  // Protected routes - redirect if not logged in OR token expired
   if (pathname.startsWith('/dashboard')) {
-    if (!isLoggedIn) {
+    if (!isLoggedIn || isTokenExpired) {
       return NextResponse.redirect(new URL('/login', req.url));
     }
   }
 
-  // Redirect logged-in users from login to dashboard
-  if (pathname === '/login' && isLoggedIn) {
+  // Redirect logged-in users from login to dashboard (only if token is valid)
+  if (pathname === '/login' && isLoggedIn && !isTokenExpired) {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 

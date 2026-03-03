@@ -80,7 +80,6 @@ export class SessionsService {
         exerciseId: item.exerciseId,
         exerciseName: item.exercise.name,
         repsCompleted: item.repsCompleted,
-        difficulty: item.difficulty,
         averageAccuracy: item.averageAccuracy,
         seriesData: item.seriesData,
       })),
@@ -139,7 +138,6 @@ export class SessionsService {
       createSessionDto.items.map((item) => ({
         exerciseId: item.exerciseId,
         repsCompleted: item.repsCompleted,
-        difficulty: item.difficulty || 0,
         averageAccuracy: item.averageAccuracy,
         seriesData:
           item.seriesData === undefined

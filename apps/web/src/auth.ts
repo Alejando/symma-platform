@@ -1,6 +1,8 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 
+import { isTokenExpired } from '@/lib/auth-utils';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -68,6 +70,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = user.role;
         token.id = user.id;
       }
+
+      if (token.accessToken && isTokenExpired(token.accessToken)) {
+        token.error = 'TokenExpired';
+      }
+
       return token;
     },
     async session({ session, token }) {
@@ -75,6 +82,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
         session.user.accessToken = token.accessToken as string;
         session.user.role = token.role as string;
+      }
+      if (token.error) {
+        session.error = token.error;
       }
       return session;
     },

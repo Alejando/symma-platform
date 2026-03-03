@@ -5,10 +5,12 @@ import { useSession } from 'next-auth/react';
 import { getExercises, createExercise, updateExercise, deleteExercise } from '@/lib/api';
 import type { CreateExerciseRequest, Exercise, UpdateExerciseRequest } from '@symma/shared-types';
 import { ExerciseDialog } from './components/exercise-dialog';
+import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import { Button } from '@/components/ui/button';
 
 export default function ExercisesPage() {
   const { data: session } = useSession();
+  const handleAuthError = useAuthErrorHandler();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

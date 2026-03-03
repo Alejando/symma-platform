@@ -15,6 +15,7 @@ declare module 'next-auth' {
       accessToken: string;
       role: string;
     };
+    error?: 'TokenExpired';
   }
 }
 
@@ -23,5 +24,6 @@ declare module 'next-auth/jwt' {
     accessToken?: string;
     role?: string;
     id?: string;
+    error?: 'TokenExpired';
   }
 }

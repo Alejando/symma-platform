@@ -179,22 +179,32 @@ export function ProgressChart({ data, sessions = [], selectedIds, exercises = []
               />
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <Tooltip
-                contentStyle={{ backgroundColor: 'var(--background)', borderColor: 'var(--border)' }}
-                itemStyle={{ color: 'var(--foreground)' }}
-                formatter={(value: number) => [`${value}${METRIC_UNITS[metric]}`, METRIC_LABELS[metric]]}
-                labelFormatter={(label) => {
-                  if (typeof label !== "string") {
-                    return String(label);
+                content={({ active, payload, label }) => {
+                  if (!active || !payload || payload.length === 0) return null;
+                  
+                  const dataPoint = payload[0];
+                  if (!dataPoint) return null;
+                  
+                  const value = dataPoint.value as number;
+                  const matchedSession = typeof label === 'string' ? sessionByDate.get(label) : null;
+                  
+                  let formattedDate = '';
+                  try {
+                    formattedDate = typeof label === 'string' ? format(parseISO(label), "MMM do, yyyy") : String(label);
+                  } catch {
+                    formattedDate = String(label);
                   }
-
-                  const matchedSession = sessionByDate.get(label);
-                  const formattedDate = format(parseISO(label), "MMM do, yyyy");
-
-                  if (!matchedSession) {
-                    return formattedDate;
-                  }
-
-                  return `${formattedDate} • ${Math.floor(matchedSession.durationSeconds / 60)} min`;
+                  
+                  const duration = matchedSession ? ` • ${Math.floor(matchedSession.durationSeconds / 60)} min` : '';
+                  
+                  return (
+                    <div className="rounded-lg border bg-background p-2 shadow-sm">
+                      <p className="text-sm font-medium text-muted-foreground">{formattedDate}{duration}</p>
+                      <p className="text-sm font-semibold">
+                        {METRIC_LABELS[metric]}: {value}{METRIC_UNITS[metric]}
+                      </p>
+                    </div>
+                  );
                 }}
               />
               <Area
@@ -209,6 +219,8 @@ export function ProgressChart({ data, sessions = [], selectedIds, exercises = []
               <Scatter
                 data={chartData}
                 dataKey="value"
+                legendType="none"
+                tooltipType="none"
                 shape={(props: unknown) => {
                   const typedProps = props as {
                     cx?: number;

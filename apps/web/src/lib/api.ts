@@ -14,6 +14,8 @@ import type {
   DashboardStatsResponse,
 } from '@symma/shared-types';
 
+import { AuthenticationError } from './errors';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
 
 async function fetchWithAuth(
@@ -31,6 +33,9 @@ async function fetchWithAuth(
   });
 
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new AuthenticationError('Session expired or unauthorized');
+    }
     const error = await response.json().catch(() => ({ message: 'Request failed' }));
     throw new Error(error.message || `HTTP error! status: ${response.status}`);
   }

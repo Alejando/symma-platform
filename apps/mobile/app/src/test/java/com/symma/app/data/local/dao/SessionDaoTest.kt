@@ -121,7 +121,6 @@ class SessionDaoTest {
             sessionId = sessionId,
             exerciseId = exerciseId,
             repsCompleted = 10,
-            difficulty = 1,
             averageAccuracy = 85f,
             seriesData = null
         )

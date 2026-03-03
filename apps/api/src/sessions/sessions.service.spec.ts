@@ -18,7 +18,6 @@ describe('SessionsService', () => {
         create: Array<{
           exerciseId?: string;
           repsCompleted?: number;
-          difficulty?: number;
           averageAccuracy?: number;
           seriesData?: unknown;
         }>;
@@ -78,7 +77,6 @@ describe('SessionsService', () => {
           sessionId,
           exerciseId: 'exercise-1',
           repsCompleted: 10,
-          difficulty: 1,
           averageAccuracy: 88.5,
           seriesData: { reps: [82, 85, 90] },
           exercise: {
@@ -196,7 +194,6 @@ describe('SessionsService', () => {
         {
           exerciseId: 'exercise-1',
           repsCompleted: 10,
-          difficulty: 1,
           averageAccuracy: 85,
           seriesData: { reps: [1, 2, 3] },
         },
@@ -218,7 +215,6 @@ describe('SessionsService', () => {
           sessionId,
           exerciseId: 'exercise-1',
           repsCompleted: 10,
-          difficulty: 1,
           averageAccuracy: 85,
           seriesData: { reps: [1, 2, 3] },
         },
@@ -268,7 +264,6 @@ describe('SessionsService', () => {
       expect(createCallArgs.data.items?.create[0]).toMatchObject({
         exerciseId: 'exercise-1',
         repsCompleted: 10,
-        difficulty: 1,
         averageAccuracy: 85,
         seriesData: { reps: [1, 2, 3] },
       });

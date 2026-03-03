@@ -17,7 +17,6 @@ class SessionMapperTest {
         val request = SessionItemRequest(
             exerciseId = "exercise-1",
             repsCompleted = 10,
-            difficulty = 2,
             averageAccuracy = 85.5f,
             seriesData = mapOf("reps" to listOf(1, 2, 3))
         )
@@ -28,7 +27,6 @@ class SessionMapperTest {
         assertEquals("session-123", entity.sessionId)
         assertEquals("exercise-1", entity.exerciseId)
         assertEquals(10, entity.repsCompleted)
-        assertEquals(2, entity.difficulty)
         assertEquals(85.5f, entity.averageAccuracy)
         assertNotNull(entity.seriesData)
         assertTrue(entity.seriesData!!.contains("reps"))
@@ -39,7 +37,6 @@ class SessionMapperTest {
         val request = SessionItemRequest(
             exerciseId = "exercise-1",
             repsCompleted = 10,
-            difficulty = 0,
             averageAccuracy = null,
             seriesData = null
         )
@@ -71,7 +68,6 @@ class SessionMapperTest {
                 sessionId = "session-123",
                 exerciseId = "exercise-1",
                 repsCompleted = 10,
-                difficulty = 1,
                 averageAccuracy = 85f,
                 seriesData = """{"reps":[1,2,3]}"""
             )
@@ -105,7 +101,6 @@ class SessionMapperTest {
                 sessionId = "session-123",
                 exerciseId = "exercise-1",
                 repsCompleted = 10,
-                difficulty = 1,
                 averageAccuracy = 85f,
                 seriesData = null
             )
@@ -131,7 +126,6 @@ class SessionMapperTest {
             sessionId = "session-123",
             exerciseId = "exercise-1",
             repsCompleted = 10,
-            difficulty = 2,
             averageAccuracy = 92.5f,
             seriesData = null
         )
@@ -141,7 +135,6 @@ class SessionMapperTest {
         assertEquals("item-1", domain.id)
         assertEquals("exercise-1", domain.exerciseId)
         assertEquals(10, domain.repsCompleted)
-        assertEquals(2, domain.difficulty)
         assertEquals(92.5f, domain.averageAccuracy)
     }
 }
