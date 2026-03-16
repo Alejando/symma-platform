@@ -1,9 +1,10 @@
 import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import type { RoutineHistoryResponse } from '@symma/shared-types';
 
 @Controller('routines')
 export class AnalyticsController {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   @Get(':id/stats')
   async getRoutineStats(@Param('id') id: string) {
@@ -30,24 +31,30 @@ export class AnalyticsController {
     // Calculate Streak (consecutive days ending yesterday or today)
     let currentStreak = 0;
     // Logic for streak to be improved later, for now simplified count of sessions in last days
-    // A proper streak needs consecutive dates. 
+    // A proper streak needs consecutive dates.
     // Let's assume one session per day for simplicity or grouping by day.
 
     // Simple streak logic:
     // Sort descending. Check difference in days.
-    const sortedSessions = [...sessions].sort((a, b) => b.date.getTime() - a.date.getTime());
+    const sortedSessions = [...sessions].sort(
+      (a, b) => b.date.getTime() - a.date.getTime(),
+    );
     if (sortedSessions.length > 0) {
       // Check if last session was today or yesterday
       const lastSessionDate = sortedSessions[0].date;
       const today = new Date();
-      const diffIds = Math.floor((today.getTime() - lastSessionDate.getTime()) / (1000 * 60 * 60 * 24));
+      const diffIds = Math.floor(
+        (today.getTime() - lastSessionDate.getTime()) / (1000 * 60 * 60 * 24),
+      );
 
       if (diffIds <= 1) {
         currentStreak = 1;
         for (let i = 0; i < sortedSessions.length - 1; i++) {
           const d1 = sortedSessions[i].date;
           const d2 = sortedSessions[i + 1].date;
-          const diffDays = Math.floor((d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
+          const diffDays = Math.floor(
+            (d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24),
+          );
           if (diffDays === 1) {
             currentStreak++;
           } else if (diffDays === 0) {
@@ -76,7 +83,9 @@ export class AnalyticsController {
   }
 
   @Get(':id/history')
-  async getRoutineHistory(@Param('id') id: string) {
+  async getRoutineHistory(
+    @Param('id') id: string,
+  ): Promise<RoutineHistoryResponse> {
     const routine = await this.prisma.routine.findUnique({
       where: { id },
     });
@@ -88,9 +97,35 @@ export class AnalyticsController {
     const sessions = await this.prisma.session.findMany({
       where: { routineId: id },
       orderBy: { date: 'desc' },
-      take: 20, // Limit for now
+      take: 20,
+      include: {
+        items: {
+          select: {
+            exerciseId: true,
+            repsCompleted: true,
+            averageAccuracy: true,
+            exercise: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
     });
 
-    return sessions;
+    return sessions.map((session) => ({
+      id: session.id,
+      date: session.date.toISOString(),
+      durationSeconds: session.durationSeconds,
+      score: Math.round(session.score * 100),
+      isSynced: session.isSynced,
+      items: session.items.map((item) => ({
+        exerciseId: item.exerciseId,
+        exerciseName: item.exercise.name,
+        repsCompleted: item.repsCompleted,
+        averageAccuracy: item.averageAccuracy,
+      })),
+    }));
   }
 }

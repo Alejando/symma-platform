@@ -26,6 +26,11 @@
         "^check-types"
       ]
     },
+    "test": {
+      "dependsOn": [
+        "^test"
+      ]
+    },
     "dev": {
       "cache": false,
       "persistent": true
@@ -34,6 +39,11 @@
       "cache": false
     },
     "db:push": {
+      "cache": false
+    },
+    "generate:openapi": {
+      "dependsOn": ["^build"],
+      "outputs": ["openapi.json"],
       "cache": false
     }
   }

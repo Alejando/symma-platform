@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Patient, CreatePatientDto, UpdatePatientDto, Gender } from '@symma/shared-types';
+import { Button } from '@/components/ui/button';
 
 interface PatientDialogProps {
   isOpen: boolean;
@@ -193,12 +194,13 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
           <h2 className="text-xl font-bold text-[#0d1b1a]">
             {patient ? 'Edit Patient' : 'Add New Patient'}
           </h2>
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <span className="material-symbols-outlined text-gray-500">close</span>
-          </button>
+          </Button>
         </div>
 
         {/* Form */}
@@ -422,20 +424,21 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="text-sm font-medium text-gray-700"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 text-sm font-bold text-white bg-[#0d9488] hover:bg-[#0b857a] disabled:opacity-50 rounded-lg transition-colors shadow-sm"
+              className="px-6 text-sm font-bold text-white bg-[#0d9488] hover:bg-[#0b857a] shadow-sm"
             >
               {loading ? 'Saving...' : patient ? 'Save Changes' : 'Add Patient'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

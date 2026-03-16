@@ -122,17 +122,17 @@ private fun ExerciseView(
     onResume: () -> Unit,
     onSkip: () -> Unit
 ) {
-    // Feedback Logic: differentiate isometric (hold) vs isotonic (pulse)
-    val feedbackText = if (state.isIsometric) {
-        when {
+    // Feedback Logic: release gate takes priority over normal feedback
+    val feedbackText = when {
+        state.awaitingRelease -> "Relax and release"
+        state.isIsometric -> when {
             state.isTargetReached -> "Hold it!"
             symmetryScore >= 0.8f -> "Almost there!"
             symmetryScore >= 0.5f -> "Keep going..."
             symmetryScore > 0f -> "Try harder"
             else -> "Get in position"
         }
-    } else {
-        when {
+        else -> when {
             state.isTargetReached -> "Nice!"
             symmetryScore >= 0.8f -> "Almost!"
             symmetryScore >= 0.5f -> "Keep going..."
@@ -142,8 +142,9 @@ private fun ExerciseView(
     }
     
     val feedbackColor = when {
+        state.awaitingRelease -> Color(0xFFFFC107) // Amber — release required
         state.isTargetReached -> Color.Green
-        symmetryScore >= 0.8f -> Color(0xFFFFC107) // Yellow
+        symmetryScore >= 0.8f -> Color(0xFFFFC107)
         symmetryScore >= 0.5f -> Color(0xFFFFC107)
         else -> Color.White
     }

@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { getPatient, updatePatient } from '@/lib/api';
+import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import type { Patient, UpdatePatientDto, CreatePatientDto } from '@symma/shared-types';
 import { PatientDialog } from '@/components/patients';
 import { PatientContext } from '@/components/patients/patient-context';
+import { Button } from '@/components/ui/button';
 
 function getInitials(firstName: string, lastName: string) {
   return `${firstName[0]}${lastName[0]}`.toUpperCase();
@@ -56,6 +58,8 @@ export default function PatientLayout({
     }
   };
 
+  const handleAuthError = useAuthErrorHandler();
+
   useEffect(() => {
     async function loadPatient() {
       if (session?.user?.accessToken) {
@@ -63,14 +67,16 @@ export default function PatientLayout({
           const data = await getPatient(session.user.accessToken, id);
           setPatient(data);
         } catch (error) {
-          console.error('Failed to load patient:', error);
+          if (!handleAuthError(error)) {
+            console.error('Failed to load patient:', error);
+          }
         } finally {
           setLoading(false);
         }
       }
     }
     loadPatient();
-  }, [session, id]);
+  }, [session, id, handleAuthError]);
 
   if (loading) {
     return <div className="p-8">Loading...</div>;
@@ -107,7 +113,7 @@ export default function PatientLayout({
               <div className="flex items-center gap-3 md:gap-4 text-sm text-gray-500 flex-wrap">
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-base md:text-lg">calendar_today</span>
-                  <span>{calculateAge(patient.dateOfBirth)} yrs</span>
+                  <span>{patient.dateOfBirth ? `${calculateAge(patient.dateOfBirth)} yrs` : 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-base md:text-lg">wc</span>
@@ -123,13 +129,14 @@ export default function PatientLayout({
 
           {/* Action Buttons */}
           <div className="flex gap-2 md:gap-3 shrink-0 justify-end">
-            <button
+            <Button
+              variant="outline"
               onClick={handleEditClick}
-              className="flex items-center justify-center gap-1 md:gap-2 px-3 md:px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="text-sm font-medium text-gray-700"
             >
               <span className="material-symbols-outlined text-lg">edit</span>
               <span className="inline">Edit</span>
-            </button>
+            </Button>
             <Link
               href={`/dashboard/patients/${id}/routines/new`}
               className="flex items-center justify-center gap-1 md:gap-2 px-3 md:px-4 py-2 text-sm font-medium text-white bg-[#0d9488] rounded-lg hover:bg-[#0f766e] transition-colors shadow-sm"

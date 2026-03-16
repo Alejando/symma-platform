@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/@openapitools/openapi-generator-cli/config.schema.json",
+  "spaces": 2,
+  "generator-cli": {
+    "version": "7.4.0",
+    "generators": {
+      "kotlin-models": {
+        "generatorName": "kotlin",
+        "inputSpec": "apps/api/openapi.json",
+        "output": "apps/mobile/app/src/main/java",
+        "globalProperty": "models",
+        "additionalProperties": {
+          "packageName": "com.symma.app.data.remote.model",
+          "serializationLibrary": "gson",
+          "dateLibrary": "string",
+          "enumPropertyNaming": "UPPERCASE"
+        }
+      }
+    }
+  }
+}

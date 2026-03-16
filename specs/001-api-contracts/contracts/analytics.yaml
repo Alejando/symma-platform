@@ -1,0 +1,88 @@
+openapi: 3.0.3
+info:
+  title: Symma API — Analytics Contracts
+  version: 1.0.0
+
+paths:
+  /routines/{id}/stats:
+    get:
+      tags: [Analytics]
+      operationId: getRoutineStats
+      summary: Get aggregated statistics for a routine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutineStatsResponse'
+        '404':
+          description: Routine not found
+
+  /routines/{id}/history:
+    get:
+      tags: [Analytics]
+      operationId: getRoutineHistory
+      summary: Get session history for a routine (most recent first, limit 20)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: './sessions.yaml#/components/schemas/SessionResponse'
+        '404':
+          description: Routine not found
+
+components:
+  schemas:
+    RoutineChartPoint:
+      type: object
+      required: [date, score]
+      properties:
+        date:
+          type: string
+          format: date
+          description: YYYY-MM-DD
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Session score as integer percentage
+
+    RoutineStatsResponse:
+      type: object
+      required: [summary, chartData]
+      properties:
+        summary:
+          type: object
+          required: [totalSessions, currentStreak, avgScore]
+          properties:
+            totalSessions:
+              type: integer
+            currentStreak:
+              type: integer
+              description: Consecutive days with at least one session
+            avgScore:
+              type: integer
+              minimum: 0
+              maximum: 100
+              description: Average score as integer percentage (0–100)
+        chartData:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoutineChartPoint'

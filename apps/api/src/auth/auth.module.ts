@@ -26,4 +26,4 @@ import { PatientJwtStrategy } from './strategies/patient-jwt.strategy';
   providers: [AuthService, JwtStrategy, PatientAuthService, PatientJwtStrategy],
   exports: [AuthService, PatientAuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { Patient } from '@symma/shared-types';
 import { formatPhoneNumber } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface PatientTableProps {
   patients: Patient[];
@@ -99,7 +100,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                   <span className="text-sm text-gray-600">{patient.email}</span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm text-gray-600">{formatDate(patient.dateOfBirth)}</span>
+                  <span className="text-sm text-gray-600">{patient.dateOfBirth ? formatDate(patient.dateOfBirth) : 'N/A'}</span>
                 </td>
                 <td className="px-6 py-4">
                   <span
@@ -117,24 +118,28 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-2">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => onEdit(patient)}
-                      className="p-2 hover:bg-[#0d9488]/10 rounded-lg transition-colors group"
+                      className="hover:bg-[#0d9488]/10 group"
                       title="Edit"
                     >
                       <span className="material-symbols-outlined text-gray-400 group-hover:text-[#0d9488] text-xl">
                         edit
                       </span>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => onDelete(patient)}
-                      className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                      className="hover:bg-red-50 group"
                       title="Archive"
                     >
                       <span className="material-symbols-outlined text-gray-400 group-hover:text-red-600 text-xl">
                         archive
                       </span>
-                    </button>
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -175,26 +180,28 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                   </span>
                 </div>
                 <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
-                  <span>{formatDate(patient.dateOfBirth)}</span>
+                  <span>{patient.dateOfBirth ? formatDate(patient.dateOfBirth) : 'N/A'}</span>
                   {patient.diagnosis && (
                     <span className="truncate">{patient.diagnosis}</span>
                   )}
                 </div>
                 <div className="mt-3 flex items-center gap-2 pt-3 border-t border-gray-100">
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => onEdit(patient)}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#0d9488] hover:bg-[#0d9488]/10 rounded-lg transition-colors"
+                    className="flex-1 text-sm font-medium text-[#0d9488] hover:bg-[#0d9488]/10"
                   >
                     <span className="material-symbols-outlined text-lg">edit</span>
                     Edit
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
                     onClick={() => onDelete(patient)}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="flex-1 text-sm font-medium text-red-600 hover:bg-red-50"
                   >
                     <span className="material-symbols-outlined text-lg">archive</span>
                     Archive
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

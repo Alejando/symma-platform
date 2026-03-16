@@ -1,26 +1,59 @@
 "use client"
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
+import type { RoutineHistoryItem, RoutineStatsResponse, HistoryItemSummary } from "@symma/shared-types";
 import { RoutineStatsCards } from "@/components/analytics/RoutineStatsCards";
 import { ProgressChart } from "@/components/analytics/ProgressChart";
+import type { SessionChartPoint, ExerciseOption } from "@/components/analytics/ProgressChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
+import { Eye } from "lucide-react";
 
 import { useSession } from "next-auth/react";
 import { getRoutineStats, getRoutineHistory } from "@/lib/api";
+import { getSessionColor } from "@/lib/session-colors";
+
+type SessionWithColor = RoutineHistoryItem & {
+  color: string;
+  index: number;
+  items: HistoryItemSummary[];
+};
 
 export default function RoutineAnalyticsPage() {
   const params = useParams();
+  const patientId = params.id as string;
   const routineId = params.routineId as string;
   const { data: session } = useSession();
-  const [stats, setStats] = useState<any>(null);
-  const [history, setHistory] = useState<any[]>([]);
+  const [stats, setStats] = useState<RoutineStatsResponse | null>(null);
+  const [history, setHistory] = useState<SessionWithColor[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const exercises: ExerciseOption[] = useMemo(() => {
+    const exerciseMap = new Map<string, string>();
+    history.forEach((session) => {
+      session.items.forEach((item) => {
+        if (!exerciseMap.has(item.exerciseId)) {
+          exerciseMap.set(item.exerciseId, item.exerciseName);
+        }
+      });
+    });
+    return Array.from(exerciseMap.entries()).map(([id, name]) => ({ id, name }));
+  }, [history]);
+
+  const chartSessions: SessionChartPoint[] = useMemo(() => history.map((sessionItem) => ({
+    id: sessionItem.id,
+    date: sessionItem.date,
+    score: sessionItem.score,
+    durationSeconds: sessionItem.durationSeconds,
+    color: sessionItem.color,
+    items: sessionItem.items,
+  })), [history]);
 
   useEffect(() => {
     async function fetchData() {
@@ -32,7 +65,12 @@ export default function RoutineAnalyticsPage() {
           ]);
 
           setStats(statsData);
-          setHistory(historyData);
+          const colorizedHistory = historyData.map((sessionItem, index) => ({
+            ...sessionItem,
+            color: getSessionColor(index),
+            index,
+          }));
+          setHistory(colorizedHistory);
         } catch (error) {
           console.error("Failed to fetch data", error);
         } finally {
@@ -88,7 +126,7 @@ export default function RoutineAnalyticsPage() {
 
       <div className="grid gap-4 md:grid-cols-7">
         <div className="col-span-4 md:col-span-5">
-          <ProgressChart data={stats.chartData} />
+          <ProgressChart data={stats.chartData} sessions={chartSessions} exercises={exercises} />
         </div>
         <div className="col-span-4 md:col-span-2">
           <Card className="h-full">
@@ -131,12 +169,18 @@ export default function RoutineAnalyticsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {history.map((session) => (
-                <TableRow key={session.id}>
-                  <TableCell>{format(parseISO(session.date), "PPP")}</TableCell>
-                  <TableCell>{Math.floor(session.durationSeconds / 60)} min</TableCell>
-                  <TableCell>{(session.score * 100).toFixed(0)}%</TableCell>
-                  <TableCell className="text-right">View Evidence</TableCell>
+              {history.map((sessionItem) => (
+                <TableRow key={sessionItem.id}>
+                  <TableCell>{format(parseISO(sessionItem.date), "PPP")}</TableCell>
+                  <TableCell>{Math.floor(sessionItem.durationSeconds / 60)} min</TableCell>
+                  <TableCell>{sessionItem.score}%</TableCell>
+                  <TableCell className="text-right">
+                    <Button asChild size="icon" variant="ghost" title="View Details">
+                      <Link href={`/dashboard/patients/${patientId}/routines/${routineId}/sessions/${sessionItem.id}`}>
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

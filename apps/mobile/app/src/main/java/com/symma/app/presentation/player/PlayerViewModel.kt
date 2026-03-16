@@ -8,6 +8,7 @@ import com.symma.app.domain.model.Routine
 import com.symma.app.domain.model.RoutineItem
 import com.symma.app.domain.repository.CalibrationRepository
 import com.symma.app.domain.repository.RoutineRepository
+import com.symma.app.domain.usecase.SaveAndSyncSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -35,10 +36,18 @@ private const val GET_READY_DURATION = 5
 /** Default rest duration if not specified in RoutineItem */
 private const val DEFAULT_REST_SECONDS = 10
 
+/**
+ * Maximum frame delta allowed for hold-time accumulation.
+ * Caps real-clock gaps (e.g., after pause or in unit tests) to prevent a single
+ * large delta from completing a rep in one frame.
+ */
+private const val MAX_FRAME_DELTA_MS = 200L
+
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     private val routineRepository: RoutineRepository,
     private val calibrationRepository: CalibrationRepository,
+    private val saveAndSyncSessionUseCase: SaveAndSyncSessionUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel(), FaceLandmarkerHelper.LandmarkerListener {
     
@@ -83,6 +92,11 @@ class PlayerViewModel @Inject constructor(
     private var isTargetReached = false
     private var wasTargetReached = false // For edge detection (Isotonic)
     private var lastFrameTime: Long = 0L
+    /**
+     * True after a rep completes until the score drops below the release threshold.
+     * Blocks next-rep progression for both ISOMETRIC and ISOTONIC exercises.
+     */
+    private var awaitingRelease = false
     
     // Timer management
     private var timerJob: Job? = null
@@ -195,11 +209,12 @@ class PlayerViewModel @Inject constructor(
         // Reset state for new exercise/rep
         accumulatedHoldTimeMs = 0L
         isTargetReached = false
-        // For Isotonic: if starting a new rep (not first), assume target was reached
-        // so user must RELEASE the gesture before the next rep can trigger.
-        // For Isometric or first rep: start fresh.
-        wasTargetReached = config.exerciseType == ExerciseType.ISOTONIC && currentRep > 1
-        lastFrameTime = System.currentTimeMillis()
+        wasTargetReached = false
+        // awaitingRelease is intentionally NOT reset here; it persists from the
+        // previous rep completion until the score actually drops below releaseThreshold.
+        // lastFrameTime = 0L sentinel: the first processFrame call will initialize it
+        // from the incoming timestamp, avoiding a huge delta on the first frame.
+        lastFrameTime = 0L
         frameProcessingEnabled = true
         
         // For Isometric exercises, we use frame-based hold tracking
@@ -231,7 +246,8 @@ class PlayerViewModel @Inject constructor(
             isPaused = isPaused,
             isIsometric = true,
             completedSets = currentSet - 1,
-            completedReps = currentRep - 1
+            completedReps = currentRep - 1,
+            awaitingRelease = awaitingRelease
         )
     }
     
@@ -254,7 +270,8 @@ class PlayerViewModel @Inject constructor(
             isPaused = isPaused,
             isIsometric = false,
             completedSets = currentSet - 1,
-            completedReps = currentRep - 1
+            completedReps = currentRep - 1,
+            awaitingRelease = awaitingRelease
         )
     }
     
@@ -262,7 +279,7 @@ class PlayerViewModel @Inject constructor(
      * RFC-031: Process each frame from FaceLandmarker.
      * This drives the clinical state machine for Isometric exercises.
      */
-    fun processFrame(score: Float) {
+    fun processFrame(score: Float, timestampMs: Long = System.currentTimeMillis()) {
         if (!frameProcessingEnabled || isPaused) return
         
         val currentItem = routineItems.getOrNull(currentExerciseIndex) ?: return
@@ -271,13 +288,37 @@ class PlayerViewModel @Inject constructor(
         
         if (currentState !is PlayerUiState.Exercise) return
         
-        val now = System.currentTimeMillis()
-        val deltaTimeMs = now - lastFrameTime
+        val now = timestampMs
+        // If lastFrameTime is 0 (sentinel from startCurrentExercise), initialize it
+        // from the current timestamp so the first frame contributes 0ms delta.
+        val deltaTimeMs = if (lastFrameTime == 0L) 0L else (now - lastFrameTime).coerceIn(0L, MAX_FRAME_DELTA_MS)
         lastFrameTime = now
         
-        // 1. Check Target
+        // 1. Release gate: if awaiting release, check if score has dropped below threshold
+        if (awaitingRelease) {
+            if (score < config.releaseThreshold) {
+                awaitingRelease = false
+                Log.d(TAG, "🔓 Release detected (score=$score < ${config.releaseThreshold}), next rep unblocked")
+            } else {
+                // Still holding — update UI to show release-required state and return early
+                val holdSecondsLeft = if (config.exerciseType == ExerciseType.ISOMETRIC) {
+                    val remaining = (config.holdSeconds * 1000L - accumulatedHoldTimeMs).coerceAtLeast(0L)
+                    (remaining / 1000).toInt()
+                } else 0
+                _uiState.value = currentState.copy(
+                    holdTimeLeft = holdSecondsLeft,
+                    isTargetReached = false,
+                    awaitingRelease = true,
+                    completedSets = currentSet - 1,
+                    completedReps = currentRep - 1
+                )
+                return
+            }
+        }
+
+        // 2. Check Target using configurable engage threshold
         val previousTargetReached = isTargetReached
-        isTargetReached = score >= 1.0f
+        isTargetReached = score >= config.engageThreshold
         
         // Strict Mode: Reset hold time if user slips during isometric hold
         if (!isTargetReached && previousTargetReached && config.strictMode && config.exerciseType == ExerciseType.ISOMETRIC) {
@@ -285,12 +326,12 @@ class PlayerViewModel @Inject constructor(
             accumulatedHoldTimeMs = 0L
         }
         
-        // 2. Time Accumulation (The "Hold")
+        // 3. Time Accumulation (The "Hold")
         if (isTargetReached && config.exerciseType == ExerciseType.ISOMETRIC) {
             accumulatedHoldTimeMs += deltaTimeMs
         }
         
-        // 3. Completion Logic
+        // 4. Completion Logic
         var repCompleted = false
         
         when (config.exerciseType) {
@@ -321,6 +362,7 @@ class PlayerViewModel @Inject constructor(
         _uiState.value = currentState.copy(
             holdTimeLeft = holdSecondsLeft,
             isTargetReached = isTargetReached,
+            awaitingRelease = false,
             completedSets = currentSet - 1,
             completedReps = currentRep - 1
         )
@@ -357,6 +399,8 @@ class PlayerViewModel @Inject constructor(
         isTargetReached = false
         wasTargetReached = false
         frameProcessingEnabled = false
+        // Require release before next rep (applies to both ISOMETRIC and ISOTONIC)
+        awaitingRelease = true
         
         if (currentRep < config.reps) {
             // More reps to go in current set
@@ -475,8 +519,8 @@ class PlayerViewModel @Inject constructor(
                 SessionItemRequest(
                     exerciseId = currentItem.exercise.id,
                     repsCompleted = totalRepsCompleted, 
-                    averageAccuracy = averageAccuracy,
-                    skipped = wasSkipped
+                    averageAccuracy = averageAccuracy
+                    // skipped = wasSkipped // Eliminado porque no está en la API
                 )
             )
             Log.d(TAG, "📊 Exercise Finished. Samples: ${currentExerciseScores.size}, Avg Accuracy: $averageAccuracy, Reps: $totalRepsCompleted, Skipped: $wasSkipped")
@@ -518,7 +562,8 @@ class PlayerViewModel @Inject constructor(
         // Handle case where we finish abruptly or the last exercise was just completed naturally in moveToNextExercise
         // (moveToNextExercise already added the last result)
         
-        val totalTimeSeconds = (System.currentTimeMillis() - sessionStartTime) / 1000
+        val endTime = System.currentTimeMillis()
+        val totalTimeSeconds = (endTime - sessionStartTime) / 1000
         
         Log.d(TAG, "🎉 SESSION COMPLETED!")
         Log.d(TAG, "  Routine ID: ${routine?.id}")
@@ -534,9 +579,29 @@ class PlayerViewModel @Inject constructor(
         
         viewModelScope.launch {
             _events.emit(PlayerEvent.PlaySuccess)
+            
+            // Save session locally and trigger sync
+            val overallScore = if (sessionResults.isNotEmpty()) {
+                sessionResults.mapNotNull { it.averageAccuracy }.average().toFloat()
+            } else {
+                0f
+            }
+            
+            val result = saveAndSyncSessionUseCase(
+                routineId = routine?.id ?: "",
+                startTime = sessionStartTime,
+                endTime = endTime,
+                durationSeconds = totalTimeSeconds.toInt(),
+                score = overallScore,
+                items = sessionResults.toList()
+            )
+            
+            if (result.isSuccess) {
+                Log.d(TAG, "✅ Session saved locally: ${result.getOrNull()}")
+            } else {
+                Log.e(TAG, "❌ Failed to save session: ${result.exceptionOrNull()?.message}")
+            }
         }
-        
-        // TODO: Trigger network upload here or in the UI layer based on the state
     }
     
     // ==================== PUBLIC CONTROLS ====================

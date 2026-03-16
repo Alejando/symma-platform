@@ -1,35 +1,38 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { RoutineBuilder } from './routine-builder';
-import { Exercise, Patient, MobileModule, ExerciseType } from '@symma/shared-types';
+import type { ExerciseResponse, Patient } from '@symma/shared-types';
 import { vi, describe, it, expect } from 'vitest';
 
-const mockExercise: Exercise = {
+const mockExercise: ExerciseResponse = {
   id: 'ex-1',
   keyName: 'EX001',
   name: 'Test Exercise',
   description: 'Desc',
-  type: ExerciseType.ISOMETRIC,
+  type: 'ISOMETRIC',
   category: 'CORE',
+  mobileModule: 'SMILE',
   assetAnimationUrl: 'http://test.com',
   assetTutorialVideoUrl: 'http://test.com',
   createdAt: new Date().toISOString(),
-  defaultConfig: {
-    holdTime: 5,
-    restTime: 60,
-  },
 };
 
 const mockPatient: Patient = {
   id: 'p-1',
+  therapistId: 't-1',
   firstName: 'John',
   lastName: 'Doe',
   email: 'john@example.com',
   dateOfBirth: new Date().toISOString(),
   gender: 'MALE',
+  phoneNumber: null,
   status: 'ACTIVE',
+  diagnosis: null,
+  initialParalysisDegree: null,
+  clinicalNotes: null,
+  emergencyContactName: null,
+  emergencyContactPhone: null,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
-  therapistId: 't-1',
 };
 
 describe('RoutineBuilder', () => {

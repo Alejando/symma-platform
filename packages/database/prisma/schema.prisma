@@ -15,9 +15,6 @@ datasource db {
 model Clinic {
   id           String      @id @default(uuid())
   name         String
-  address      String?
-  contactPhone String?     @map("contact_phone")
-  billingInfo  String?     @map("billing_info")
   createdAt    DateTime    @default(now()) @map("created_at")
   therapists   Therapist[]
 
@@ -55,9 +52,7 @@ model Patient {
   clinicalNotes          String?       @map("clinical_notes")
   emergencyContactName   String?       @map("emergency_contact_name")
   emergencyContactPhone  String?       @map("emergency_contact_phone")
-  authPinHash            String?       @map("auth_pin_hash")
   accessCodeHash         String?       @unique @map("access_code_hash")
-  avatarUrl              String?       @map("avatar_url")
   createdAt              DateTime      @default(now()) @map("created_at")
   updatedAt              DateTime      @updatedAt @map("updated_at")
   therapist              Therapist     @relation(fields: [therapistId], references: [id])
@@ -90,7 +85,6 @@ model Exercise {
   mobileModule          MobileModule?    @map("mobile_module")
   assetAnimationUrl     String?          @map("asset_animation_url")
   assetTutorialVideoUrl String?          @map("asset_tutorial_video_url")
-  defaultConfig         Json?            @map("default_config")
   createdAt             DateTime         @default(now()) @map("created_at")
   routineItems          RoutineItem[]
   sessionItems          SessionItem[]
@@ -192,7 +186,6 @@ model SessionItem {
   sessionId       String   @map("session_id")
   exerciseId      String   @map("exercise_id")
   repsCompleted   Int      @map("reps_completed")
-  difficulty      Int      @default(0)
   averageAccuracy Float?   @map("average_accuracy") // RFC-026: AI Metric
   seriesData      Json?    @map("series_data")      // RFC-030: Detailed Series Data
   session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)

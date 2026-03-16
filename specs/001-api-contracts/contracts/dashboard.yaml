@@ -1,0 +1,69 @@
+openapi: 3.0.3
+info:
+  title: Symma API — Dashboard Contracts
+  version: 1.0.0
+
+paths:
+  /dashboard/stats:
+    get:
+      tags: [Dashboard]
+      operationId: getDashboardStats
+      summary: Get dashboard statistics for the authenticated therapist
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStatsResponse'
+
+components:
+  schemas:
+    DashboardMetric:
+      type: object
+      required: [value, trend]
+      properties:
+        value:
+          type: integer
+          description: Current metric value
+        trend:
+          type: integer
+          description: Percentage change (0 = no trend data available)
+
+    AtRiskPatientResponse:
+      type: object
+      required: [id, name, daysInactive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Full name (firstName + lastName)
+        daysInactive:
+          type: integer
+          minimum: 0
+          description: Number of days since last session
+        avatarUrl:
+          type: string
+          nullable: true
+
+    DashboardStatsResponse:
+      type: object
+      required: [metrics, atRiskPatients]
+      properties:
+        metrics:
+          type: object
+          required: [activePatients, complianceAlerts, avgEfficacy]
+          properties:
+            activePatients:
+              $ref: '#/components/schemas/DashboardMetric'
+            complianceAlerts:
+              $ref: '#/components/schemas/DashboardMetric'
+            avgEfficacy:
+              $ref: '#/components/schemas/DashboardMetric'
+        atRiskPatients:
+          type: array
+          items:
+            $ref: '#/components/schemas/AtRiskPatientResponse'

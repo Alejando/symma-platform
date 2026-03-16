@@ -3,20 +3,17 @@ import {
   IsEmail,
   IsNotEmpty,
   IsOptional,
-  IsEnum,
+  IsIn,
   IsInt,
   Min,
   Max,
   IsDateString,
 } from 'class-validator';
+import type { CreatePatientRequest, Gender } from '@symma/shared-types';
 
-export enum Gender {
-  MALE = 'MALE',
-  FEMALE = 'FEMALE',
-  OTHER = 'OTHER',
-}
+const GENDER_VALUES: Gender[] = ['MALE', 'FEMALE', 'OTHER'];
 
-export class CreatePatientDto {
+export class CreatePatientDto implements CreatePatientRequest {
   @IsString()
   @IsNotEmpty()
   firstName: string;
@@ -34,7 +31,7 @@ export class CreatePatientDto {
   dateOfBirth: string;
 
   @IsOptional()
-  @IsEnum(Gender)
+  @IsIn(GENDER_VALUES)
   gender?: Gender;
 
   @IsOptional()

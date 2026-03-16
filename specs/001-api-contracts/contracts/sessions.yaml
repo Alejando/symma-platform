@@ -1,0 +1,124 @@
+openapi: 3.0.3
+info:
+  title: Symma API — Sessions Contracts
+  version: 1.0.0
+
+paths:
+  /sessions:
+    post:
+      tags: [Sessions]
+      operationId: createSession
+      summary: Create a new therapy session record (used by mobile sync)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+
+components:
+  schemas:
+    SessionItemRequest:
+      type: object
+      required: [exerciseId, repsCompleted]
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        repsCompleted:
+          type: integer
+          minimum: 0
+        difficulty:
+          type: integer
+          default: 0
+        averageAccuracy:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Average symmetry score (0–100)
+        seriesData:
+          description: Detailed per-rep series data (JSON blob)
+
+    CreateSessionRequest:
+      type: object
+      required: [routineId, startTime, endTime, items]
+      description: >
+        Session creation payload sent by the mobile app after completing an exercise session.
+        Note: isSynced and syncedAt are local-only mobile fields and MUST NOT appear here.
+      properties:
+        routineId:
+          type: string
+          format: uuid
+        startTime:
+          type: string
+          format: date-time
+          description: ISO 8601 UTC with Z suffix
+        endTime:
+          type: string
+          format: date-time
+          description: ISO 8601 UTC with Z suffix
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionItemRequest'
+
+    SessionItemResponse:
+      type: object
+      required: [id, sessionId, exerciseId, repsCompleted, difficulty]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+          format: uuid
+        exerciseId:
+          type: string
+          format: uuid
+        repsCompleted:
+          type: integer
+        difficulty:
+          type: integer
+        averageAccuracy:
+          type: number
+          format: float
+          nullable: true
+        seriesData:
+          nullable: true
+
+    SessionResponse:
+      type: object
+      required: [id, routineId, date, durationSeconds, score, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        routineId:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date-time
+        durationSeconds:
+          type: integer
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Session score as integer percentage (0–100)
+        createdAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionItemResponse'

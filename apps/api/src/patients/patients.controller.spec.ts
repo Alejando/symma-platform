@@ -73,18 +73,31 @@ describe('PatientsController', () => {
     it('should return patients for authenticated therapist', async () => {
       mockPatientsService.findAll.mockResolvedValue([mockPatient]);
 
-      const result = await controller.findAll(mockRequest, undefined);
+      const result = await controller.findAll(
+        mockRequest,
+        undefined,
+        undefined,
+        undefined,
+      );
 
-      expect(service.findAll).toHaveBeenCalledWith('therapist-123', undefined);
+      expect(service.findAll).toHaveBeenCalledWith('therapist-123', {
+        search: undefined,
+        page: undefined,
+        limit: undefined,
+      });
       expect(result).toEqual([mockPatient]);
     });
 
     it('should pass search query to service', async () => {
       mockPatientsService.findAll.mockResolvedValue([mockPatient]);
 
-      await controller.findAll(mockRequest, 'john');
+      await controller.findAll(mockRequest, 'john', undefined, undefined);
 
-      expect(service.findAll).toHaveBeenCalledWith('therapist-123', 'john');
+      expect(service.findAll).toHaveBeenCalledWith('therapist-123', {
+        search: 'john',
+        page: undefined,
+        limit: undefined,
+      });
     });
   });
 

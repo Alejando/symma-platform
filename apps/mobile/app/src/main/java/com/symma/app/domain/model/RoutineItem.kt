@@ -1,5 +1,8 @@
 package com.symma.app.domain.model
 
+import com.symma.app.domain.logic.REP_ENGAGE_THRESHOLD
+import com.symma.app.domain.logic.REP_RELEASE_THRESHOLD
+
 data class RoutineItem(
     val id: String,
     val orderIndex: Int,
@@ -9,21 +12,30 @@ data class RoutineItem(
     val restBetweenSetsSeconds: Int?,
     val difficulty: Float = 1.0f,
     val strictMode: Boolean = false,
-    val exercise: Exercise
+    val exercise: Exercise,
+    val engageThreshold: Float? = null,
+    val releaseThreshold: Float? = null
 ) {
     /**
      * Maps backend flat columns to structured ExerciseConfig.
      */
     val config: ExerciseConfig
-        get() = ExerciseConfig(
-            exerciseType = if (holdTimeSeconds > 0) ExerciseType.ISOMETRIC else ExerciseType.ISOTONIC,
-            sets = targetSets.coerceAtLeast(1),
-            reps = targetRepetitions.coerceAtLeast(1),
-            restSeconds = restBetweenSetsSeconds ?: 5,
-            holdSeconds = holdTimeSeconds.coerceAtLeast(0),
-            strictMode = strictMode,
-            allowSkip = true
-        )
+        get() {
+            val engage = engageThreshold ?: REP_ENGAGE_THRESHOLD
+            val release = releaseThreshold ?: REP_RELEASE_THRESHOLD
+            val safeRelease = release.coerceAtMost(engage - 0.01f)
+            return ExerciseConfig(
+                exerciseType = if (holdTimeSeconds > 0) ExerciseType.ISOMETRIC else ExerciseType.ISOTONIC,
+                sets = targetSets.coerceAtLeast(1),
+                reps = targetRepetitions.coerceAtLeast(1),
+                restSeconds = restBetweenSetsSeconds ?: 5,
+                holdSeconds = holdTimeSeconds.coerceAtLeast(0),
+                strictMode = strictMode,
+                allowSkip = true,
+                engageThreshold = engage,
+                releaseThreshold = safeRelease
+            )
+        }
 
     /**
      * Maps exercise mobileModule to MobileModule enum for strategy selection.

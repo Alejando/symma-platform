@@ -1,6 +1,8 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 
+import { isTokenExpired } from '@/lib/auth-utils';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -35,7 +37,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           // Fetch user profile with the token
           const profileResponse = await fetch(`${API_URL}/api/v1/auth/profile`, {
             headers: {
-              Authorization: `Bearer ${data.access_token}`,
+              Authorization: `Bearer ${data.accessToken}`,
             },
           });
 
@@ -49,7 +51,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             id: profile.id,
             email: profile.email,
             name: `${profile.firstName} ${profile.lastName}`,
-            accessToken: data.access_token,
+            accessToken: data.accessToken,
             role: profile.role,
           };
         } catch {
@@ -68,6 +70,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = user.role;
         token.id = user.id;
       }
+
+      if (token.accessToken && isTokenExpired(token.accessToken)) {
+        token.error = 'TokenExpired';
+      }
+
       return token;
     },
     async session({ session, token }) {
@@ -75,6 +82,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
         session.user.accessToken = token.accessToken as string;
         session.user.role = token.role as string;
+      }
+      if (token.error) {
+        session.error = token.error;
       }
       return session;
     },

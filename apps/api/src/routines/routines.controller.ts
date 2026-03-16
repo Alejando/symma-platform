@@ -9,6 +9,7 @@ import {
   Delete,
   UseGuards,
   Request,
+  Query,
 } from '@nestjs/common';
 import { RoutinesService } from './routines.service';
 import { CreateRoutineDto } from './dto/create-routine.dto';
@@ -19,7 +20,7 @@ import type { AuthenticatedRequest } from '../auth/types';
 @Controller('routines')
 @UseGuards(JwtAuthGuard)
 export class RoutinesController {
-  constructor(private readonly routinesService: RoutinesService) { }
+  constructor(private readonly routinesService: RoutinesService) {}
 
   @Post()
   create(
@@ -30,8 +31,15 @@ export class RoutinesController {
   }
 
   @Get()
-  findAll(@Request() req: AuthenticatedRequest) {
-    return this.routinesService.findAll(req.user.userId);
+  findAll(
+    @Request() req: AuthenticatedRequest,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.routinesService.findAll(req.user.userId, {
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? Math.min(parseInt(limit, 10), 100) : undefined,
+    });
   }
 
   @Get(':id')

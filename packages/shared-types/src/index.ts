@@ -1,191 +1,48 @@
-// ==========================================
+// Barrel re-export — all contracts from domain-specific files
+// This file maintains backward compatibility while organizing types by domain
+
 // Enums
+export * from './enums';
+
+// Common (pagination, errors)
+export * from './common';
+
+// Domain contracts
+export * from './auth';
+export * from './patients';
+export * from './routines';
+export * from './exercises';
+export * from './sessions';
+export * from './mobile';
+export * from './analytics';
+export * from './dashboard';
+
+// ==========================================
+// Legacy Aliases (for backward compatibility)
+// These will be deprecated in future versions
 // ==========================================
 
-export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
+// Legacy entity types — use PatientResponse, RoutineResponse, ExerciseResponse instead
+export type { PatientResponse as Patient } from './patients';
+export type { RoutineResponse as Routine } from './routines';
+export type { RoutineItemResponse as RoutineItem } from './routines';
+export type { ExerciseResponse as Exercise } from './exercises';
 
-export type PatientStatus = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+// Legacy DTO aliases — use CreatePatientRequest, UpdatePatientRequest instead
+export type { CreatePatientRequest as CreatePatientDto } from './patients';
+export type { UpdatePatientRequest as UpdatePatientDto } from './patients';
+export type { CreateRoutineRequest as CreateRoutineDto } from './routines';
+export type { UpdateRoutineRequest as UpdateRoutineDto } from './routines';
+export type { RoutineItemRequest as CreateRoutineItemDto } from './routines';
 
-export type Role = 'ADMIN' | 'THERAPIST';
-
-// ==========================================
-// Entities
-// ==========================================
-
-export interface Patient {
-  id: string;
-  therapistId: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth: string; // ISO date string
-  gender?: Gender;
-  phoneNumber?: string;
-  email: string;
-  status: PatientStatus;
-  diagnosis?: string;
-  initialParalysisDegree?: number;
-  clinicalNotes?: string;
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
-  avatarUrl?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
+// Legacy Therapist type (not yet in new contracts — keeping for compatibility)
 export interface Therapist {
   id: string;
   clinicId: string;
   email: string;
   firstName: string;
   lastName: string;
-  role: Role;
+  role: 'ADMIN' | 'THERAPIST';
   isActive: boolean;
   createdAt: string;
-}
-
-// ==========================================
-// DTOs
-// ==========================================
-
-export interface CreatePatientDto {
-  firstName: string;
-  lastName: string;
-  email: string;
-  dateOfBirth: string;
-  gender?: Gender;
-  phoneNumber?: string;
-  diagnosis?: string;
-  initialParalysisDegree?: number;
-  clinicalNotes?: string;
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
-}
-
-export interface UpdatePatientDto extends Partial<CreatePatientDto> {
-  status?: PatientStatus;
-}
-
-// ==========================================
-// API Response Types
-// ==========================================
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-export interface ApiError {
-  statusCode: number;
-  message: string | string[];
-  error?: string;
-}
-
-// ==========================================
-// Routine Types
-// ==========================================
-
-// ==========================================
-// Routine Types
-// ==========================================
-
-export enum ExerciseType {
-  ISOTONIC = 'ISOTONIC',
-  ISOMETRIC = 'ISOMETRIC',
-  MANUAL = 'MANUAL',
-  RELAXATION = 'RELAXATION'
-}
-
-export const MOBILE_SUPPORTED_TYPES: ExerciseType[] = [
-  ExerciseType.ISOTONIC,
-  ExerciseType.ISOMETRIC,
-];
-
-export enum MobileModule {
-  EYES = 'EYES',
-  EYES_INVERSE = 'EYES_INVERSE',
-  BROWS = 'BROWS',
-  JAW = 'JAW',
-  SMILE = 'SMILE',
-  KISS = 'KISS'
-}
-
-export type ExerciseCategory = 'WARMUP' | 'CORE' | 'COOLDOWN';
-
-export interface Exercise {
-  id: string;
-  keyName: string;
-  name: string;
-  description?: string;
-  type: ExerciseType;
-  category: ExerciseCategory;
-  mobileModule?: MobileModule;
-  assetAnimationUrl?: string;
-  assetTutorialVideoUrl?: string;
-  defaultConfig?: { threshold?: number; holdTime?: number; restTime?: number };
-  createdAt: string;
-}
-
-export interface RoutineItem {
-  id: string;
-  routineId: string;
-  exerciseId: string;
-  orderIndex: number;
-
-  // RFC-030 Configuration
-  sets: number;
-  repsPerSet: number;
-  targetHoldSeconds: number;
-  difficultyLevel: number;
-  restBetweenSets: number;
-  strictMode: boolean;
-  allowSkip: boolean;
-
-  exercise?: Exercise;
-}
-
-export type RoutineStatus = 'ACTIVE' | 'ARCHIVED';
-
-export interface Routine {
-  id: string;
-  patientId: string;
-  name: string;
-  startDate: string;
-  endDate?: string;
-  status: RoutineStatus;
-  therapistNotes?: string;
-  createdAt: string;
-  updatedAt: string;
-  patient?: Patient;
-  items?: RoutineItem[];
-  sessionsCount?: number;
-}
-
-export interface CreateRoutineItemDto {
-  exerciseId: string;
-  sets: number;
-  repsPerSet: number;
-  targetHoldSeconds: number;
-  difficultyLevel?: number;
-  restBetweenSets?: number;
-  strictMode?: boolean;
-  allowSkip?: boolean;
-}
-
-export interface CreateRoutineDto {
-  patientId: string;
-  name: string;
-  startDate: string;
-  endDate?: string;
-  therapistNotes?: string;
-  items: CreateRoutineItemDto[];
-}
-
-export interface UpdateRoutineDto {
-  name?: string;
-  startDate?: string;
-  endDate?: string;
-  therapistNotes?: string;
-  items?: CreateRoutineItemDto[];
 }

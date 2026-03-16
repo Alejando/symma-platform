@@ -1,0 +1,95 @@
+openapi: 3.0.3
+info:
+  title: Symma API — Common Schemas
+  version: 1.0.0
+  description: Shared enums, pagination, and error schemas used across all domains.
+
+components:
+  schemas:
+    # ==========================================
+    # Enums
+    # ==========================================
+    Gender:
+      type: string
+      enum: [MALE, FEMALE, OTHER]
+
+    PatientStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE, ARCHIVED]
+
+    Role:
+      type: string
+      enum: [ADMIN, THERAPIST]
+
+    ExerciseType:
+      type: string
+      enum: [ISOTONIC, ISOMETRIC, MANUAL, RELAXATION]
+
+    ExerciseCategory:
+      type: string
+      enum: [WARMUP, CORE, COOLDOWN]
+
+    RoutineStatus:
+      type: string
+      enum: [ACTIVE, ARCHIVED]
+
+    MobileModule:
+      type: string
+      enum: [EYES, EYES_INVERSE, BROWS, JAW, SMILE, KISS]
+
+    # ==========================================
+    # Pagination
+    # ==========================================
+    PaginationQuery:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+          description: 1-indexed page number
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+          description: Items per page
+        search:
+          type: string
+          description: Optional text search filter
+
+    PaginatedResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items: {}
+          description: Array of items for the current page
+        total:
+          type: integer
+          description: Total matching records (not just this page)
+        page:
+          type: integer
+          description: Current page (1-indexed)
+        limit:
+          type: integer
+          description: Items per page
+
+    # ==========================================
+    # Error
+    # ==========================================
+    ApiError:
+      type: object
+      required: [statusCode, message]
+      properties:
+        statusCode:
+          type: integer
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        error:
+          type: string

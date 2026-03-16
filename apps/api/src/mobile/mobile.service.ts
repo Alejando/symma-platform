@@ -4,9 +4,11 @@ import { ActiveRoutineResponseDto } from './dto/active-routine-response.dto';
 
 @Injectable()
 export class MobileService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-  async getActiveRoutine(patientId: string): Promise<ActiveRoutineResponseDto | null> {
+  async getActiveRoutine(
+    patientId: string,
+  ): Promise<ActiveRoutineResponseDto | null> {
     const routine = await this.prisma.routine.findFirst({
       where: {
         patientId,
@@ -34,10 +36,10 @@ export class MobileService {
       items: routine.items.map((item) => ({
         id: item.id,
         orderIndex: item.orderIndex,
-        targetSets: item.sets,
-        targetRepetitions: item.repsPerSet,
-        holdTimeSeconds: item.targetHoldSeconds,
-        restBetweenSetsSeconds: item.restBetweenSets,
+        sets: item.sets,
+        repsPerSet: item.repsPerSet,
+        targetHoldSeconds: item.targetHoldSeconds,
+        restBetweenSets: item.restBetweenSets,
         difficultyLevel: item.difficultyLevel,
         strictMode: item.strictMode,
         exercise: {

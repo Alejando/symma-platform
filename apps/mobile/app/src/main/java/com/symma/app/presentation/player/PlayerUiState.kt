@@ -49,7 +49,9 @@ sealed interface PlayerUiState {
         val isPaused: Boolean,
         val isIsometric: Boolean,
         val completedSets: Int,
-        val completedReps: Int
+        val completedReps: Int,
+        /** True when a rep just completed and the patient must relax before the next rep starts. */
+        val awaitingRelease: Boolean = false
     ) : PlayerUiState {
         @Deprecated("Use holdTimeLeft instead", ReplaceWith("holdTimeLeft"))
         val timeLeft: Int get() = holdTimeLeft

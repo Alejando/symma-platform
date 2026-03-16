@@ -3,11 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { getExercises, createExercise, updateExercise, deleteExercise } from '@/lib/api';
-import type { Exercise } from '@symma/shared-types';
+import type { CreateExerciseRequest, Exercise, UpdateExerciseRequest } from '@symma/shared-types';
 import { ExerciseDialog } from './components/exercise-dialog';
+import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
+import { Button } from '@/components/ui/button';
 
 export default function ExercisesPage() {
   const { data: session } = useSession();
+  const handleAuthError = useAuthErrorHandler();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -50,16 +53,20 @@ export default function ExercisesPage() {
     }
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: CreateExerciseRequest | UpdateExerciseRequest) => {
     if (!session?.user?.accessToken) return;
     try {
       if (selectedExercise) {
         // Update
-        const updated = await updateExercise(session.user.accessToken, selectedExercise.id, data);
+        const updated = await updateExercise(
+          session.user.accessToken,
+          selectedExercise.id,
+          data as UpdateExerciseRequest,
+        );
         setExercises(prev => prev.map(e => e.id === updated.id ? updated : e));
       } else {
         // Create
-        const created = await createExercise(session.user.accessToken, data);
+        const created = await createExercise(session.user.accessToken, data as CreateExerciseRequest);
         setExercises(prev => [...prev, created]);
       }
     } catch (error) {
@@ -82,13 +89,13 @@ export default function ExercisesPage() {
           <h1 className="text-2xl font-bold text-[#0d1b1a]">Exercises</h1>
           <p className="text-gray-500 mt-1">Manage library of exercises</p>
         </div>
-        <button
+        <Button
           onClick={handleCreate}
-          className="px-4 py-2 bg-[#0d9488] text-white rounded-lg hover:bg-[#0b857a] flex items-center gap-2 font-medium shadow-sm transition-colors"
+          className="bg-[#0d9488] text-white hover:bg-[#0b857a] font-medium shadow-sm"
         >
           <span className="material-symbols-outlined text-[20px]">add</span>
           Add Exercise
-        </button>
+        </Button>
       </div>
 
       {/* Desktop Table */}
@@ -126,20 +133,24 @@ export default function ExercisesPage() {
                 <td className="px-6 py-4 text-sm text-gray-500 font-mono text-xs">{exercise.keyName}</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
                       onClick={() => handleEdit(exercise)}
-                      className="p-1 text-gray-400 hover:text-[#0d9488] hover:bg-[#0d9488]/10 rounded transition-colors"
+                      className="text-gray-400 hover:text-[#0d9488] hover:bg-[#0d9488]/10"
                       title="Edit"
                     >
                       <span className="material-symbols-outlined text-[20px]">edit</span>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
                       onClick={() => handleDelete(exercise.id)}
-                      className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                      className="text-gray-400 hover:text-red-600 hover:bg-red-50"
                       title="Delete"
                     >
                       <span className="material-symbols-outlined text-[20px]">delete</span>
-                    </button>
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -195,20 +206,22 @@ export default function ExercisesPage() {
                     <p className="mt-2 text-xs text-gray-500 line-clamp-2">{exercise.description}</p>
                   )}
                   <div className="mt-3 flex items-center gap-2 pt-3 border-t border-gray-100">
-                    <button
+                    <Button
+                      variant="ghost"
                       onClick={() => handleEdit(exercise)}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#0d9488] hover:bg-[#0d9488]/10 rounded-lg transition-colors"
+                      className="flex-1 text-sm font-medium text-[#0d9488] hover:bg-[#0d9488]/10"
                     >
                       <span className="material-symbols-outlined text-lg">edit</span>
                       Edit
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="ghost"
                       onClick={() => handleDelete(exercise.id)}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="flex-1 text-sm font-medium text-red-600 hover:bg-red-50"
                     >
                       <span className="material-symbols-outlined text-lg">delete</span>
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>

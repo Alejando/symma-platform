@@ -4,7 +4,10 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
-export class PatientJwtStrategy extends PassportStrategy(Strategy, 'jwt-patient') {
+export class PatientJwtStrategy extends PassportStrategy(
+  Strategy,
+  'jwt-patient',
+) {
   constructor(private prisma: PrismaService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -19,7 +22,7 @@ export class PatientJwtStrategy extends PassportStrategy(Strategy, 'jwt-patient'
     }
 
     const patient = await this.prisma.patient.findUnique({
-      where: { id: payload.sub }
+      where: { id: payload.sub },
     });
 
     if (!patient) {

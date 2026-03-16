@@ -1,4 +1,20 @@
-import type { Patient, CreatePatientDto, UpdatePatientDto, Exercise, CreateRoutineDto, UpdateRoutineDto, Routine } from '@symma/shared-types';
+import type {
+  Patient,
+  CreatePatientDto,
+  UpdatePatientDto,
+  Exercise,
+  CreateExerciseRequest,
+  UpdateExerciseRequest,
+  CreateRoutineDto,
+  UpdateRoutineDto,
+  Routine,
+  RoutineHistoryResponse,
+  RoutineStatsResponse,
+  SessionDetailResponse,
+  DashboardStatsResponse,
+} from '@symma/shared-types';
+
+import { AuthenticationError } from './errors';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
 
@@ -17,6 +33,9 @@ async function fetchWithAuth(
   });
 
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new AuthenticationError('Session expired or unauthorized');
+    }
     const error = await response.json().catch(() => ({ message: 'Request failed' }));
     throw new Error(error.message || `HTTP error! status: ${response.status}`);
   }
@@ -30,7 +49,9 @@ export async function getPatients(token: string, search?: string): Promise<Patie
     url.searchParams.set('search', search);
   }
   const response = await fetchWithAuth(url.toString(), token);
-  return response.json();
+  const result = await response.json();
+  // API returns PaginatedResponse { data, total, page, limit }
+  return result.data ?? result;
 }
 
 export async function getPatient(token: string, id: string): Promise<Patient> {
@@ -70,7 +91,9 @@ export async function deletePatient(token: string, id: string): Promise<Patient>
 
 export async function getExercises(token: string): Promise<Exercise[]> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/exercises`, token);
-  return response.json();
+  const result = await response.json();
+  // API returns PaginatedResponse { data, total, page, limit }
+  return result.data ?? result;
 }
 
 export async function createRoutine(
@@ -89,16 +112,21 @@ export async function getPatientRoutines(token: string, patientId: string): Prom
   return response.json();
 }
 
-export async function getRoutineStats(token: string, routineId: string): Promise<any> {
+export async function getRoutineStats(token: string, routineId: string): Promise<RoutineStatsResponse> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}/stats`, token);
   return response.json();
 }
 
-export async function getRoutineHistory(token: string, routineId: string): Promise<any[]> {
+export async function getRoutineHistory(token: string, routineId: string): Promise<RoutineHistoryResponse> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}/history`, token);
   return response.json();
 }
-export async function createExercise(token: string, data: any): Promise<Exercise> {
+
+export async function getSessionDetail(token: string, sessionId: string): Promise<SessionDetailResponse> {
+  const response = await fetchWithAuth(`${API_URL}/api/v1/sessions/${sessionId}`, token);
+  return response.json();
+}
+export async function createExercise(token: string, data: CreateExerciseRequest): Promise<Exercise> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/exercises`, token, {
     method: 'POST',
     body: JSON.stringify(data),
@@ -106,7 +134,7 @@ export async function createExercise(token: string, data: any): Promise<Exercise
   return response.json();
 }
 
-export async function updateExercise(token: string, id: string, data: any): Promise<Exercise> {
+export async function updateExercise(token: string, id: string, data: UpdateExerciseRequest): Promise<Exercise> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/exercises/${id}`, token, {
     method: 'PATCH',
     body: JSON.stringify(data),
@@ -186,7 +214,7 @@ export async function getPatientAccessCodeStatus(
 }
 
 
-export async function getDashboardStats(token: string): Promise<any> {
+export async function getDashboardStats(token: string): Promise<DashboardStatsResponse> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/dashboard/stats`, token);
   return response.json();
 }

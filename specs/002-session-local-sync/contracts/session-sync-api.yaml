@@ -1,0 +1,240 @@
+openapi: 3.0.3
+info:
+  title: Symma Session Sync API
+  description: |
+    Contract for the session creation endpoint used by the Android mobile app
+    to upload locally-persisted rehabilitation sessions to the server.
+    
+    This endpoint already exists. The only recommended change is accepting an
+    optional `id` field for client-side idempotency (see Decision 3 in research.md).
+  version: 1.1.0
+
+servers:
+  - url: http://localhost:4001
+    description: Local development
+  - url: https://api.symma.health
+    description: Production
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/sessions:
+    post:
+      summary: Create a new therapy session record
+      description: |
+        Called by the mobile app to upload a completed rehabilitation session.
+        
+        **Idempotency**: If the client provides an `id` field (locally-generated UUID),
+        the server MUST use it as the primary key. If a session with that `id` already
+        exists (e.g., due to a retry after a network timeout), the server MUST return
+        `409 Conflict` instead of creating a duplicate. The mobile app treats 409 as
+        a successful sync.
+        
+        **Auth**: Requires a valid patient JWT (`jwt-patient` strategy).
+      operationId: createSession
+      tags:
+        - Sessions
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+            examples:
+              full_session:
+                summary: Session with exercise items
+                value:
+                  id: "550e8400-e29b-41d4-a716-446655440000"
+                  routineId: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                  startTime: "2026-02-22T20:00:00.000Z"
+                  endTime: "2026-02-22T20:15:30.000Z"
+                  items:
+                    - exerciseId: "a3bb189e-8bf9-3888-9912-ace4e6543002"
+                      repsCompleted: 10
+                      difficulty: 1
+                      averageAccuracy: 0.82
+                    - exerciseId: "b4cc290f-9cg0-4999-0023-bdf5f7654113"
+                      repsCompleted: 8
+                      difficulty: 2
+                      averageAccuracy: 0.75
+      responses:
+        '201':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '400':
+          description: |
+            Validation error — malformed request body. Mobile app MUST mark
+            session as `ERROR` (permanent failure, no retry).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: |
+            Unauthorized — invalid or expired JWT. Mobile app MUST NOT mark
+            session as `ERROR`; should retry after re-authentication.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: |
+            Routine not found — the referenced `routineId` does not exist.
+            Mobile app MUST mark session as `ERROR` (permanent failure).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: |
+            Conflict — a session with the provided `id` already exists.
+            Mobile app MUST treat this as SUCCESS and mark session as `SYNCED`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: |
+            Unprocessable entity — business rule violation (e.g., routine is archived).
+            Mobile app MUST mark session as `ERROR` (permanent failure).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: |
+            Server error. Mobile app MUST leave session as `PENDING` and retry
+            via WorkManager backoff.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CreateSessionRequest:
+      type: object
+      required:
+        - routineId
+        - startTime
+        - endTime
+        - items
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: |
+            Optional. Client-generated UUID for idempotency. If provided and a
+            session with this ID already exists, the server returns 409.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        routineId:
+          type: string
+          format: uuid
+          description: ID of the routine that was performed
+          example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+        startTime:
+          type: string
+          format: date-time
+          description: ISO-8601 session start timestamp
+          example: "2026-02-22T20:00:00.000Z"
+        endTime:
+          type: string
+          format: date-time
+          description: ISO-8601 session end timestamp
+          example: "2026-02-22T20:15:30.000Z"
+        items:
+          type: array
+          description: Results for each exercise performed in the session
+          items:
+            $ref: '#/components/schemas/SessionItemRequest'
+
+    SessionItemRequest:
+      type: object
+      required:
+        - exerciseId
+        - repsCompleted
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+          description: ID of the exercise performed
+          example: "a3bb189e-8bf9-3888-9912-ace4e6543002"
+        repsCompleted:
+          type: integer
+          minimum: 0
+          description: Number of repetitions the patient completed
+          example: 10
+        difficulty:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Difficulty level at time of exercise
+          example: 1
+        averageAccuracy:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          nullable: true
+          description: Average symmetry/accuracy score (0.0–1.0). Null if not computed.
+          example: 0.82
+        seriesData:
+          nullable: true
+          description: |
+            Optional detailed per-rep data. Free-form JSON object.
+            Structure defined by RFC-030.
+          example: null
+
+    SessionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Server-assigned session ID (matches client-provided id if supplied)
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        routineId:
+          type: string
+          format: uuid
+          example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+        date:
+          type: string
+          format: date-time
+          description: Session date (derived from startTime)
+          example: "2026-02-22T20:00:00.000Z"
+        durationSeconds:
+          type: integer
+          example: 930
+        score:
+          type: number
+          format: float
+          example: 0.79
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-02-22T20:15:31.000Z"
+
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "Validation failed"
+        error:
+          type: string
+          example: "Bad Request"

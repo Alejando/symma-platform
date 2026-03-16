@@ -1,7 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Exercise, MobileModule, ExerciseType, MOBILE_SUPPORTED_TYPES } from '@symma/shared-types';
+import type {
+  CreateExerciseRequest,
+  ExerciseCategory,
+  ExerciseResponse,
+  MobileModule,
+  ExerciseType,
+  UpdateExerciseRequest,
+} from '@symma/shared-types';
+import { Button } from '@/components/ui/button';
+
+type Exercise = ExerciseResponse;
+
+const MOBILE_SUPPORTED_TYPES: ExerciseType[] = ['ISOTONIC', 'ISOMETRIC'];
+
+const EXERCISE_TYPES: ExerciseType[] = ['ISOTONIC', 'ISOMETRIC', 'MANUAL', 'RELAXATION'];
+const MOBILE_MODULES: MobileModule[] = ['SMILE', 'BROWS', 'JAW', 'KISS', 'EYES', 'EYES_INVERSE'];
 
 
 
@@ -15,20 +30,31 @@ interface ExerciseDialogProps {
   isOpen: boolean;
   onClose: () => void;
   exercise?: Exercise | null;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: CreateExerciseRequest | UpdateExerciseRequest) => Promise<void>;
 }
+
+type ExerciseFormData = {
+  keyName: string;
+  name: string;
+  description: string;
+  type: ExerciseType;
+  category: ExerciseCategory;
+  mobileModule?: MobileModule;
+  assetAnimationUrl: string;
+  assetTutorialVideoUrl: string;
+};
 
 export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: ExerciseDialogProps) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ExerciseFormData>({
     keyName: '',
     name: '',
     description: '',
-    type: ExerciseType.ISOMETRIC,
+    type: 'ISOMETRIC',
     category: 'CORE',
-    mobileModule: MobileModule.EYES,
+    mobileModule: 'EYES',
     assetAnimationUrl: '',
     assetTutorialVideoUrl: '',
   });
@@ -39,9 +65,9 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
         keyName: exercise?.keyName || '',
         name: exercise?.name || '',
         description: exercise?.description || '',
-        type: exercise?.type || ExerciseType.ISOMETRIC,
+        type: exercise?.type || 'ISOMETRIC',
         category: exercise?.category || 'CORE',
-        mobileModule: exercise?.mobileModule || MobileModule.EYES,
+        mobileModule: exercise?.mobileModule || 'EYES',
         assetAnimationUrl: exercise?.assetAnimationUrl || '',
         assetTutorialVideoUrl: exercise?.assetTutorialVideoUrl || '',
       });
@@ -57,7 +83,7 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
       const updated = { ...prev, [name]: value };
       // Clear mobileModule if type doesn't support it
       if (name === 'type' && !MOBILE_SUPPORTED_TYPES.includes(value as ExerciseType)) {
-        updated.mobileModule = undefined as any;
+        updated.mobileModule = undefined;
       }
       return updated;
     });
@@ -104,9 +130,9 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
           <h2 className="text-xl font-bold text-[#0d1b1a]">
             {exercise ? 'Edit Exercise' : 'New Exercise'}
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+          <Button variant="ghost" size="icon-sm" onClick={onClose}>
             <span className="material-symbols-outlined text-gray-500">close</span>
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -163,7 +189,7 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
               >
-                {Object.values(ExerciseType).map(type => (
+                {EXERCISE_TYPES.map(type => (
                   <option key={type} value={type}>{type.replace(/_/g, ' ')}</option>
                 ))}
               </select>
@@ -178,7 +204,7 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
                 >
                   <option value="">Select module...</option>
-                  {Object.values(MobileModule).map(module => (
+                  {MOBILE_MODULES.map(module => (
                     <option key={module} value={module}>{module.replace(/_/g, ' ')}</option>
                   ))}
                 </select>
@@ -223,20 +249,21 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="text-sm font-medium text-gray-700"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 text-sm font-bold text-white bg-[#0d9488] hover:bg-[#0b857a] disabled:opacity-50 rounded-lg transition-colors shadow-sm"
+              className="px-6 text-sm font-bold text-white bg-[#0d9488] hover:bg-[#0b857a] shadow-sm"
             >
               {loading ? 'Saving...' : 'Save Changes'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

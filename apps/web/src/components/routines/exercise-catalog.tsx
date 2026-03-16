@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Exercise } from '@symma/shared-types';
+import { Button } from '@/components/ui/button';
 
 interface ExerciseCatalogProps {
   exercises: Exercise[];
@@ -31,13 +32,13 @@ export function ExerciseCatalog({ exercises, onAddExercise }: ExerciseCatalogPro
   return (
     <>
       {/* Mobile Toggle Button */}
-      <button
+      <Button
         onClick={() => setIsOpen(true)}
-        className="md:hidden fixed bottom-4 left-4 z-30 flex items-center gap-2 px-4 py-3 bg-[#0d9488] text-white rounded-full shadow-lg hover:bg-[#0b857a] transition-colors"
+        className="md:hidden fixed bottom-4 left-4 z-30 px-4 py-3 bg-[#0d9488] text-white rounded-full shadow-lg hover:bg-[#0b857a]"
       >
         <span className="material-symbols-outlined">add</span>
         Add Exercise
-      </button>
+      </Button>
 
       {/* Mobile Overlay */}
       {isOpen && (
@@ -58,12 +59,14 @@ export function ExerciseCatalog({ exercises, onAddExercise }: ExerciseCatalogPro
         <div className="p-4 border-b border-slate-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-bold text-slate-800">Exercise Catalog</h3>
-            <button
+            <Button
+              variant="ghost"
+              size="icon-xs"
               onClick={() => setIsOpen(false)}
-              className="md:hidden p-1 hover:bg-slate-100 rounded"
+              className="md:hidden"
             >
               <span className="material-symbols-outlined text-slate-400">close</span>
-            </button>
+            </Button>
           </div>
 
           {/* Search */}
@@ -83,16 +86,18 @@ export function ExerciseCatalog({ exercises, onAddExercise }: ExerciseCatalogPro
           {/* Chips Filter */}
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             {(['ALL', 'WARMUP', 'CORE', 'COOLDOWN'] as const).map((cat) => (
-              <button
+              <Button
                 key={cat}
+                variant={filter === cat ? 'default' : 'secondary'}
+                size="xs"
                 onClick={() => setFilter(cat)}
-                className={`px-3 py-1 text-xs font-medium rounded-full shrink-0 transition-colors ${filter === cat
-                  ? 'bg-[#0d9488] text-white'
+                className={`rounded-full shrink-0 ${filter === cat
+                  ? 'bg-[#0d9488] text-white hover:bg-[#0b847a]'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
               >
                 {cat.charAt(0) + cat.slice(1).toLowerCase()}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -114,13 +119,15 @@ export function ExerciseCatalog({ exercises, onAddExercise }: ExerciseCatalogPro
                   {exercise.category} • {exercise.type.replace('_', ' ')} • {exercise.mobileModule?.replace('_', ' ') || 'No Module'}
                 </p>
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="icon-xs"
                 onClick={() => handleAddExercise(exercise)}
-                className="p-1.5 text-slate-400 hover:text-[#0d9488] hover:bg-[#0d9488]/10 rounded-full transition-colors"
+                className="text-slate-400 hover:text-[#0d9488] hover:bg-[#0d9488]/10 rounded-full"
                 aria-label={`Add ${exercise.name}`}
               >
                 <span className="material-symbols-outlined text-[20px]">add_circle</span>
-              </button>
+              </Button>
             </div>
           ))}
 

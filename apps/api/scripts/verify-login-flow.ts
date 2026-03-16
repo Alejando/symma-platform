@@ -4,7 +4,7 @@ import { AppModule } from '../src/app.module';
 import { PatientsService } from '../src/patients/patients.service';
 import { PatientAuthService } from '../src/auth/patient-auth.service';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { PatientStatus } from '../src/patients/dto/update-patient.dto';
+import type { PatientStatus } from '@symma/shared-types';
 
 async function verify() {
   console.log('🚀 Starting Verification Script...');
@@ -24,7 +24,7 @@ async function verify() {
     // 1. Setup: Create Clinic -> Therapist -> Patient
     console.log('1️⃣  Setting up Dependencies...');
     const clinic = await prisma.clinic.create({
-      data: { name: 'Test Clinic Hotfix', address: '123 Test St' }
+      data: { name: 'Test Clinic Hotfix' }
     });
 
     const therapist = await prisma.therapist.create({
@@ -57,13 +57,12 @@ async function verify() {
     console.log('3️⃣  Verifying DB State...');
     const updatedPatient = await prisma.patient.findUnique({ where: { id: patient.id } });
     if (!updatedPatient?.accessCodeHash) throw new Error('❌ accessCodeHash NOT found in DB');
-    if (!updatedPatient?.authPinHash) throw new Error('❌ authPinHash NOT found in DB');
-    console.log('   ✅ Hashes stored successfully');
+    console.log('   ✅ accessCodeHash stored successfully');
 
     // 4. Attempt Login
     console.log('4️⃣  Attempting Login with Access Code...');
     const token = await authService.login(code);
-    if (!token.access_token) throw new Error('❌ Login failed: No token returned');
+    if (!token.accessToken) throw new Error('❌ Login failed: No token returned');
     console.log('   ✅ Login Successful! Token received.');
 
     console.log('✅✅✅ VERIFICATION PASSED ✅✅✅');

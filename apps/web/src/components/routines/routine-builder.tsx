@@ -1,8 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import type { Exercise, Patient, CreateRoutineDto, Routine, UpdateRoutineDto, RoutineItem } from '@symma/shared-types';
-import { MobileModule, ExerciseType } from '@symma/shared-types';
+import { useState } from 'react';
+import type { ExerciseResponse, Patient, CreateRoutineDto, RoutineResponse, UpdateRoutineDto, RoutineItemResponse, ExerciseType } from '@symma/shared-types';
+import { Button } from '@/components/ui/button';
+
+type Exercise = ExerciseResponse;
+type Routine = RoutineResponse;
+type RoutineItem = RoutineItemResponse;
 
 export type BuilderItem = {
   id: string;
@@ -56,17 +60,6 @@ export function RoutineBuilder({
       : ''
   );
   const [therapistNotes, setTherapistNotes] = useState(initialData?.therapistNotes || '');
-
-  // Update state when initialData changes (for edit mode)
-  useEffect(() => {
-    if (initialData) {
-      setName(initialData.name);
-      setPatientId(initialData.patientId);
-      setStartDate(new Date(initialData.startDate).toISOString().split('T')[0]);
-      setEndDate(initialData.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : '');
-      setTherapistNotes(initialData.therapistNotes || '');
-    }
-  }, [initialData]);
 
   // Keep these handlers here or pass them? Logic is here, state update via prop.
   const handleRemoveItem = (itemId: string) => {
@@ -203,20 +196,21 @@ export function RoutineBuilder({
           </span>
           <div className="flex items-center gap-2 flex-1 sm:flex-none justify-end">
             {onCancel && (
-              <button
+              <Button
+                variant="ghost"
                 onClick={onCancel}
-                className="px-3 md:px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                className="px-3 md:px-4 py-2 text-sm font-medium text-slate-600"
               >
                 Cancel
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               onClick={handleSubmit}
               disabled={loading || items.length === 0}
-              className="flex items-center justify-center h-10 px-4 md:px-6 rounded-lg bg-[#0d9488] text-white text-sm font-bold shadow-sm hover:bg-[#0b847a] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="h-10 px-4 md:px-6 bg-[#0d9488] text-white text-sm font-bold shadow-sm hover:bg-[#0b847a]"
             >
               {loading ? 'Saving...' : 'Save'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -276,28 +270,30 @@ export function RoutineBuilder({
                     {!isLocked && (
                       <>
                         <div className="hidden md:flex gap-1">
-                          <button onClick={() => moveItem(index, 'up')} disabled={index === 0} className="p-1 text-slate-300 hover:text-slate-600 disabled:opacity-30 rounded">
+                          <Button variant="ghost" size="icon-xs" onClick={() => moveItem(index, 'up')} disabled={index === 0} className="text-slate-300 hover:text-slate-600">
                             <span className="material-symbols-outlined text-lg">arrow_upward</span>
-                          </button>
-                          <button onClick={() => moveItem(index, 'down')} disabled={index === items.length - 1} className="p-1 text-slate-300 hover:text-slate-600 disabled:opacity-30 rounded">
+                          </Button>
+                          <Button variant="ghost" size="icon-xs" onClick={() => moveItem(index, 'down')} disabled={index === items.length - 1} className="text-slate-300 hover:text-slate-600">
                             <span className="material-symbols-outlined text-lg">arrow_downward</span>
-                          </button>
+                          </Button>
                         </div>
                         <div className="flex md:hidden gap-1">
-                          <button onClick={() => moveItem(index, 'up')} disabled={index === 0} className="p-1 hover:bg-slate-100 rounded">
+                          <Button variant="ghost" size="icon-xs" onClick={() => moveItem(index, 'up')} disabled={index === 0}>
                             <span className="material-symbols-outlined text-sm text-slate-400">arrow_upward</span>
-                          </button>
-                          <button onClick={() => moveItem(index, 'down')} disabled={index === items.length - 1} className="p-1 hover:bg-slate-100 rounded">
+                          </Button>
+                          <Button variant="ghost" size="icon-xs" onClick={() => moveItem(index, 'down')} disabled={index === items.length - 1}>
                             <span className="material-symbols-outlined text-sm text-slate-400">arrow_downward</span>
-                          </button>
+                          </Button>
                         </div>
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
                           onClick={() => handleRemoveItem(item.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                          className="text-slate-400 hover:text-red-500 hover:bg-red-50"
                           title="Remove exercise"
                         >
                           <span className="material-symbols-outlined text-[18px]">delete</span>
-                        </button>
+                        </Button>
                       </>
                     )}
                   </div>
@@ -335,12 +331,12 @@ export function RoutineBuilder({
                     <div>
                       <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">Hold (s)</label>
                       <input
-                        className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked || item.exercise.type === ExerciseType.ISOTONIC ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
+                        className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked || item.exercise.type === 'ISOTONIC' ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
                         type="number"
                         min="0"
                         value={item.targetHoldSeconds}
                         onChange={(e) => handleUpdateItem(item.id, 'targetHoldSeconds', parseInt(e.target.value) || 0)}
-                        disabled={isLocked || item.exercise.type === ExerciseType.ISOTONIC}
+                        disabled={isLocked || item.exercise.type === 'ISOTONIC'}
                       />
                     </div>
                   </div>
@@ -377,7 +373,7 @@ export function RoutineBuilder({
                       <input
                         type="checkbox"
                         checked={item.strictMode}
-                        onChange={(e) => handleUpdateItem(item.id, 'strictMode', e.target.checked as any)}
+                        onChange={(e) => handleUpdateItem(item.id, 'strictMode', e.target.checked)}
                         disabled={isLocked}
                         className="rounded border-slate-300 text-[#0d9488] focus:ring-[#0d9488]"
                       />
@@ -387,7 +383,7 @@ export function RoutineBuilder({
                       <input
                         type="checkbox"
                         checked={item.allowSkip}
-                        onChange={(e) => handleUpdateItem(item.id, 'allowSkip', e.target.checked as any)}
+                        onChange={(e) => handleUpdateItem(item.id, 'allowSkip', e.target.checked)}
                         disabled={isLocked}
                         className="rounded border-slate-300 text-[#0d9488] focus:ring-[#0d9488]"
                       />

@@ -23,7 +23,7 @@ export class PatientsController {
   constructor(
     private readonly patientsService: PatientsService,
     private readonly routinesService: RoutinesService,
-  ) { }
+  ) {}
 
   @Post()
   create(
@@ -37,8 +37,14 @@ export class PatientsController {
   findAll(
     @Request() req: AuthenticatedRequest,
     @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.patientsService.findAll(req.user.userId, search);
+    return this.patientsService.findAll(req.user.userId, {
+      search,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? Math.min(parseInt(limit, 10), 100) : undefined,
+    });
   }
 
   @Get(':id')
@@ -47,7 +53,10 @@ export class PatientsController {
   }
 
   @Get(':id/routines')
-  getPatientRoutines(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
+  getPatientRoutines(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
     return this.routinesService.findAllByPatient(req.user.userId, id);
   }
 
@@ -90,8 +99,10 @@ export class PatientsController {
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
-    const hasCode = await this.patientsService.hasAccessCode(req.user.userId, id);
+    const hasCode = await this.patientsService.hasAccessCode(
+      req.user.userId,
+      id,
+    );
     return { hasAccessCode: hasCode };
   }
 }
-

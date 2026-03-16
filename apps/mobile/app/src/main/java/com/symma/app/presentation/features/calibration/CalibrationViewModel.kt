@@ -6,6 +6,13 @@ import android.util.Size
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
+import com.symma.app.domain.logic.CALIBRATION_MIN_VALID_SAMPLES
+import com.symma.app.domain.logic.CALIBRATION_THRESHOLD_BROW_RAISE
+import com.symma.app.domain.logic.CALIBRATION_THRESHOLD_DEFAULT
+import com.symma.app.domain.logic.CALIBRATION_THRESHOLD_EYES_CLOSED
+import com.symma.app.domain.logic.CALIBRATION_THRESHOLD_JAW_OPEN
+import com.symma.app.domain.logic.CALIBRATION_THRESHOLD_KISS
+import com.symma.app.domain.logic.CALIBRATION_THRESHOLD_SMILE
 import com.symma.app.domain.logic.CalibrationUtils
 import com.symma.app.domain.logic.DistanceState
 import com.symma.app.domain.model.CalibrationBaseline
@@ -20,9 +27,7 @@ import javax.inject.Inject
 
 private const val NEUTRAL_CAPTURE_FRAMES = 60
 private const val ACTIVE_CAPTURE_FRAMES = 90
-private const val MIN_VALID_SAMPLES = 45
 private const val DISTANCE_OK_REQUIRED_MS = 1000L  // 1 second at correct distance required
-private const val DEFAULT_MIN_GESTURE_THRESHOLD = 0.15f  // 15% minimum gesture intensity
 
 @HiltViewModel
 class CalibrationViewModel @Inject constructor(
@@ -46,16 +51,28 @@ class CalibrationViewModel @Inject constructor(
     // Distance validation tracking
     private var distanceOkStartTime: Long? = null
     
-    // Configurable gesture threshold (can be set per session)
-    private var minGestureThreshold: Float = DEFAULT_MIN_GESTURE_THRESHOLD
+    /**
+     * Returns the step-specific minimum gesture intensity threshold.
+     * - BrowRaise / EyesClosed: 0.10 (low-amplitude gestures, easy to miss)
+     * - Smile / JawOpen / Kiss: 0.20 (high-amplitude gestures, 0.15 lets resting-face noise through)
+     */
+    private fun thresholdForStep(step: CalibrationStep): Float = when (step) {
+        CalibrationStep.BrowRaise -> CALIBRATION_THRESHOLD_BROW_RAISE
+        CalibrationStep.EyesClosed -> CALIBRATION_THRESHOLD_EYES_CLOSED
+        CalibrationStep.Smile -> CALIBRATION_THRESHOLD_SMILE
+        CalibrationStep.JawOpen -> CALIBRATION_THRESHOLD_JAW_OPEN
+        CalibrationStep.Kiss -> CALIBRATION_THRESHOLD_KISS
+        else -> CALIBRATION_THRESHOLD_DEFAULT
+    }
 
     /**
      * Configure the minimum gesture threshold for this calibration session.
+     * Kept for external callers; updates the UI state threshold for the current step.
      * @param threshold Value between 0.0 and 1.0 (e.g., 0.15 = 15%)
      */
     fun setGestureThreshold(threshold: Float) {
-        minGestureThreshold = threshold.coerceIn(0.05f, 0.5f)
-        _uiState.update { it.copy(minGestureThreshold = minGestureThreshold) }
+        val clamped = threshold.coerceIn(0.05f, 0.5f)
+        _uiState.update { it.copy(minGestureThreshold = clamped) }
     }
 
     fun onFaceDetected(isDetected: Boolean, faceBox: RectF? = null, imageWidth: Int = 0, imageHeight: Int = 0) {
@@ -205,7 +222,7 @@ class CalibrationViewModel @Inject constructor(
             (getScore("mouthSmileLeft") + getScore("mouthSmileRight")) / 2
         )
         neutralSamples[CalibrationBaseline.KEY_BROW_RAISE]?.add(
-            (getScore("browOuterUpLeft") + getScore("browOuterUpRight")) / 2
+            (getScore("browInnerUp") + getScore("browOuterUpLeft") + getScore("browOuterUpRight")) / 3
         )
         neutralSamples[CalibrationBaseline.KEY_KISS]?.add(getScore("mouthPucker"))
         neutralSamples[CalibrationBaseline.KEY_EYES_CLOSED]?.add(
@@ -281,10 +298,12 @@ class CalibrationViewModel @Inject constructor(
             return
         }
         
-        // Extract raw value based on current step
+        // Extract raw value based on current step.
+        // BrowRaise uses the same 3-blendshape formula as BrowsStrategy to ensure
+        // calibration and runtime scoring are aligned.
         val rawValue = when (step) {
             CalibrationStep.Smile -> (getScore("mouthSmileLeft") + getScore("mouthSmileRight")) / 2
-            CalibrationStep.BrowRaise -> (getScore("browOuterUpLeft") + getScore("browOuterUpRight")) / 2
+            CalibrationStep.BrowRaise -> (getScore("browInnerUp") + getScore("browOuterUpLeft") + getScore("browOuterUpRight")) / 3
             CalibrationStep.Kiss -> getScore("mouthPucker")
             CalibrationStep.JawOpen -> getScore("jawOpen")
             CalibrationStep.EyesClosed -> (getScore("eyeBlinkLeft") + getScore("eyeBlinkRight")) / 2
@@ -303,8 +322,9 @@ class CalibrationViewModel @Inject constructor(
         val neutralOffset = currentBaseline.getNeutralOffset(neutralKey)
         val correctedValue = (rawValue - neutralOffset).coerceAtLeast(0f)
         
-        // Check if gesture intensity meets minimum threshold
-        val meetsThreshold = correctedValue >= minGestureThreshold
+        // Check if gesture intensity meets step-specific minimum threshold
+        val stepThreshold = thresholdForStep(step)
+        val meetsThreshold = correctedValue >= stepThreshold
         
         if (meetsThreshold) {
             activeSamples.add(correctedValue)
@@ -318,12 +338,16 @@ class CalibrationViewModel @Inject constructor(
                 framesCaptured = validSampleCount,
                 currentRawValue = rawValue,
                 currentCorrectedValue = correctedValue,
-                isGestureIntensitySufficient = meetsThreshold
+                isGestureIntensitySufficient = meetsThreshold,
+                minGestureThreshold = stepThreshold
             ) 
         }
         
-        // Complete active capture for this step
-        if (validSampleCount >= ACTIVE_CAPTURE_FRAMES && !_uiState.value.stepCompleted) {
+        // Complete active capture only when both total frames AND minimum valid samples are met.
+        // This prevents noisy/low-confidence baselines from finalizing prematurely.
+        val hasEnoughTotal = validSampleCount >= ACTIVE_CAPTURE_FRAMES
+        val hasEnoughValid = validSampleCount >= CALIBRATION_MIN_VALID_SAMPLES
+        if (hasEnoughTotal && hasEnoughValid && !_uiState.value.stepCompleted) {
             completeActiveStep()
         }
     }
@@ -431,7 +455,7 @@ data class CalibrationUiState(
     val distanceOkProgress: Float = 0f,
     val isReadyToStart: Boolean = false,
     // Gesture intensity validation
-    val minGestureThreshold: Float = DEFAULT_MIN_GESTURE_THRESHOLD,
+    val minGestureThreshold: Float = CALIBRATION_THRESHOLD_DEFAULT,
     val isGestureIntensitySufficient: Boolean = false,
     // Debug info
     val debugFaceAreaRatio: Float = 0f,

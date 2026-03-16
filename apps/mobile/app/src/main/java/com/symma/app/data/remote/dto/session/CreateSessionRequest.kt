@@ -3,6 +3,9 @@ package com.symma.app.data.remote.dto.session
 import com.google.gson.annotations.SerializedName
 
 data class CreateSessionRequest(
+    @SerializedName("id")
+    val id: String? = null, // Client-generated UUID for idempotency
+    
     @SerializedName("routineId")
     val routineId: String,
     
@@ -22,13 +25,10 @@ data class SessionItemRequest(
     
     @SerializedName("repsCompleted")
     val repsCompleted: Int,
-    
-    @SerializedName("difficulty")
-    val difficulty: Int = 0, // Optional for now
 
     @SerializedName("averageAccuracy")
     val averageAccuracy: Float? = null, // RFC-026: AI Metric
 
-    @SerializedName("skipped")
-    val skipped: Boolean = false
+    @SerializedName("seriesData")
+    val seriesData: Any? = null
 )
