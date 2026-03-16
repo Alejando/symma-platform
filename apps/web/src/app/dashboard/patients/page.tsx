@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import { PatientDialog, PatientTable } from '@/components/patients';
 import type { Patient, CreatePatientDto, UpdatePatientDto } from '@symma/shared-types';
 import { getPatients, createPatient, updatePatient, deletePatient } from '@/lib/api';
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button';
 
 export default function PatientsPage() {
   const { data: session } = useSession();
+  const t = useTranslations('common');
   const handleAuthError = useAuthErrorHandler();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,10 +89,10 @@ export default function PatientsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-[#0d1b1a] tracking-tight">
-            Patients
+            {t('patients.title')}
           </h1>
           <p className="text-[#4c9a93] mt-1 font-medium text-sm md:text-base">
-            Manage your patient records and clinical information.
+            {t('patients.subtitle')}
           </p>
         </div>
         <Button
@@ -98,7 +100,7 @@ export default function PatientsPage() {
           className="bg-[#0d9488] hover:bg-[#0b857a] text-white font-semibold shadow-sm shrink-0"
         >
           <span className="material-symbols-outlined text-xl">person_add</span>
-          <span>Add Patient</span>
+          <span>{t('buttons.addPatient')}</span>
         </Button>
       </div>
 
@@ -112,14 +114,14 @@ export default function PatientsPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name or email..."
+            placeholder={t('labels.searchByNameOrEmail')}
             className="block w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] text-sm transition"
           />
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500 bg-white px-4 py-2 rounded-lg border border-gray-200">
           <span className="material-symbols-outlined text-lg">group</span>
           <span>
-            <strong className="text-gray-900">{patients.length}</strong> patients
+            <strong className="text-gray-900">{patients.length}</strong> {t('labels.patients')}
           </span>
         </div>
       </div>
@@ -155,16 +157,12 @@ export default function PatientsPage() {
                 <span className="material-symbols-outlined text-red-600 text-2xl">warning</span>
               </div>
               <div>
-                <h3 className="font-bold text-lg text-gray-900">Archive Patient</h3>
-                <p className="text-sm text-gray-500">This action can be undone later.</p>
+                <h3 className="font-bold text-lg text-gray-900">{t('patients.archiveTitle')}</h3>
+                <p className="text-sm text-gray-500">{t('patients.archiveDescription')}</p>
               </div>
             </div>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to archive{' '}
-              <strong>
-                {deleteConfirm.firstName} {deleteConfirm.lastName}
-              </strong>
-              ? They will be removed from your active patient list.
+              {t('patients.archiveConfirm', { name: `${deleteConfirm.firstName} ${deleteConfirm.lastName}` })}
             </p>
             <div className="flex justify-end gap-3">
               <Button
@@ -172,14 +170,14 @@ export default function PatientsPage() {
                 onClick={() => setDeleteConfirm(null)}
                 className="text-sm font-medium text-gray-700"
               >
-                Cancel
+                {t('buttons.cancel')}
               </Button>
               <Button
                 variant="destructive"
                 onClick={confirmDelete}
                 className="text-sm font-bold"
               >
-                Archive Patient
+                {t('buttons.archivePatient')}
               </Button>
             </div>
           </div>

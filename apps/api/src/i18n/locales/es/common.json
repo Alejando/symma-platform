@@ -1,0 +1,50 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "patients": "Pacientes",
+    "routines": "Rutinas",
+    "settings": "Configuración",
+    "logout": "Cerrar sesión"
+  },
+  "buttons": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "add": "Agregar",
+    "back": "Volver"
+  },
+  "labels": {
+    "name": "Nombre",
+    "email": "Correo electrónico",
+    "status": "Estado",
+    "role": "Rol",
+    "actions": "Acciones",
+    "date": "Fecha",
+    "description": "Descripción",
+    "search": "Buscar..."
+  },
+  "messages": {
+    "noData": "No hay datos disponibles",
+    "loading": "Cargando...",
+    "success": "Operación exitosa",
+    "error": "Ha ocurrido un error",
+    "confirmDelete": "¿Estás seguro de que deseas eliminar este elemento?"
+  },
+  "pagination": {
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "page": "Página {current} de {total}",
+    "showing": "Mostrando {start} a {end} de {total} resultados"
+  },
+  "time": {
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "lastWeek": "La semana pasada",
+    "lastMonth": "El mes pasado",
+    "daysAgo": "Hace {count, plural, one {# día} other {# días}}",
+    "hoursAgo": "Hace {count, plural, one {# hora} other {# horas}}",
+    "minutesAgo": "Hace {count, plural, one {# minuto} other {# minutos}}"
+  }
+}

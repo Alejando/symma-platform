@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import { getPatient, updatePatient } from '@/lib/api';
 import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
 import type { Patient, UpdatePatientDto, CreatePatientDto } from '@symma/shared-types';
 import { PatientDialog } from '@/components/patients';
 import { PatientContext } from '@/components/patients/patient-context';
 import { Button } from '@/components/ui/button';
+import { EnumLabel } from '@/components/ui/enum-label';
 
 function getInitials(firstName: string, lastName: string) {
   return `${firstName[0]}${lastName[0]}`.toUpperCase();
@@ -37,6 +39,7 @@ export default function PatientLayout({
 }) {
   const { id } = use(params);
   const { data: session } = useSession();
+  const t = useTranslations('common');
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
@@ -79,16 +82,16 @@ export default function PatientLayout({
   }, [session, id, handleAuthError]);
 
   if (loading) {
-    return <div className="p-8">Loading...</div>;
+    return <div className="p-8">{t('patientLayout.loading')}</div>;
   }
 
   if (!patient) {
-    return <div className="p-8">Patient not found</div>;
+    return <div className="p-8">{t('patientLayout.notFound')}</div>;
   }
 
   const tabs = [
-    { name: 'Overview', href: `/dashboard/patients/${id}` },
-    { name: 'Routines', href: `/dashboard/patients/${id}/routines` },
+    { name: t('patientLayout.overview'), href: `/dashboard/patients/${id}` },
+    { name: t('nav.routines'), href: `/dashboard/patients/${id}/routines` },
   ];
 
   return (
@@ -107,21 +110,21 @@ export default function PatientLayout({
                   {patient.firstName} {patient.lastName}
                 </h1>
                 <span className="bg-[#0D9488] text-white text-xs font-medium px-2 py-0.5 rounded-full shrink-0">
-                  Active
+                  {t('routineDetail.active')}
                 </span>
               </div>
               <div className="flex items-center gap-3 md:gap-4 text-sm text-gray-500 flex-wrap">
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-base md:text-lg">calendar_today</span>
-                  <span>{patient.dateOfBirth ? `${calculateAge(patient.dateOfBirth)} yrs` : 'N/A'}</span>
+                  <span>{patient.dateOfBirth ? t('patientLayout.yrs', { age: calculateAge(patient.dateOfBirth) }) : t('patientDetail.na')}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-base md:text-lg">wc</span>
-                  <span className="capitalize">{patient.gender}</span>
+                  <span className="capitalize">{patient.gender ? <EnumLabel enumName="Gender" value={patient.gender} /> : '-'}</span>
                 </div>
                 <div className="hidden sm:flex items-center gap-1">
                   <span className="material-symbols-outlined text-base md:text-lg">medical_services</span>
-                  <span>Post-Op Recovery</span>
+                  <span>{t('patientLayout.postOpRecovery')}</span>
                 </div>
               </div>
             </div>
@@ -135,14 +138,14 @@ export default function PatientLayout({
               className="text-sm font-medium text-gray-700"
             >
               <span className="material-symbols-outlined text-lg">edit</span>
-              <span className="inline">Edit</span>
+              <span className="inline">{t('buttons.edit')}</span>
             </Button>
             <Link
               href={`/dashboard/patients/${id}/routines/new`}
               className="flex items-center justify-center gap-1 md:gap-2 px-3 md:px-4 py-2 text-sm font-medium text-white bg-[#0d9488] rounded-lg hover:bg-[#0f766e] transition-colors shadow-sm"
             >
               <span className="material-symbols-outlined text-lg">add</span>
-              <span className="inline">Assign Routine</span>
+              <span className="inline">{t('patientLayout.assignRoutine')}</span>
             </Link>
           </div>
         </div>

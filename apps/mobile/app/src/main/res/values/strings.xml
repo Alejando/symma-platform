@@ -1,3 +1,96 @@
 <resources>
     <string name="app_name">Symma</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_patients">Pacientes</string>
+    <string name="nav_routines">Rutinas</string>
+    <string name="nav_settings">Configuración</string>
+    <string name="nav_logout">Cerrar sesión</string>
+
+    <!-- Buttons -->
+    <string name="btn_save">Guardar</string>
+    <string name="btn_cancel">Cancelar</string>
+    <string name="btn_delete">Eliminar</string>
+    <string name="btn_edit">Editar</string>
+    <string name="btn_create">Crear</string>
+    <string name="btn_add">Agregar</string>
+    <string name="btn_back">Volver</string>
+
+    <!-- Labels -->
+    <string name="label_name">Nombre</string>
+    <string name="label_email">Correo electrónico</string>
+    <string name="label_status">Estado</string>
+    <string name="label_role">Rol</string>
+    <string name="label_actions">Acciones</string>
+    <string name="label_date">Fecha</string>
+    <string name="label_description">Descripción</string>
+    <string name="label_search">Buscar...</string>
+
+    <!-- Messages -->
+    <string name="msg_no_data">No hay datos disponibles</string>
+    <string name="msg_loading">Cargando...</string>
+    <string name="msg_success">Operación exitosa</string>
+    <string name="msg_error">Ha ocurrido un error</string>
+    <string name="msg_confirm_delete">¿Estás seguro de que deseas eliminar este elemento?</string>
+
+    <!-- Errors -->
+    <string name="err_unauthorized">No autorizado</string>
+    <string name="err_forbidden">No tienes permisos para realizar esta acción</string>
+    <string name="err_token_expired">Tu sesión ha expirado, por favor inicia sesión nuevamente</string>
+    <string name="err_invalid_credentials">Credenciales inválidas</string>
+    <string name="err_internal_error">Error interno del servidor</string>
+    <string name="err_bad_request">Solicitud incorrecta</string>
+    <string name="err_not_found">Recurso no encontrado</string>
+    <string name="err_timeout">Tiempo de espera agotado</string>
+    <string name="err_offline">No hay conexión a internet</string>
+    <string name="err_sync_failed">Error al sincronizar datos</string>
+
+    <!-- Validation -->
+    <string name="val_required">Este campo es obligatorio</string>
+    <string name="val_email">Debe ser un correo electrónico válido</string>
+    <string name="val_password">La contraseña debe contener al menos 8 caracteres, una letra mayúscula, una letra minúscula y un número</string>
+    <string name="val_passwords_match">Las contraseñas no coinciden</string>
+
+    <!-- Login Screen -->
+    <string name="login_enter_access_code">Ingresa tu Código de Acceso</string>
+
+    <!-- Home Screen -->
+    <string name="home_greeting_morning">Buenos días</string>
+    <string name="home_greeting_afternoon">Buenas tardes</string>
+    <string name="home_greeting_evening">Buenas noches</string>
+    <string name="home_today_therapy">Rutina del Día</string>
+    <string name="home_exercises_count">%d ejercicios</string>
+    <string name="home_start_session">Iniciar Sesión</string>
+    <string name="home_no_routine_title">No se encontró rutina</string>
+    <string name="home_no_routine_desc">Verifica tu conexión a internet o contacta a tu terapeuta.</string>
+    <string name="home_try_again">Intentar de nuevo</string>
+    <string name="home_sync_error">Error de sincronización</string>
+    <string name="home_retry">Reintentar</string>
+    <string name="home_not_synced">Aún no sincronizado</string>
+    <string name="home_last_sync">Última sinc: %s</string>
+    <string name="home_syncing">Sincronizando...</string>
+    <string name="home_sync">Sincronizar</string>
+
+    <!-- Calibration -->
+    <string name="calib_dist_too_close">Aléjate un poco de la cámara</string>
+    <string name="calib_dist_too_far">Acércate un poco a la cámara</string>
+    <string name="calib_dist_ok">Mantén la posición 1 segundo</string>
+    <string name="calib_neutral_capture">Relaja tu rostro y mira al frente</string>
+    <string name="calib_step_smile">¡Sonríe ampliamente!</string>
+    <string name="calib_step_brow_raise">¡Levanta las cejas!</string>
+    <string name="calib_step_kiss">¡Haz un beso!</string>
+    <string name="calib_step_jaw_open">¡Abre la boca!</string>
+    <string name="calib_step_eyes_closed">¡Cierra los ojos fuerte!</string>
+    <string name="calib_complete">¡Calibración completa!</string>
+    <string name="calib_start">Iniciar Calibración</string>
+    <string name="calib_hold_position">Mantén la posición...</string>
+    <string name="calib_warn_too_close">⚠️ Muy cerca - Riesgo de distorsión</string>
+    <string name="calib_warn_too_far">⚠️ Muy lejos - Baja resolución</string>
+    <string name="calib_warn_ok">✓ Distancia correcta</string>
+
+    <!-- Camera Permission -->
+    <string name="camera_permission_title">Permiso de Cámara Requerido</string>
+    <string name="camera_permission_desc">Necesitamos acceso a la cámara para que puedas ver tus movimientos faciales mientras realizas los ejercicios de rehabilitación.</string>
+    <string name="camera_permission_button">Permitir Acceso a Cámara</string>
 </resources>

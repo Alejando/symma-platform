@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import type {
   CreateExerciseRequest,
   ExerciseCategory,
@@ -20,11 +21,7 @@ const MOBILE_MODULES: MobileModule[] = ['SMILE', 'BROWS', 'JAW', 'KISS', 'EYES',
 
 
 
-const EXERCISE_CATEGORIES = [
-  { value: 'WARMUP', label: 'Warmup' },
-  { value: 'CORE', label: 'Core' },
-  { value: 'COOLDOWN', label: 'Cooldown' },
-];
+const EXERCISE_CATEGORIES: ExerciseCategory[] = ['WARMUP', 'CORE', 'COOLDOWN'];
 
 interface ExerciseDialogProps {
   isOpen: boolean;
@@ -45,6 +42,9 @@ type ExerciseFormData = {
 };
 
 export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: ExerciseDialogProps) {
+  const t = useTranslations('common');
+  const tVal = useTranslations('validation');
+  const tEnums = useTranslations('enums');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -92,8 +92,8 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.keyName.trim()) newErrors.keyName = 'Key name is required';
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (!formData.keyName.trim()) newErrors.keyName = tVal('keyNameRequired');
+    if (!formData.name.trim()) newErrors.name = tVal('nameRequired');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -113,7 +113,7 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
       onClose();
     } catch (error) {
       console.error(error);
-      setErrors({ submit: 'Failed to save exercise' });
+      setErrors({ submit: t('messages.failedToSaveExercise') });
     } finally {
       setLoading(false);
     }
@@ -128,7 +128,7 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
           <h2 className="text-xl font-bold text-[#0d1b1a]">
-            {exercise ? 'Edit Exercise' : 'New Exercise'}
+            {exercise ? t('exercises.editExercise') : t('exercises.newExercise')}
           </h2>
           <Button variant="ghost" size="icon-sm" onClick={onClose}>
             <span className="material-symbols-outlined text-gray-500">close</span>
@@ -143,7 +143,7 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Key Name <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.keyName')} <span className="text-red-500">*</span></label>
             <input
               type="text"
               name="keyName"
@@ -157,7 +157,7 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.name')} <span className="text-red-500">*</span></label>
             <input
               type="text"
               name="name"
@@ -170,7 +170,7 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.description')}</label>
             <textarea
               name="description"
               value={formData.description}
@@ -182,7 +182,7 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.type')}</label>
               <select
                 name="type"
                 value={formData.type}
@@ -190,43 +190,43 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
               >
                 {EXERCISE_TYPES.map(type => (
-                  <option key={type} value={type}>{type.replace(/_/g, ' ')}</option>
+                  <option key={type} value={type}>{tEnums(`ExerciseType.${type}`)}</option>
                 ))}
               </select>
             </div>
             {isMobileModuleEnabled && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Module</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.mobileModule')}</label>
                 <select
                   name="mobileModule"
                   value={formData.mobileModule || ''}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
                 >
-                  <option value="">Select module...</option>
+                  <option value="">{t('labels.selectModule')}</option>
                   {MOBILE_MODULES.map(module => (
-                    <option key={module} value={module}>{module.replace(/_/g, ' ')}</option>
+                    <option key={module} value={module}>{tEnums(`MobileModule.${module}`)}</option>
                   ))}
                 </select>
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.category')}</label>
               <select
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
               >
-                {EXERCISE_CATEGORIES.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                {EXERCISE_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{tEnums(`ExerciseCategory.${cat}`)}</option>
                 ))}
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Animation URL</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.animationUrl')}</label>
             <input
               type="text"
               name="assetAnimationUrl"
@@ -237,7 +237,7 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tutorial Video URL</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.tutorialVideoUrl')}</label>
             <input
               type="text"
               name="assetTutorialVideoUrl"
@@ -255,14 +255,14 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
               onClick={onClose}
               className="text-sm font-medium text-gray-700"
             >
-              Cancel
+              {t('buttons.cancel')}
             </Button>
             <Button
               type="submit"
               disabled={loading}
               className="px-6 text-sm font-bold text-white bg-[#0d9488] hover:bg-[#0b857a] shadow-sm"
             >
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? t('buttons.saving') : t('buttons.saveChanges')}
             </Button>
           </div>
         </form>

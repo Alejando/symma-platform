@@ -39,7 +39,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("http://192.168.68.111:4001/") // Emulator localhost port 4000
+            .baseUrl("https://dc11-177-226-36-123.ngrok-free.app/") // Emulator localhost port 4000
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

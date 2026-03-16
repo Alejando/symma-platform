@@ -1,0 +1,39 @@
+{
+  "Role": {
+    "ADMIN": "Administrador",
+    "THERAPIST": "Terapeuta"
+  },
+  "Gender": {
+    "MALE": "Masculino",
+    "FEMALE": "Femenino",
+    "OTHER": "Otro"
+  },
+  "PatientStatus": {
+    "ACTIVE": "Activo",
+    "INACTIVE": "Inactivo",
+    "ARCHIVED": "Archivado"
+  },
+  "ExerciseType": {
+    "ISOTONIC": "Isotónico",
+    "ISOMETRIC": "Isométrico",
+    "MANUAL": "Manual",
+    "RELAXATION": "Relajación"
+  },
+  "ExerciseCategory": {
+    "WARMUP": "Calentamiento",
+    "CORE": "Principal",
+    "COOLDOWN": "Enfriamiento"
+  },
+  "RoutineStatus": {
+    "ACTIVE": "Activa",
+    "ARCHIVED": "Archivada"
+  },
+  "MobileModule": {
+    "EYES": "Ojos",
+    "EYES_INVERSE": "Ojos Inverso",
+    "BROWS": "Cejas",
+    "JAW": "Mandíbula",
+    "SMILE": "Sonrisa",
+    "KISS": "Beso"
+  }
+}

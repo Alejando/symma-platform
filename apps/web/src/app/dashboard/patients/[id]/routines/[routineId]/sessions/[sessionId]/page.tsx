@@ -4,7 +4,9 @@ import Link from "next/link";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { SessionDetailResponse } from "@symma/shared-types";
@@ -45,6 +47,7 @@ export default function SessionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { data: authSession } = useSession();
+  const t = useTranslations('common');
 
   const sessionId = params.sessionId as string;
   const patientId = params.id as string;
@@ -83,7 +86,7 @@ export default function SessionDetailPage() {
       return "";
     }
 
-    return format(parseISO(sessionDetail.date), "PPP");
+    return format(parseISO(sessionDetail.date), "PPP", { locale: es });
   }, [sessionDetail]);
 
   if (loading) {
@@ -101,12 +104,12 @@ export default function SessionDetailPage() {
       <div className="flex-1 space-y-4 p-8 pt-6">
         <Card>
           <CardHeader>
-            <CardTitle>Unable to load session</CardTitle>
+            <CardTitle>{t('sessionDetail.unableToLoad')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">{error ?? "No data available"}</p>
+            <p className="text-sm text-muted-foreground">{error ?? t('analytics.noDataAvailable')}</p>
             <Button onClick={() => router.refresh()} variant="outline">
-              Retry
+              {t('sessionDetail.retry')}
             </Button>
           </CardContent>
         </Card>
@@ -125,40 +128,40 @@ export default function SessionDetailPage() {
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Session Detail</h2>
-          <p className="text-muted-foreground">Detailed exercise performance for this session.</p>
+          <h2 className="text-3xl font-bold tracking-tight">{t('sessionDetail.title')}</h2>
+          <p className="text-muted-foreground">{t('sessionDetail.description')}</p>
         </div>
         <Button asChild variant="outline">
-          <Link href={`/dashboard/patients/${patientId}/routines/${routineId}`}>Back to Analytics</Link>
+          <Link href={`/dashboard/patients/${patientId}/routines/${routineId}`}>{t('sessionDetail.backToAnalytics')}</Link>
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Session Metadata</CardTitle>
+          <CardTitle>{t('sessionDetail.sessionMetadata')}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3 text-sm">
           <Badge variant="outline">{detailDate}</Badge>
           <Badge variant="outline">{Math.floor(sessionDetail.durationSeconds / 60)} min</Badge>
           <Badge className={scoreBadgeClass(sessionDetail.score)}>{sessionDetail.score}%</Badge>
-          <Badge variant="outline">{sessionDetail.isSynced ? "Synced" : "Pending Sync"}</Badge>
+          <Badge variant="outline">{sessionDetail.isSynced ? t('sessionDetail.synced') : t('sessionDetail.pendingSync')}</Badge>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Exercise Breakdown</CardTitle>
+          <CardTitle>{t('sessionDetail.exerciseBreakdown')}</CardTitle>
         </CardHeader>
         <CardContent>
           {sessionDetail.items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No exercise data recorded</p>
+            <p className="text-sm text-muted-foreground">{t('sessionDetail.noExerciseData')}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Exercise</TableHead>
-                  <TableHead>Reps</TableHead>
-                  <TableHead>Accuracy</TableHead>
+                  <TableHead>{t('sessionDetail.exercise')}</TableHead>
+                  <TableHead>{t('labels.reps')}</TableHead>
+                  <TableHead>{t('sessionDetail.accuracy')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -179,7 +182,7 @@ export default function SessionDetailPage() {
                           <TableCell colSpan={3}>
                             <details>
                               <summary className="cursor-pointer text-xs text-muted-foreground">
-                                View rep-by-rep series
+                                {t('sessionDetail.viewRepSeries')}
                               </summary>
                               <div className="mt-3 h-24 w-full">
                                 <ResponsiveContainer width="100%" height="100%">
@@ -212,10 +215,10 @@ export default function SessionDetailPage() {
       <div className="flex items-center justify-between">
         <Button disabled={!previousHref} onClick={() => previousHref && router.push(previousHref)} variant="outline">
           <ChevronLeft className="mr-2 h-4 w-4" />
-          Previous Session
+          {t('sessionDetail.previousSession')}
         </Button>
         <Button disabled={!nextHref} onClick={() => nextHref && router.push(nextHref)} variant="outline">
-          Next Session
+          {t('sessionDetail.nextSession')}
           <ChevronRight className="ml-2 h-4 w-4" />
         </Button>
       </div>

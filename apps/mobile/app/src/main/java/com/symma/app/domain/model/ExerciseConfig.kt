@@ -24,7 +24,9 @@ enum class MobileModule {
  */
 enum class ExerciseType {
     ISOTONIC,
-    ISOMETRIC
+    ISOMETRIC,
+    MANUAL,
+    RELAXATION
 }
 
 /**

@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = useTranslations('common');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -26,13 +28,13 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password');
+        setError(t('messages.invalidCredentials'));
       } else {
         router.push('/dashboard');
         router.refresh();
       }
     } catch {
-      setError('An error occurred. Please try again.');
+      setError(t('messages.errorOccurred'));
     } finally {
       setLoading(false);
     }
@@ -52,10 +54,10 @@ export default function LoginPage() {
             {/* Page Heading */}
             <div className="flex flex-col gap-2">
               <p className="text-[#0d1b1a] tracking-tight text-[28px] font-bold leading-tight">
-                Welcome back
+                {t('login.welcomeBack')}
               </p>
               <p className="text-[#4c9a93] text-sm font-normal leading-normal max-w-[280px] mx-auto">
-                Enter your credentials to access the Symma patient portal.
+                {t('login.enterCredentials')}
               </p>
             </div>
           </div>
@@ -73,7 +75,7 @@ export default function LoginPage() {
             <div className="flex flex-col gap-1.5">
               <label className="flex flex-col min-w-40 flex-1">
                 <p className="text-[#0d1b1a] text-sm font-medium leading-normal pb-2">
-                  Email address
+                  {t('labels.emailAddress')}
                 </p>
                 <input
                   className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d1b1a] focus:outline-0 focus:ring-2 focus:ring-[#0d9488]/20 border border-[#cfe7e5] bg-[#f8fcfb] focus:border-[#0d9488] h-12 placeholder:text-[#4c9a93]/70 p-[15px] text-base font-normal leading-normal transition-all"
@@ -92,19 +94,19 @@ export default function LoginPage() {
               <label className="flex flex-col min-w-40 flex-1">
                 <div className="flex justify-between items-center pb-2">
                   <p className="text-[#0d1b1a] text-sm font-medium leading-normal">
-                    Password
+                    {t('labels.password')}
                   </p>
                   <a
                     className="text-xs font-semibold text-[#0d9488] hover:text-[#0b857a] transition-colors"
                     href="#"
                   >
-                    Forgot password?
+                    {t('login.forgotPassword')}
                   </a>
                 </div>
                 <div className="relative flex w-full flex-1 items-stretch rounded-lg group">
                   <input
                     className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d1b1a] focus:outline-0 focus:ring-2 focus:ring-[#0d9488]/20 border border-[#cfe7e5] bg-[#f8fcfb] focus:border-[#0d9488] h-12 placeholder:text-[#4c9a93]/70 p-[15px] pr-12 text-base font-normal leading-normal transition-all"
-                    placeholder="Enter your password"
+                    placeholder={t('login.enterPassword')}
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -133,18 +135,18 @@ export default function LoginPage() {
                 disabled={loading}
                 className="w-full h-11 bg-[#0d9488] hover:bg-[#0b857a] disabled:bg-[#0d9488]/50 text-white text-sm font-bold tracking-[0.015em] shadow-md shadow-[#0d9488]/20"
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? t('buttons.signingIn') : t('buttons.signIn')}
               </Button>
             </div>
 
             {/* Footer Sign Up Link */}
             <div className="flex items-center justify-center gap-1.5 pt-2">
-              <span className="text-sm text-slate-500">Don&apos;t have an account?</span>
+              <span className="text-sm text-slate-500">{t('login.noAccount')}</span>
               <a
                 className="text-sm font-bold text-[#0d9488] hover:text-[#0b857a] transition-colors"
                 href="#"
               >
-                Join the network
+                {t('login.joinNetwork')}
               </a>
             </div>
           </form>

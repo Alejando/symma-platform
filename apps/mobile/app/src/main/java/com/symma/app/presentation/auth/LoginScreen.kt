@@ -19,9 +19,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.symma.app.R
 import com.symma.app.presentation.auth.components.NumericKeypad
 import com.symma.app.presentation.auth.components.PinIndicator
 import com.symma.app.presentation.components.design.SymmaScaffold
@@ -73,7 +75,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(32.dp))
                 
                 Text(
-                    text = "Enter your Access Code",
+                    text = stringResource(R.string.login_enter_access_code),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 

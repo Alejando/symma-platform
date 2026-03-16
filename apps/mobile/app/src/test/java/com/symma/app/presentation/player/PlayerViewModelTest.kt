@@ -10,6 +10,7 @@ import com.symma.app.domain.model.Routine
 import com.symma.app.domain.model.RoutineItem
 import com.symma.app.domain.repository.CalibrationRepository
 import com.symma.app.domain.repository.RoutineRepository
+import com.symma.app.domain.usecase.SaveAndSyncSessionUseCase
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -36,6 +37,7 @@ class PlayerViewModelTest {
 
     private lateinit var routineRepository: RoutineRepository
     private lateinit var calibrationRepository: CalibrationRepository
+    private lateinit var saveAndSyncSessionUseCase: SaveAndSyncSessionUseCase
     private lateinit var routineFlow: MutableStateFlow<Routine?>
     private lateinit var savedStateHandle: SavedStateHandle
     private lateinit var viewModel: PlayerViewModel
@@ -45,6 +47,7 @@ class PlayerViewModelTest {
         routineFlow = MutableStateFlow(null)
         routineRepository = mockk()
         calibrationRepository = mockk()
+        saveAndSyncSessionUseCase = mockk(relaxed = true)
         every { routineRepository.getRoutineFlow() } returns routineFlow
         every { calibrationRepository.getBaseline() } returns CalibrationBaseline()
         savedStateHandle = SavedStateHandle()
@@ -128,7 +131,7 @@ class PlayerViewModelTest {
         routineFlow.value = createTestRoutine()
 
         // When
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
 
         // Then
         viewModel.uiState.test {
@@ -147,7 +150,7 @@ class PlayerViewModelTest {
     fun `Verify Countdown transitions from GetReady to Exercise`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createTestRoutine()
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent() // Process Loading -> GetReady
 
         // When/Then
@@ -179,7 +182,7 @@ class PlayerViewModelTest {
     fun `Verify Exercise state has correct initial rep count`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createTestRoutine()
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent() // Loading -> GetReady
         advanceTimeBy(5500) // Skip GetReady (5s)
 
@@ -233,7 +236,7 @@ class PlayerViewModelTest {
     fun `RFC-031 - Exercise state includes Set tracking`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createMultiSetRoutine()
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100) // Skip GetReady
 
@@ -254,7 +257,7 @@ class PlayerViewModelTest {
     fun `RFC-031 - processFrame updates isTargetReached when score reaches 1`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createMultiSetRoutine()
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100) // Skip GetReady
 
@@ -275,7 +278,7 @@ class PlayerViewModelTest {
     fun `RFC-031 - isTargetReached becomes false when score drops below 1`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createMultiSetRoutine()
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100)
 
@@ -298,7 +301,7 @@ class PlayerViewModelTest {
     fun `RFC-031 - Exercise state has correct initial values for multi-set routine`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createMultiSetRoutine()
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100)
 
@@ -320,7 +323,7 @@ class PlayerViewModelTest {
     fun `RFC-031 - Initial state has isTargetReached false`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createMultiSetRoutine()
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100)
 
@@ -353,7 +356,7 @@ class PlayerViewModelTest {
     fun `Verify completedSets and completedReps in UI state`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createTestRoutine()
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100) // Skip GetReady
 
@@ -372,7 +375,7 @@ class PlayerViewModelTest {
     fun `US1 - Isometric rep does not count next rep while gesture is held after completion`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createIsometricRoutine(reps = 2, holdSeconds = 1)
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100) // Skip GetReady
 
@@ -409,7 +412,7 @@ class PlayerViewModelTest {
     fun `US1 - Isometric next rep starts after release and re-engage`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createIsometricRoutine(reps = 2, holdSeconds = 1)
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100)
 
@@ -434,7 +437,7 @@ class PlayerViewModelTest {
     fun `US1 - Isotonic rep does not count next rep while gesture is held after completion`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createIsotonicRoutine(reps = 2)
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100)
 
@@ -465,7 +468,7 @@ class PlayerViewModelTest {
     fun `US1 - Isotonic next rep counts after release and re-engage`() = runTest(testDispatcher) {
         // Given
         routineFlow.value = createIsotonicRoutine(reps = 2)
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100)
 
@@ -497,7 +500,7 @@ class PlayerViewModelTest {
     fun `US1 - Jitter near release threshold does not cause false release`() = runTest(testDispatcher) {
         // Given: score oscillates between 0.76 and 0.80 (above release threshold 0.75)
         routineFlow.value = createIsometricRoutine(reps = 2, holdSeconds = 1)
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100)
 
@@ -529,7 +532,7 @@ class PlayerViewModelTest {
     fun `US2 - PlayDing is emitted exactly once when isometric rep completes`() = runTest(testDispatcher) {
         // Given: 1 rep, 1s hold.
         routineFlow.value = createIsometricRoutine(reps = 1, holdSeconds = 1)
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100) // Skip GetReady
         testDispatcher.scheduler.runCurrent()
@@ -551,7 +554,7 @@ class PlayerViewModelTest {
     fun `US2 - No PlayDing emitted while rep is in progress`() = runTest(testDispatcher) {
         // Given: hold requires 3s, we only inject ~1s worth of virtual time
         routineFlow.value = createIsometricRoutine(reps = 1, holdSeconds = 3)
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         advanceTimeBy(5100)
         testDispatcher.scheduler.runCurrent()
@@ -575,7 +578,7 @@ class PlayerViewModelTest {
         every { calibrationRepository.getBaseline() } returns initialBaseline
         routineFlow.value = createTestRoutine()
         
-        viewModel = PlayerViewModel(routineRepository, calibrationRepository, savedStateHandle)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
         testDispatcher.scheduler.runCurrent()
         
         // Then - modify repository response

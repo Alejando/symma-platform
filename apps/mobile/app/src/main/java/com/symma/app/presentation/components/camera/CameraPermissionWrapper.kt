@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -113,7 +114,7 @@ private fun PermissionRationaleContent(
         Spacer(modifier = Modifier.height(24.dp))
         
         Text(
-            text = "Permiso de Cámara Requerido",
+            text = stringResource(R.string.camera_permission_title),
             style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurface
@@ -122,7 +123,7 @@ private fun PermissionRationaleContent(
         Spacer(modifier = Modifier.height(12.dp))
         
         Text(
-            text = "Necesitamos acceso a la cámara para que puedas ver tus movimientos faciales mientras realizas los ejercicios de rehabilitación.",
+            text = stringResource(R.string.camera_permission_desc),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -136,7 +137,7 @@ private fun PermissionRationaleContent(
                 containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
-            Text("Permitir Acceso a Cámara")
+            Text(stringResource(R.string.camera_permission_button))
         }
     }
 }

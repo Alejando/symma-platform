@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { EnumLabel } from "@/components/ui/enum-label";
 import type { Patient } from '@symma/shared-types';
 import { formatPhoneNumber } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -26,7 +28,7 @@ function getStatusBadge(status: string) {
 
 function formatDate(dateString: string): string {
   try {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('es-MX', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -37,12 +39,14 @@ function formatDate(dateString: string): string {
 }
 
 export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) {
+  const t = useTranslations('common');
+
   if (patients.length === 0) {
     return (
       <div className="bg-white rounded-xl border border-[#e7f3f2] p-12 text-center">
         <span className="material-symbols-outlined text-4xl text-gray-300 mb-3">group_off</span>
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">No patients yet</h3>
-        <p className="text-gray-500 text-sm">Add your first patient to get started.</p>
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">{t('messages.noPatientsYet')}</h3>
+        <p className="text-gray-500 text-sm">{t('messages.addFirstPatient')}</p>
       </div>
     );
   }
@@ -55,22 +59,22 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
           <thead className="bg-gray-50 border-b border-[#e7f3f2]">
             <tr>
               <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Patient
+                {t('labels.patient')}
               </th>
               <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Email
+                {t('labels.email')}
               </th>
               <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                DOB
+                {t('labels.dob')}
               </th>
               <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Status
+                {t('labels.status')}
               </th>
               <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Diagnosis
+                {t('labels.diagnosis')}
               </th>
               <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Actions
+                {t('labels.actions')}
               </th>
             </tr>
           </thead>
@@ -108,7 +112,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                       patient.status
                     )}`}
                   >
-                    {patient.status}
+                    <EnumLabel enumName="PatientStatus" value={patient.status} />
                   </span>
                 </td>
                 <td className="px-6 py-4">
@@ -123,7 +127,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                       size="icon-sm"
                       onClick={() => onEdit(patient)}
                       className="hover:bg-[#0d9488]/10 group"
-                      title="Edit"
+                      title={t('buttons.edit')}
                     >
                       <span className="material-symbols-outlined text-gray-400 group-hover:text-[#0d9488] text-xl">
                         edit
@@ -134,7 +138,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                       size="icon-sm"
                       onClick={() => onDelete(patient)}
                       className="hover:bg-red-50 group"
-                      title="Archive"
+                      title={t('buttons.archive')}
                     >
                       <span className="material-symbols-outlined text-gray-400 group-hover:text-red-600 text-xl">
                         archive
@@ -176,7 +180,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                       patient.status
                     )}`}
                   >
-                    {patient.status}
+                    <EnumLabel enumName="PatientStatus" value={patient.status} />
                   </span>
                 </div>
                 <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
@@ -192,7 +196,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                     className="flex-1 text-sm font-medium text-[#0d9488] hover:bg-[#0d9488]/10"
                   >
                     <span className="material-symbols-outlined text-lg">edit</span>
-                    Edit
+                    {t('buttons.edit')}
                   </Button>
                   <Button
                     variant="ghost"
@@ -200,7 +204,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                     className="flex-1 text-sm font-medium text-red-600 hover:bg-red-50"
                   >
                     <span className="material-symbols-outlined text-lg">archive</span>
-                    Archive
+                    {t('buttons.archive')}
                   </Button>
                 </div>
               </div>

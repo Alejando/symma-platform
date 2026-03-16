@@ -347,6 +347,9 @@ class PlayerViewModel @Inject constructor(
                     repCompleted = true
                 }
             }
+            else -> {
+                // Other types are either auto-completed or skipped
+            }
         }
         
         wasTargetReached = isTargetReached

@@ -2,6 +2,19 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { RoutineBuilder } from './routine-builder';
 import type { ExerciseResponse, Patient } from '@symma/shared-types';
 import { vi, describe, it, expect } from 'vitest';
+import { NextIntlClientProvider } from 'next-intl';
+
+const mockTranslations = {
+  ExerciseCategory: {
+    CORE: 'Principal',
+  },
+  ExerciseType: {
+    ISOMETRIC: 'Isométrico',
+  },
+  MobileModule: {
+    SMILE: 'Sonrisa',
+  }
+};
 
 const mockExercise: ExerciseResponse = {
   id: 'ex-1',
@@ -41,13 +54,15 @@ describe('RoutineBuilder', () => {
     const handleSubmit = vi.fn();
 
     render(
-      <RoutineBuilder
-        patients={[mockPatient]}
-        items={[]}
-        onItemsChange={setItems}
-        onSubmit={handleSubmit}
-        loading={false}
-      />
+      <NextIntlClientProvider locale="es" messages={{ enums: mockTranslations }}>
+        <RoutineBuilder
+          patients={[mockPatient]}
+          items={[]}
+          onItemsChange={setItems}
+          onSubmit={handleSubmit}
+          loading={false}
+        />
+      </NextIntlClientProvider>
     );
 
     expect(screen.getByText(/Select Patient/i)).toBeInTheDocument();
@@ -72,14 +87,16 @@ describe('RoutineBuilder', () => {
 
 
     render(
-      <RoutineBuilder
-        patients={[mockPatient]}
-        preSelectedPatientId="p-1"
-        items={items}
-        onItemsChange={setItems}
-        onSubmit={handleSubmit}
-        loading={false}
-      />
+      <NextIntlClientProvider locale="es" messages={{ enums: mockTranslations }}>
+        <RoutineBuilder
+          patients={[mockPatient]}
+          preSelectedPatientId="p-1"
+          items={items}
+          onItemsChange={setItems}
+          onSubmit={handleSubmit}
+          loading={false}
+        />
+      </NextIntlClientProvider>
     );
 
     expect(screen.getByText('Test Exercise')).toBeInTheDocument();

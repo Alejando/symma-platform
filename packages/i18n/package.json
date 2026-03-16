@@ -1,0 +1,26 @@
+{
+  "name": "@symma/i18n",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./locales/*.json": "./src/locales/*.json",
+    "./locales/*": "./src/locales/*",
+    "./src/locales/*.json": "./src/locales/*.json",
+    "./src/locales/*": "./src/locales/*"
+  },
+  "scripts": {
+    "lint": "eslint \"src/**/*.ts*\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "eslint": "^9.21.0",
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.18"
+  }
+}

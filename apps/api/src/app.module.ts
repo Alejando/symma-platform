@@ -11,12 +11,16 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { MobileModule } from './mobile/mobile.module';
 import { SessionsModule } from './sessions/sessions.module';
+import { AppI18nModule } from './i18n/i18n.module';
+import { APP_FILTER } from '@nestjs/core';
+import { I18nExceptionFilter } from './common/filters/i18n-exception.filter';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    AppI18nModule,
     PrismaModule,
     AuthModule,
     PatientsModule,
@@ -28,6 +32,12 @@ import { SessionsModule } from './sessions/sessions.module';
     SessionsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_FILTER,
+      useClass: I18nExceptionFilter,
+    },
+  ],
 })
 export class AppModule {}

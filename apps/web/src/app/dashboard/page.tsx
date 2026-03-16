@@ -1,5 +1,6 @@
 import { auth } from '@/auth';
 import { getDashboardStats } from '@/lib/api';
+import { getTranslations } from 'next-intl/server';
 import { DashboardKPIs } from './_components/DashboardKPIs';
 import { DashboardActions } from './_components/DashboardActions';
 import { RiskList } from './_components/RiskList';
@@ -11,12 +12,21 @@ type SessionUserWithAccessToken = {
 export default async function DashboardPage() {
   const session = await auth();
   const firstName = session?.user?.name?.split(' ')[0] || 'Doctor';
-  const currentDate = new Date().toLocaleDateString('en-US', {
+  const t = await getTranslations('common');
+  
+  const currentDate = new Date().toLocaleDateString('es-MX', {
     weekday: 'long',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return t('dashboard.goodMorning', { name: firstName });
+    if (hour < 18) return t('dashboard.goodAfternoon', { name: firstName });
+    return t('dashboard.goodEvening', { name: firstName });
+  };
 
   let dashboardData = null;
 
@@ -45,10 +55,10 @@ export default async function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-[#0d1b1a] tracking-tight">
-            Good Morning, {firstName}
+            {getGreeting()}
           </h2>
           <p className="text-[#4c9a93] mt-1 font-medium">
-            Here&apos;s what&apos;s happening with your patients today.
+            {t('dashboard.whatsHappening')}
           </p>
         </div>
         <div className="flex items-center gap-2 text-gray-500 bg-white px-4 py-2 rounded-lg border border-[#e7f3f2] shadow-sm">
