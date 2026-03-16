@@ -1,11 +1,13 @@
 "use client"
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Area, CartesianGrid, ComposedChart, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis } from "recharts";
 import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import type { HistoryItemSummary } from "@symma/shared-types";
 
 export type MetricType = "score" | "reps" | "time";
@@ -47,17 +49,6 @@ export function getSelectedSessions(
   return sessions.filter((session) => selectedIds.has(session.id));
 }
 
-const METRIC_LABELS: Record<MetricType, string> = {
-  score: "Score",
-  reps: "Repetitions",
-  time: "Time",
-};
-
-const METRIC_UNITS: Record<MetricType, string> = {
-  score: "%",
-  reps: " reps",
-  time: " min",
-};
 
 function getMetricValue(
   session: SessionChartPoint,
@@ -91,8 +82,21 @@ function getMetricValue(
 }
 
 export function ProgressChart({ data, sessions = [], selectedIds, exercises = [] }: ProgressChartProps) {
+  const t = useTranslations('common');
   const [metric, setMetric] = useState<MetricType>("score");
   const [selectedExercise, setSelectedExercise] = useState<string>("average");
+
+  const METRIC_LABELS: Record<MetricType, string> = {
+    score: t('analytics.score'),
+    reps: t('analytics.repetitions'),
+    time: t('analytics.time'),
+  };
+
+  const METRIC_UNITS: Record<MetricType, string> = {
+    score: "%",
+    reps: " reps",
+    time: " min",
+  };
 
   const selectedSessions = getSelectedSessions(sessions, selectedIds);
 
@@ -121,21 +125,21 @@ export function ProgressChart({ data, sessions = [], selectedIds, exercises = []
   return (
     <Card className="col-span-2">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>Performance Trend</CardTitle>
+        <CardTitle>{t('analytics.performanceTrend')}</CardTitle>
         <div className="flex items-center gap-4">
           <Tabs value={metric} onValueChange={(value) => setMetric(value as MetricType)}>
             <TabsList className="h-8">
-              <TabsTrigger value="score" className="text-xs px-2 py-1">Score</TabsTrigger>
-              <TabsTrigger value="reps" className="text-xs px-2 py-1">Reps</TabsTrigger>
-              <TabsTrigger value="time" className="text-xs px-2 py-1">Time</TabsTrigger>
+              <TabsTrigger value="score" className="text-xs px-2 py-1">{t('analytics.score')}</TabsTrigger>
+              <TabsTrigger value="reps" className="text-xs px-2 py-1">{t('labels.reps')}</TabsTrigger>
+              <TabsTrigger value="time" className="text-xs px-2 py-1">{t('analytics.time')}</TabsTrigger>
             </TabsList>
           </Tabs>
           <Select value={selectedExercise} onValueChange={setSelectedExercise}>
             <SelectTrigger className="w-[180px] h-8 text-xs">
-              <SelectValue placeholder="Select exercise" />
+              <SelectValue placeholder={t('analytics.selectExercise')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="average">All Exercises (Avg)</SelectItem>
+              <SelectItem value="average">{t('analytics.allExercisesAvg')}</SelectItem>
               {exercises.map((exercise) => (
                 <SelectItem key={exercise.id} value={exercise.id}>
                   {exercise.name}
@@ -190,7 +194,7 @@ export function ProgressChart({ data, sessions = [], selectedIds, exercises = []
                   
                   let formattedDate = '';
                   try {
-                    formattedDate = typeof label === 'string' ? format(parseISO(label), "MMM do, yyyy") : String(label);
+                    formattedDate = typeof label === 'string' ? format(parseISO(label), "d 'de' MMM, yyyy", { locale: es }) : String(label);
                   } catch {
                     formattedDate = String(label);
                   }

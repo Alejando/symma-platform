@@ -1,0 +1,22 @@
+{
+  "required": "Este campo es obligatorio",
+  "email": "Debe ser un correo electrónico válido",
+  "invalidEmail": "Formato de correo inválido",
+  "minLength": "Debe tener al menos {min} caracteres",
+  "maxLength": "Debe tener como máximo {max} caracteres",
+  "min": "El valor debe ser mayor o igual a {min}",
+  "max": "El valor debe ser menor o igual a {max}",
+  "matches": "El formato no es válido",
+  "password": "La contraseña debe contener al menos 8 caracteres, una letra mayúscula, una letra minúscula y un número",
+  "passwordsMatch": "Las contraseñas no coinciden",
+  "date": "Debe ser una fecha válida",
+  "futureDate": "La fecha debe estar en el futuro",
+  "pastDate": "La fecha debe estar en el pasado",
+  "firstNameRequired": "El nombre es obligatorio",
+  "lastNameRequired": "El apellido es obligatorio",
+  "emailRequired": "El correo es obligatorio",
+  "dateOfBirthRequired": "La fecha de nacimiento es obligatoria",
+  "phoneDigits": "El teléfono debe tener 10 dígitos",
+  "keyNameRequired": "El nombre clave es obligatorio",
+  "nameRequired": "El nombre es obligatorio"
+}

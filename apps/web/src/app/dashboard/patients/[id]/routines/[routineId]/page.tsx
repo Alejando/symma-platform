@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import type { RoutineHistoryItem, RoutineStatsResponse, HistoryItemSummary } from "@symma/shared-types";
 import { RoutineStatsCards } from "@/components/analytics/RoutineStatsCards";
 import { ProgressChart } from "@/components/analytics/ProgressChart";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import { Eye } from "lucide-react";
 
 import { useSession } from "next-auth/react";
@@ -30,6 +32,7 @@ export default function RoutineAnalyticsPage() {
   const patientId = params.id as string;
   const routineId = params.routineId as string;
   const { data: session } = useSession();
+  const t = useTranslations('common');
   const [stats, setStats] = useState<RoutineStatsResponse | null>(null);
   const [history, setHistory] = useState<SessionWithColor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,16 +106,16 @@ export default function RoutineAnalyticsPage() {
   // Fallback for demo if no data or error
   // Wait, if no data, stats might be null.
   if (!stats) {
-    return <div className="p-8">No data available</div>;
+    return <div className="p-8">{t('analytics.noDataAvailable')}</div>;
   }
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Routine Analytics</h2>
+          <h2 className="text-3xl font-bold tracking-tight">{t('analytics.routineAnalytics')}</h2>
           <p className="text-muted-foreground">
-            Detailed performance metrics and history.
+            {t('analytics.detailedMetrics')}
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -131,7 +134,7 @@ export default function RoutineAnalyticsPage() {
         <div className="col-span-4 md:col-span-2">
           <Card className="h-full">
             <CardHeader>
-              <CardTitle>Prescribed Exercises</CardTitle>
+              <CardTitle>{t('analytics.prescribedExercises')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -156,26 +159,26 @@ export default function RoutineAnalyticsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Session History</CardTitle>
+          <CardTitle>{t('analytics.sessionHistory')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('analytics.date')}</TableHead>
+                <TableHead>{t('routineDetail.duration')}</TableHead>
+                <TableHead>{t('analytics.score')}</TableHead>
+                <TableHead className="text-right">{t('labels.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {history.map((sessionItem) => (
                 <TableRow key={sessionItem.id}>
-                  <TableCell>{format(parseISO(sessionItem.date), "PPP")}</TableCell>
-                  <TableCell>{Math.floor(sessionItem.durationSeconds / 60)} min</TableCell>
+                  <TableCell>{format(parseISO(sessionItem.date), "PPP", { locale: es })}</TableCell>
+                  <TableCell>{t('analytics.min', { minutes: Math.floor(sessionItem.durationSeconds / 60) })}</TableCell>
                   <TableCell>{sessionItem.score}%</TableCell>
                   <TableCell className="text-right">
-                    <Button asChild size="icon" variant="ghost" title="View Details">
+                    <Button asChild size="icon" variant="ghost" title={t('analytics.viewDetails')}>
                       <Link href={`/dashboard/patients/${patientId}/routines/${routineId}/sessions/${sessionItem.id}`}>
                         <Eye className="h-4 w-4" />
                       </Link>

@@ -34,3 +34,26 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Internationalization (i18n)
+
+The web app uses `next-intl` for translations and shares strings with the `@symma/i18n` package.
+
+To use translations in a Server or Client Component:
+
+```tsx
+import { useTranslations } from 'next-intl';
+
+export function MyComponent() {
+  const t = useTranslations('common');
+  return <div>{t('labels.name')}</div>; // Renders "Nombre"
+}
+```
+
+For enums, use the provided `EnumLabel` component:
+
+```tsx
+import { EnumLabel } from '@/components/ui/enum-label';
+
+<EnumLabel enumName="PatientStatus" value="ACTIVE" /> // Renders "Activo"
+```

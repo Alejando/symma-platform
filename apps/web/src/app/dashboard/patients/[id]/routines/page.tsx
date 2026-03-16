@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import { getPatientRoutines, cloneRoutine, deleteRoutine } from '@/lib/api';
 import type { Routine } from '@symma/shared-types';
 import { Button } from '@/components/ui/button';
+import { EnumLabel } from '@/components/ui/enum-label';
 
 import { use } from 'react';
 
@@ -18,6 +20,7 @@ export default function PatientRoutinesPage({
   const { id } = use(params);
   const { data: session } = useSession();
   const router = useRouter();
+  const t = useTranslations('common');
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -55,7 +58,7 @@ export default function PatientRoutinesPage({
 
   const handleDelete = async (routineId: string, routineName: string) => {
     if (!session?.user?.accessToken) return;
-    if (!confirm(`Are you sure you want to delete "${routineName}"?`)) return;
+    if (!confirm(t('routineDetail.confirmDeleteRoutine', { name: routineName }))) return;
 
     setActionLoading(routineId);
     try {
@@ -87,7 +90,7 @@ export default function PatientRoutinesPage({
 
       {/* Active Routine Section */}
       <section>
-        <h2 className="text-base md:text-lg font-semibold text-[#0d1b1a] mb-3 md:mb-4">Active Routine</h2>
+        <h2 className="text-base md:text-lg font-semibold text-[#0d1b1a] mb-3 md:mb-4">{t('routineDetail.activeRoutine')}</h2>
         {activeRoutines.length > 0 ? (
           <div className="grid gap-4">
             {activeRoutines.map((routine) => (
@@ -99,18 +102,18 @@ export default function PatientRoutinesPage({
                   <div className="min-w-0">
                     <h3 className="text-lg md:text-xl font-bold text-[#0d1b1a] mb-1 truncate">{routine.name}</h3>
                     <p className="text-sm text-gray-500">
-                      Started {new Date(routine.startDate).toLocaleDateString()}
+                      {t('routineDetail.started')} {new Date(routine.startDate).toLocaleDateString('es-MX')}
                     </p>
                   </div>
                   <div className="flex sm:flex-col items-center sm:items-end gap-2">
                     <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide">
-                      Active
+                      {t('routineDetail.active')}
                     </span>
                     <Link
                       href={`/dashboard/patients/${id}/routines/${routine.id}`}
                       className="text-sm text-[#0d9488] hover:text-[#0f766e] font-medium flex items-center gap-1"
                     >
-                      Analytics
+                      {t('routineDetail.analytics')}
                       <span className="material-symbols-outlined text-sm">arrow_forward</span>
                     </Link>
                   </div>
@@ -123,7 +126,7 @@ export default function PatientRoutinesPage({
                 )}
 
                 <div className="border-t border-[#e7f3f2] pt-4">
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Exercises</h4>
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{t('nav.exercises')}</h4>
                   <div className="flex flex-wrap gap-2">
                     {routine.items?.map((item) => (
                       <span
@@ -146,7 +149,7 @@ export default function PatientRoutinesPage({
                     className="inline-flex items-center gap-1 px-2 md:px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
                   >
                     <span className="material-symbols-outlined text-[18px]">edit</span>
-                    <span className="hidden sm:inline">Edit</span>
+                    <span className="hidden sm:inline">{t('buttons.edit')}</span>
                   </Link>
                   <Button
                     variant="ghost"
@@ -156,7 +159,7 @@ export default function PatientRoutinesPage({
                     className="text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100"
                   >
                     <span className="material-symbols-outlined text-[18px]">content_copy</span>
-                    <span className="hidden sm:inline">Clone</span>
+                    <span className="hidden sm:inline">{t('routineDetail.clone')}</span>
                   </Button>
                   <Button
                     variant="ghost"
@@ -166,7 +169,7 @@ export default function PatientRoutinesPage({
                     className="text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 ml-auto"
                   >
                     <span className="material-symbols-outlined text-[18px]">delete</span>
-                    <span className="hidden sm:inline">Delete</span>
+                    <span className="hidden sm:inline">{t('buttons.delete')}</span>
                   </Button>
                 </div>
               </div>
@@ -175,8 +178,8 @@ export default function PatientRoutinesPage({
         ) : (
           <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
             <span className="material-symbols-outlined text-gray-300 text-4xl mb-2">assignment_late</span>
-            <p className="text-gray-500 font-medium">No active routine assigned</p>
-            <p className="text-sm text-gray-400 mt-1">Assign a new routine to get started</p>
+            <p className="text-gray-500 font-medium">{t('routineDetail.noActiveRoutine')}</p>
+            <p className="text-sm text-gray-400 mt-1">{t('routineDetail.assignNewRoutine')}</p>
           </div>
         )}
       </section>
@@ -184,7 +187,7 @@ export default function PatientRoutinesPage({
       {/* History Section */}
       {historyRoutines.length > 0 && (
         <section>
-          <h2 className="text-base md:text-lg font-semibold text-[#0d1b1a] mb-3 md:mb-4">Routine History</h2>
+          <h2 className="text-base md:text-lg font-semibold text-[#0d1b1a] mb-3 md:mb-4">{t('routineDetail.routineHistory')}</h2>
 
           {/* Desktop Table */}
           <div className="hidden md:block bg-white border border-[#e7f3f2] rounded-xl overflow-hidden shadow-sm">
@@ -192,16 +195,16 @@ export default function PatientRoutinesPage({
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Routine Name
+                    {t('routineDetail.routineName')}
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Duration
+                    {t('routineDetail.duration')}
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Exercises
+                    {t('nav.exercises')}
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    {t('labels.status')}
                   </th>
                 </tr>
               </thead>
@@ -217,8 +220,8 @@ export default function PatientRoutinesPage({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500">
-                        {new Date(routine.startDate).toLocaleDateString()} -{' '}
-                        {routine.endDate ? new Date(routine.endDate).toLocaleDateString() : 'Present'}
+                        {new Date(routine.startDate).toLocaleDateString('es-MX')} -{' '}
+                        {routine.endDate ? new Date(routine.endDate).toLocaleDateString('es-MX') : t('routineDetail.present')}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -230,14 +233,14 @@ export default function PatientRoutinesPage({
                         ))}
                         {(routine.items?.length || 0) > 3 && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                            +{routine.items!.length - 3} more
+                            {t('routineDetail.more', { count: routine.items!.length - 3 })}
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                        {routine.status === 'ARCHIVED' ? 'Archived' : 'Completed'}
+                        <EnumLabel enumName="RoutineStatus" value={routine.status} />
                       </span>
                     </td>
                   </tr>
@@ -262,11 +265,11 @@ export default function PatientRoutinesPage({
                       {routine.name}
                     </Link>
                     <p className="text-xs text-gray-500 mt-1">
-                      {new Date(routine.startDate).toLocaleDateString()} - {routine.endDate ? new Date(routine.endDate).toLocaleDateString() : 'Present'}
+                      {new Date(routine.startDate).toLocaleDateString('es-MX')} - {routine.endDate ? new Date(routine.endDate).toLocaleDateString('es-MX') : t('routineDetail.present')}
                     </p>
                   </div>
                   <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 shrink-0">
-                    {routine.status === 'ARCHIVED' ? 'Archived' : 'Completed'}
+                    <EnumLabel enumName="RoutineStatus" value={routine.status} />
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1">
@@ -277,7 +280,7 @@ export default function PatientRoutinesPage({
                   ))}
                   {(routine.items?.length || 0) > 2 && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
-                      +{routine.items!.length - 2} more
+                      {t('routineDetail.more', { count: routine.items!.length - 2 })}
                     </span>
                   )}
                 </div>

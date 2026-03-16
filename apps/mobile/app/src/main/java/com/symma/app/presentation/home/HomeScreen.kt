@@ -30,10 +30,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.symma.app.R
 import com.symma.app.domain.model.Routine
 import com.symma.app.presentation.components.design.SymmaButton
 import com.symma.app.presentation.components.design.SymmaButtonVariant
@@ -96,11 +98,11 @@ fun HomeScreen(
 private fun HomeHeader() {
     val today = LocalDate.now()
     val greeting = when (today.atStartOfDay().hour) {
-        in 0..11 -> "Good Morning"
-        in 12..17 -> "Good Afternoon"
-        else -> "Good Evening"
+        in 0..11 -> stringResource(R.string.home_greeting_morning)
+        in 12..17 -> stringResource(R.string.home_greeting_afternoon)
+        else -> stringResource(R.string.home_greeting_evening)
     }
-    val dateFormatter = DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.getDefault())
+    val dateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale("es", "ES"))
 
     Column {
         Text(
@@ -110,7 +112,7 @@ private fun HomeHeader() {
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
-            text = today.format(dateFormatter),
+            text = today.format(dateFormatter).replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("es", "ES")) else it.toString() },
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -169,7 +171,7 @@ private fun RoutineCard(
         // Content is already padded by SymmaCard
         
         Text(
-            text = "Today's Therapy",
+            text = stringResource(R.string.home_today_therapy),
             style = MaterialTheme.typography.bodyMedium, // instructions
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
         )
@@ -182,14 +184,14 @@ private fun RoutineCard(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "${routine.items.size} exercises",
+            text = stringResource(R.string.home_exercises_count, routine.items.size),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
         )
         Spacer(modifier = Modifier.height(20.dp))
         
         SymmaButton(
-            text = "Start Session",
+            text = stringResource(R.string.home_start_session),
             onClick = onStartSession,
             modifier = Modifier.fillMaxWidth()
         )
@@ -212,14 +214,14 @@ private fun EmptyCard(onRetry: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "No Routine Found",
+                text = stringResource(R.string.home_no_routine_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Please check your internet connection or contact your therapist.",
+                text = stringResource(R.string.home_no_routine_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
@@ -231,7 +233,7 @@ private fun EmptyCard(onRetry: () -> Unit) {
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.size(6.dp))
-                Text("Try Again")
+                Text(stringResource(R.string.home_try_again))
             }
         }
     }
@@ -256,7 +258,7 @@ private fun ErrorCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Sync Error",
+                text = stringResource(R.string.home_sync_error),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onErrorContainer
@@ -275,7 +277,7 @@ private fun ErrorCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.size(6.dp))
-                Text("Retry")
+                Text(stringResource(R.string.home_retry))
             }
         }
     }
@@ -298,9 +300,9 @@ private fun SyncFooter(
     ) {
         Text(
             text = if (lastSyncedAt != null) {
-                "Last sync: ${dateFormat.format(Date(lastSyncedAt))}"
+                stringResource(R.string.home_last_sync, dateFormat.format(Date(lastSyncedAt)))
             } else {
-                "Not synced yet"
+                stringResource(R.string.home_not_synced)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
@@ -318,13 +320,13 @@ private fun SyncFooter(
             } else {
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = "Sync",
+                    contentDescription = stringResource(R.string.home_sync),
                     modifier = Modifier.size(16.dp)
                 )
             }
             Spacer(modifier = Modifier.size(4.dp))
             Text(
-                text = if (isSyncing) "Syncing..." else "Sync",
+                text = if (isSyncing) stringResource(R.string.home_syncing) else stringResource(R.string.home_sync),
                 style = MaterialTheme.typography.bodySmall
             )
         }

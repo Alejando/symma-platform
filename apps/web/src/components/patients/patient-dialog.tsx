@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import type { Patient, CreatePatientDto, UpdatePatientDto, Gender } from '@symma/shared-types';
 import { Button } from '@/components/ui/button';
 
@@ -12,25 +13,30 @@ interface PatientDialogProps {
   onSubmit: (data: CreatePatientDto | UpdatePatientDto) => Promise<void>;
 }
 
-const genderOptions: { value: Gender; label: string }[] = [
-  { value: 'MALE', label: 'Male' },
-  { value: 'FEMALE', label: 'Female' },
-  { value: 'OTHER', label: 'Other' },
+const getGenderOptions = (t: ReturnType<typeof useTranslations<'common'>>): { value: Gender; label: string }[] => [
+  { value: 'MALE', label: t('gender.male') },
+  { value: 'FEMALE', label: t('gender.female') },
+  { value: 'OTHER', label: t('gender.other') },
 ];
 
-const paralysisOptions = [
-  { value: 1, label: 'I - Normal' },
-  { value: 2, label: 'II - Slight' },
-  { value: 3, label: 'III - Moderate' },
-  { value: 4, label: 'IV - Moderately Severe' },
-  { value: 5, label: 'V - Severe' },
-  { value: 6, label: 'VI - Total' },
+const getParalysisOptions = (t: ReturnType<typeof useTranslations<'common'>>) => [
+  { value: 1, label: t('paralysis.grade1') },
+  { value: 2, label: t('paralysis.grade2') },
+  { value: 3, label: t('paralysis.grade3') },
+  { value: 4, label: t('paralysis.grade4') },
+  { value: 5, label: t('paralysis.grade5') },
+  { value: 6, label: t('paralysis.grade6') },
 ];
 
 export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDialogProps) {
   const router = useRouter();
+  const t = useTranslations('common');
+  const tVal = useTranslations('validation');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const genderOptions = getGenderOptions(t);
+  const paralysisOptions = getParalysisOptions(t);
 
   const [formData, setFormData] = useState({
     firstName: patient?.firstName || '',
@@ -110,25 +116,25 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    if (!formData.firstName.trim()) newErrors.firstName = tVal('firstNameRequired');
+    if (!formData.lastName.trim()) newErrors.lastName = tVal('lastNameRequired');
+    if (!formData.email.trim()) newErrors.email = tVal('emailRequired');
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = tVal('invalidEmail');
     }
-    if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
+    if (!formData.dateOfBirth) newErrors.dateOfBirth = tVal('dateOfBirthRequired');
 
     // Validate phone length if present
     if (formData.phoneNumber) {
       const digits = formData.phoneNumber.replace(/\D/g, '');
       if (digits.length !== 10) {
-        newErrors.phoneNumber = 'Phone number must be 10 digits';
+        newErrors.phoneNumber = tVal('phoneDigits');
       }
     }
     if (formData.emergencyContactPhone) {
       const digits = formData.emergencyContactPhone.replace(/\D/g, '');
       if (digits.length !== 10) {
-        newErrors.emergencyContactPhone = 'Phone number must be 10 digits';
+        newErrors.emergencyContactPhone = tVal('phoneDigits');
       }
     }
 
@@ -174,7 +180,7 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
       router.refresh();
     } catch (error) {
       console.error('Failed to save patient:', error);
-      setErrors({ submit: error instanceof Error ? error.message : 'Failed to save patient' });
+      setErrors({ submit: error instanceof Error ? error.message : t('messages.failedToSave') });
     } finally {
       setLoading(false);
     }
@@ -192,7 +198,7 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-[#0d1b1a]">
-            {patient ? 'Edit Patient' : 'Add New Patient'}
+            {patient ? t('patients.editPatient') : t('patients.addNewPatient')}
           </h2>
           <Button
             variant="ghost"
@@ -214,12 +220,12 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
           {/* Personal Information */}
           <div>
             <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
-              Personal Information
+              {t('patients.personalInfo')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  First Name <span className="text-red-500">*</span>
+                  {t('labels.firstName')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -237,7 +243,7 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Last Name <span className="text-red-500">*</span>
+                  {t('labels.lastName')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -255,7 +261,7 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email <span className="text-red-500">*</span>
+                  {t('labels.email')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
@@ -273,7 +279,7 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date of Birth <span className="text-red-500">*</span>
+                  {t('labels.dateOfBirth')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -290,7 +296,7 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Gender
+                  {t('labels.gender')}
                 </label>
                 <select
                   name="gender"
@@ -298,7 +304,7 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
                 >
-                  <option value="">Select gender</option>
+                  <option value="">{t('labels.selectGender')}</option>
                   {genderOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
@@ -309,7 +315,7 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number
+                  {t('labels.phoneNumber')}
                 </label>
                 <input
                   type="tel"
@@ -330,12 +336,12 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
           {/* Clinical Information */}
           <div>
             <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
-              Clinical Information
+              {t('patients.clinicalInfo')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Diagnosis
+                  {t('labels.diagnosis')}
                 </label>
                 <textarea
                   name="diagnosis"
@@ -343,13 +349,13 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
                   onChange={handleChange}
                   rows={2}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
-                  placeholder="E.g., Bell's Palsy, Ramsay Hunt Syndrome..."
+                  placeholder={t('patients.diagnosisPlaceholder')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  House-Brackmann Scale
+                  {t('patients.houseBrackmann')}
                 </label>
                 <select
                   name="initialParalysisDegree"
@@ -357,7 +363,7 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
                 >
-                  <option value="">Select grade</option>
+                  <option value="">{t('labels.selectGrade')}</option>
                   {paralysisOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
@@ -368,7 +374,7 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Clinical Notes
+                  {t('patients.clinicalNotes')}
                 </label>
                 <textarea
                   name="clinicalNotes"
@@ -376,7 +382,7 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
                   onChange={handleChange}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
-                  placeholder="Additional notes about the patient..."
+                  placeholder={t('patients.notesPlaceholder')}
                 />
               </div>
             </div>
@@ -385,12 +391,12 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
           {/* Emergency Contact */}
           <div>
             <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
-              Emergency Contact
+              {t('patients.emergencyContact')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Contact Name
+                  {t('patients.contactName')}
                 </label>
                 <input
                   type="text"
@@ -398,13 +404,13 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
                   value={formData.emergencyContactName}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
-                  placeholder="Emergency contact name"
+                  placeholder={t('patients.contactName')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Contact Phone
+                  {t('patients.contactPhone')}
                 </label>
                 <input
                   type="tel"
@@ -430,14 +436,14 @@ export function PatientDialog({ isOpen, onClose, patient, onSubmit }: PatientDia
               onClick={onClose}
               className="text-sm font-medium text-gray-700"
             >
-              Cancel
+              {t('buttons.cancel')}
             </Button>
             <Button
               type="submit"
               disabled={loading}
               className="px-6 text-sm font-bold text-white bg-[#0d9488] hover:bg-[#0b857a] shadow-sm"
             >
-              {loading ? 'Saving...' : patient ? 'Save Changes' : 'Add Patient'}
+              {loading ? t('buttons.saving') : patient ? t('buttons.saveChanges') : t('buttons.addPatient')}
             </Button>
           </div>
         </form>

@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import { useTranslations } from 'next-intl';
 
 interface DashboardMetrics {
   activePatients: { value: number; trend: number };
@@ -7,6 +10,7 @@ interface DashboardMetrics {
 }
 
 export function DashboardKPIs({ metrics }: { metrics: DashboardMetrics }) {
+  const t = useTranslations('common');
   const hasAlerts = metrics.complianceAlerts.value > 0;
 
   return (
@@ -16,14 +20,14 @@ export function DashboardKPIs({ metrics }: { metrics: DashboardMetrics }) {
         <div className="absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-[#0d9488]/5 to-transparent"></div>
         <div className="flex justify-between items-start z-10">
           <div>
-            <p className="text-sm font-medium text-gray-500">Active Patients</p>
+            <p className="text-sm font-medium text-gray-500">{t('dashboard.activePatients')}</p>
             <h3 className="text-3xl font-bold text-[#0d1b1a] mt-2">{metrics.activePatients.value}</h3>
           </div>
           <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
             <span className="material-symbols-outlined text-sm">trending_up</span> {metrics.activePatients.trend > 0 ? '+' : ''}{metrics.activePatients.trend}%
           </span>
         </div>
-        <p className="text-xs text-gray-400 mt-auto z-10">vs. last month</p>
+        <p className="text-xs text-gray-400 mt-auto z-10">{t('time.vsLastMonth')}</p>
       </div>
 
       {/* Compliance Alerts */}
@@ -31,9 +35,9 @@ export function DashboardKPIs({ metrics }: { metrics: DashboardMetrics }) {
         {hasAlerts && <div className="absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-[#E11D48]/5 to-transparent"></div>}
         <div className="flex justify-between items-start z-10">
           <div>
-            <p className="text-sm font-medium text-gray-500">Compliance Alerts</p>
+            <p className="text-sm font-medium text-gray-500">{t('dashboard.complianceAlerts')}</p>
             <h3 className={`text-3xl font-bold mt-2 ${hasAlerts ? 'text-[#E11D48]' : 'text-[#0d1b1a]'}`}>
-              {metrics.complianceAlerts.value} <span className="text-base font-normal text-gray-400">Patients</span>
+              {metrics.complianceAlerts.value} <span className="text-base font-normal text-gray-400">{t('labels.patients')}</span>
             </h3>
           </div>
           {hasAlerts ? (
@@ -47,7 +51,7 @@ export function DashboardKPIs({ metrics }: { metrics: DashboardMetrics }) {
           )}
         </div>
         <p className={`text-xs font-medium mt-auto z-10 flex items-center gap-1 ${hasAlerts ? 'text-[#E11D48]' : 'text-green-600'}`}>
-          {hasAlerts ? 'Action Required' : 'All clear'}
+          {hasAlerts ? t('dashboard.actionRequired') : t('dashboard.allClear')}
         </p>
       </div>
 
@@ -56,7 +60,7 @@ export function DashboardKPIs({ metrics }: { metrics: DashboardMetrics }) {
         <div className="absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-[#0d9488]/5 to-transparent"></div>
         <div className="flex justify-between items-start z-10">
           <div>
-            <p className="text-sm font-medium text-gray-500">Avg. Efficacy Score</p>
+            <p className="text-sm font-medium text-gray-500">{t('dashboard.avgEfficacy')}</p>
             <h3 className="text-3xl font-bold text-[#0d1b1a] mt-2">{metrics.avgEfficacy.value}%</h3>
           </div>
           <span className="bg-[#0d9488]/10 text-[#0d9488] text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">

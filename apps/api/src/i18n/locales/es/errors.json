@@ -1,0 +1,22 @@
+{
+  "auth": {
+    "unauthorized": "No autorizado",
+    "forbidden": "No tienes permisos para realizar esta acción",
+    "tokenExpired": "Tu sesión ha expirado, por favor inicia sesión nuevamente",
+    "invalidCredentials": "Credenciales inválidas"
+  },
+  "server": {
+    "internalError": "Error interno del servidor",
+    "badRequest": "Solicitud incorrecta",
+    "notFound": "Recurso no encontrado",
+    "timeout": "Tiempo de espera agotado"
+  },
+  "database": {
+    "uniqueConstraint": "Este registro ya existe",
+    "foreignKeyConstraint": "No se puede realizar la operación debido a dependencias relacionadas"
+  },
+  "network": {
+    "offline": "No hay conexión a internet",
+    "syncFailed": "Error al sincronizar datos"
+  }
+}

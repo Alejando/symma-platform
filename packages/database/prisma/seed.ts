@@ -191,11 +191,11 @@ async function main(): Promise<void> {
         isSynced: true,
         items: {
           create: [
-            { exerciseId: exEyes.id,  repsCompleted: 8,  difficulty: 1, averageAccuracy: Math.max(0, acc - 0.05) },
-            { exerciseId: exBrows.id, repsCompleted: 10, difficulty: 1, averageAccuracy: acc },
-            { exerciseId: exSmile.id, repsCompleted: 10, difficulty: 1, averageAccuracy: Math.min(1, acc + 0.02) },
-            { exerciseId: exKiss.id,  repsCompleted: 8,  difficulty: 1, averageAccuracy: Math.max(0, acc - 0.03) },
-            { exerciseId: exJaw.id,   repsCompleted: 5,  difficulty: 0, averageAccuracy: Math.min(1, acc + 0.05) },
+            { exerciseId: exEyes.id,  repsCompleted: 8,  averageAccuracy: Math.max(0, acc - 0.05) },
+            { exerciseId: exBrows.id, repsCompleted: 10, averageAccuracy: acc },
+            { exerciseId: exSmile.id, repsCompleted: 10, averageAccuracy: Math.min(1, acc + 0.02) },
+            { exerciseId: exKiss.id,  repsCompleted: 8,  averageAccuracy: Math.max(0, acc - 0.03) },
+            { exerciseId: exJaw.id,   repsCompleted: 5,  averageAccuracy: Math.min(1, acc + 0.05) },
           ],
         },
       },
@@ -255,9 +255,9 @@ async function main(): Promise<void> {
         isSynced: true,
         items: {
           create: [
-            { exerciseId: exEyes.id,  repsCompleted: 5, difficulty: 0, averageAccuracy: Math.max(0, acc - 0.02) },
-            { exerciseId: exBrows.id, repsCompleted: 4, difficulty: 0, averageAccuracy: acc },
-            { exerciseId: exSmile.id, repsCompleted: 3, difficulty: 0, averageAccuracy: Math.min(1, acc + 0.03) },
+            { exerciseId: exEyes.id,  repsCompleted: 5, averageAccuracy: Math.max(0, acc - 0.02) },
+            { exerciseId: exBrows.id, repsCompleted: 4, averageAccuracy: acc },
+            { exerciseId: exSmile.id, repsCompleted: 3, averageAccuracy: Math.min(1, acc + 0.03) },
           ],
         },
       },
@@ -335,12 +335,12 @@ async function main(): Promise<void> {
         isSynced: true,
         items: {
           create: [
-            { exerciseId: exEyesInverse.id, repsCompleted: 12, difficulty: 2, averageAccuracy: Math.max(0, acc - 0.04) },
-            { exerciseId: exEyes.id,        repsCompleted: 12, difficulty: 2, averageAccuracy: Math.max(0, acc - 0.02) },
-            { exerciseId: exBrows.id,       repsCompleted: 12, difficulty: 2, averageAccuracy: acc },
-            { exerciseId: exSmile.id,       repsCompleted: 12, difficulty: 2, averageAccuracy: Math.min(1, acc + 0.02) },
-            { exerciseId: exKiss.id,        repsCompleted: 10, difficulty: 1, averageAccuracy: acc },
-            { exerciseId: exJaw.id,         repsCompleted: 8,  difficulty: 1, averageAccuracy: Math.min(1, acc + 0.04) },
+            { exerciseId: exEyesInverse.id, repsCompleted: 12, averageAccuracy: Math.max(0, acc - 0.04) },
+            { exerciseId: exEyes.id,        repsCompleted: 12, averageAccuracy: Math.max(0, acc - 0.02) },
+            { exerciseId: exBrows.id,       repsCompleted: 12, averageAccuracy: acc },
+            { exerciseId: exSmile.id,       repsCompleted: 12, averageAccuracy: Math.min(1, acc + 0.02) },
+            { exerciseId: exKiss.id,        repsCompleted: 10, averageAccuracy: acc },
+            { exerciseId: exJaw.id,         repsCompleted: 8,  averageAccuracy: Math.min(1, acc + 0.04) },
           ],
         },
       },
@@ -391,8 +391,8 @@ async function main(): Promise<void> {
       isSynced: true,
       items: {
         create: [
-          { exerciseId: exSmile.id, repsCompleted: 6, difficulty: 0, averageAccuracy: 0.33 },
-          { exerciseId: exBrows.id, repsCompleted: 5, difficulty: 0, averageAccuracy: 0.37 },
+          { exerciseId: exSmile.id, repsCompleted: 6, averageAccuracy: 0.33 },
+          { exerciseId: exBrows.id, repsCompleted: 5, averageAccuracy: 0.37 },
         ],
       },
     },
@@ -407,8 +407,8 @@ async function main(): Promise<void> {
       isSynced: true,
       items: {
         create: [
-          { exerciseId: exSmile.id, repsCompleted: 7, difficulty: 0, averageAccuracy: 0.36 },
-          { exerciseId: exBrows.id, repsCompleted: 6, difficulty: 0, averageAccuracy: 0.40 },
+          { exerciseId: exSmile.id, repsCompleted: 7, averageAccuracy: 0.36 },
+          { exerciseId: exBrows.id, repsCompleted: 6, averageAccuracy: 0.40 },
         ],
       },
     },

@@ -1,5 +1,6 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { Sidebar, Header } from '@/components/layout/sidebar';
 
 export default async function DashboardLayout({
@@ -13,8 +14,10 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
+  const t = await getTranslations('enums.Role');
+
   const userName = session.user.name || 'User';
-  const userRole = session.user.role === 'ADMIN' ? 'Administrator' : 'Therapist';
+  const userRole = session.user.role ? t(session.user.role as any) : t('THERAPIST');
 
   return (
     <div className="flex h-screen w-full font-display text-[#0d1b1a] bg-[#f6f8f8] antialiased overflow-hidden">

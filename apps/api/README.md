@@ -44,6 +44,28 @@ $ pnpm run start:dev
 $ pnpm run start:prod
 ```
 
+## Internationalization (i18n)
+
+The API uses `nestjs-i18n` and shares translations with the web app through the `@symma/i18n` package.
+
+To use the translation service:
+
+```typescript
+import { TranslationService } from '../i18n/i18n.service';
+
+@Injectable()
+export class MyService {
+  constructor(private i18n: TranslationService) {}
+
+  doSomething() {
+    const errorMsg = this.i18n.translateError('auth.unauthorized');
+    const roleName = this.i18n.translateEnum('Role', 'ADMIN');
+  }
+}
+```
+
+The translation JSON files are automatically copied from the `@symma/i18n` package to `src/i18n/locales` before the build process via the `prebuild` script.
+
 ## Run tests
 
 ```bash

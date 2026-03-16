@@ -1,8 +1,10 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { usePatient } from "@/components/patients/patient-context";
 import { PatientAccessCard } from "@/components/patients/patient-access-card";
 import { formatPhoneNumber } from "@/lib/utils";
+import { EnumLabel } from "@/components/ui/enum-label";
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -25,6 +27,7 @@ function LabelValue({ label, value }: { label: string; value: React.ReactNode })
 }
 
 export default function PatientOverviewPage() {
+  const t = useTranslations('common');
   const { patient, loading } = usePatient();
 
   if (loading) {
@@ -36,76 +39,79 @@ export default function PatientOverviewPage() {
   }
 
   if (!patient) {
-    return <div className="text-gray-500">Patient details not found.</div>;
+    return <div className="text-gray-500">{t('patientDetail.notFound')}</div>;
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">
       {/* Personal Information */}
-      <InfoCard title="Personal Information">
+      <InfoCard title={t('patients.personalInfo')}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-          <LabelValue label="First Name" value={patient.firstName} />
-          <LabelValue label="Last Name" value={patient.lastName} />
-          <LabelValue label="Email" value={patient.email} />
-          <LabelValue label="Phone" value={formatPhoneNumber(patient.phoneNumber)} />
+          <LabelValue label={t('labels.firstName')} value={patient.firstName} />
+          <LabelValue label={t('labels.lastName')} value={patient.lastName} />
+          <LabelValue label={t('labels.email')} value={patient.email} />
+          <LabelValue label={t('patientDetail.phone')} value={formatPhoneNumber(patient.phoneNumber)} />
           <LabelValue
-            label="Date of Birth"
-            value={patient.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString() : 'N/A'}
+            label={t('labels.dateOfBirth')}
+            value={patient.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString('es-MX') : t('patientDetail.na')}
           />
-          <LabelValue label="Gender" value={<span className="capitalize">{patient.gender?.toLowerCase()}</span>} />
+          <LabelValue 
+            label={t('labels.gender')} 
+            value={patient.gender ? <EnumLabel enumName="Gender" value={patient.gender} /> : '-'} 
+          />
         </div>
       </InfoCard>
 
       {/* Emergency Contact */}
-      <InfoCard title="Emergency Contact">
+      <InfoCard title={t('patients.emergencyContact')}>
         <div className="space-y-4">
           <div className="bg-red-50 p-4 rounded-lg border border-red-100 flex items-start gap-3">
             <span className="material-symbols-outlined text-red-500 mt-0.5">contact_emergency</span>
             <div>
-              <LabelValue label="Name" value={patient.emergencyContactName} />
+              <LabelValue label={t('labels.name')} value={patient.emergencyContactName} />
               <div className="h-2"></div>
-              <LabelValue label="Phone" value={formatPhoneNumber(patient.emergencyContactPhone)} />
+              <LabelValue label={t('patientDetail.phone')} value={formatPhoneNumber(patient.emergencyContactPhone)} />
             </div>
           </div>
           {!patient.emergencyContactName && (
-            <p className="text-sm text-gray-500 italic">No emergency contact listed.</p>
+            <p className="text-sm text-gray-500 italic">{t('patientDetail.noEmergencyContact')}</p>
           )}
         </div>
       </InfoCard>
 
       {/* Clinical Details */}
-      <InfoCard title="Clinical Details">
+      <InfoCard title={t('patients.clinicalInfo')}>
         <div className="space-y-4">
-          <LabelValue label="Primary Diagnosis" value={patient.diagnosis} />
+          <LabelValue label={t('patientDetail.primaryDiagnosis')} value={patient.diagnosis} />
           <LabelValue
-            label="Initial Paralysis Degree"
+            label={t('patientDetail.initialParalysisDegree')}
             value={
               patient.initialParalysisDegree
-                ? `Grade ${patient.initialParalysisDegree}`
+                ? t('patientDetail.gradeValue', { value: patient.initialParalysisDegree })
                 : undefined
             }
           />
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Clinical Notes</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t('patients.clinicalNotes')}</p>
             <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 text-sm text-gray-700 min-h-[80px]">
-              {patient.clinicalNotes || 'No notes available.'}
+              {patient.clinicalNotes || t('patientDetail.noNotesAvailable')}
             </div>
           </div>
         </div>
       </InfoCard>
 
       {/* Activity Summary (Placeholder) */}
-      <InfoCard title="Quick Stats">
+      <InfoCard title={t('patientDetail.quickStats')}>
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-[#0d9488]/5 p-4 rounded-lg text-center">
             <span className="material-symbols-outlined text-[#0d9488] text-2xl mb-1">check_circle</span>
             <p className="text-2xl font-bold text-[#0d1b1a]">85%</p>
-            <p className="text-xs text-gray-500 font-medium uppercase">Adherence</p>
+            <p className="text-xs text-gray-500 font-medium uppercase">{t('patientDetail.adherence')}</p>
           </div>
           <div className="bg-[#0d9488]/5 p-4 rounded-lg text-center">
             <span className="material-symbols-outlined text-[#0d9488] text-2xl mb-1">fitness_center</span>
             <p className="text-2xl font-bold text-[#0d1b1a]">12</p>
-            <p className="text-xs text-gray-500 font-medium uppercase">Sessions</p>
+            <p className="text-xs text-gray-500 font-medium uppercase">{t('patientDetail.sessions')}</p>
           </div>
         </div>
       </InfoCard>

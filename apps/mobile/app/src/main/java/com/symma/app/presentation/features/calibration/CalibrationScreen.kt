@@ -39,9 +39,11 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.symma.app.R
 import com.symma.app.domain.logic.CalibrationUtils
 import com.symma.app.domain.logic.DistanceState
 import com.symma.app.presentation.components.camera.CameraPermissionWrapper
@@ -232,10 +234,10 @@ fun CalibrationScreen(
                     ) {
                         Text(
                             when {
-                                uiState.isReadyToStart -> "Iniciar Calibración"
-                                uiState.distanceState == DistanceState.TOO_CLOSE -> "Aléjate de la cámara"
-                                uiState.distanceState == DistanceState.TOO_FAR -> "Acércate a la cámara"
-                                else -> "Mantén la posición..."
+                                uiState.isReadyToStart -> stringResource(R.string.calib_start)
+                                uiState.distanceState == DistanceState.TOO_CLOSE -> stringResource(R.string.calib_dist_too_close)
+                                uiState.distanceState == DistanceState.TOO_FAR -> stringResource(R.string.calib_dist_too_far)
+                                else -> stringResource(R.string.calib_hold_position)
                             }
                         )
                     }
@@ -251,10 +253,15 @@ fun DistanceWarningText(
     distanceState: DistanceState,
     modifier: Modifier = Modifier
 ) {
-    val (text, color) = when (distanceState) {
-        DistanceState.TOO_CLOSE -> "⚠️ Muy cerca - Riesgo de distorsión" to Color(0xFFFF5722)
-        DistanceState.TOO_FAR -> "⚠️ Muy lejos - Baja resolución" to Color(0xFFFF9800)
-        DistanceState.OK -> "✓ Distancia correcta" to Color(0xFF4CAF50)
+    val text = when (distanceState) {
+        DistanceState.TOO_CLOSE -> stringResource(R.string.calib_warn_too_close)
+        DistanceState.TOO_FAR -> stringResource(R.string.calib_warn_too_far)
+        DistanceState.OK -> stringResource(R.string.calib_warn_ok)
+    }
+    val color = when (distanceState) {
+        DistanceState.TOO_CLOSE -> Color(0xFFFF5722)
+        DistanceState.TOO_FAR -> Color(0xFFFF9800)
+        DistanceState.OK -> Color(0xFF4CAF50)
     }
     
     Text(
@@ -511,23 +518,24 @@ fun DebugCalibrationOverlay(
     }
 }
 
+@Composable
 fun getInstructionText(phase: CalibrationPhase, step: CalibrationStep, distanceState: DistanceState = DistanceState.OK): String {
     return when (phase) {
         CalibrationPhase.POSITIONING -> when (distanceState) {
-            DistanceState.TOO_CLOSE -> "Aléjate un poco de la cámara"
-            DistanceState.TOO_FAR -> "Acércate un poco a la cámara"
-            DistanceState.OK -> "Mantén la posición 1 segundo"
+            DistanceState.TOO_CLOSE -> stringResource(R.string.calib_dist_too_close)
+            DistanceState.TOO_FAR -> stringResource(R.string.calib_dist_too_far)
+            DistanceState.OK -> stringResource(R.string.calib_dist_ok)
         }
-        CalibrationPhase.NEUTRAL_CAPTURE -> "Relaja tu rostro y mira al frente"
+        CalibrationPhase.NEUTRAL_CAPTURE -> stringResource(R.string.calib_neutral_capture)
         CalibrationPhase.ACTIVE_CAPTURE -> when (step) {
-            CalibrationStep.Smile -> "¡Sonríe ampliamente!"
-            CalibrationStep.BrowRaise -> "¡Levanta las cejas!"
-            CalibrationStep.Kiss -> "¡Haz un beso!"
-            CalibrationStep.JawOpen -> "¡Abre la boca!"
-            CalibrationStep.EyesClosed -> "¡Cierra los ojos fuerte!"
+            CalibrationStep.Smile -> stringResource(R.string.calib_step_smile)
+            CalibrationStep.BrowRaise -> stringResource(R.string.calib_step_brow_raise)
+            CalibrationStep.Kiss -> stringResource(R.string.calib_step_kiss)
+            CalibrationStep.JawOpen -> stringResource(R.string.calib_step_jaw_open)
+            CalibrationStep.EyesClosed -> stringResource(R.string.calib_step_eyes_closed)
             else -> ""
         }
-        CalibrationPhase.COMPLETE -> "¡Calibración completa!"
+        CalibrationPhase.COMPLETE -> stringResource(R.string.calib_complete)
     }
 }
 

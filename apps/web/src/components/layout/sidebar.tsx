@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl'; // Import useTranslations hook
 import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 
@@ -11,20 +12,17 @@ interface SidebarProps {
   userRole: string;
 }
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
-  { href: '/dashboard/patients', label: 'Patients', icon: 'group' },
-  { href: '/dashboard/exercises', label: 'Exercises', icon: 'fitness_center' },
-  // TODO: Enable when implemented
-  // { href: '/dashboard/calendar', label: 'Calendar', icon: 'calendar_month' },
-  // { href: '/dashboard/analytics', label: 'Analytics', icon: 'analytics' },
-  // { href: '/dashboard/settings', label: 'Settings', icon: 'settings' },
-];
-
 export function Sidebar({ userName, userRole }: SidebarProps) {
+  const t = useTranslations('common');
   const [isOpen, setIsOpen] = useState(false); // Mobile drawer
   const [isCollapsed, setIsCollapsed] = useState(true); // Desktop collapse (LG only)
   const pathname = usePathname();
+
+  const navItems = [
+    { href: '/dashboard', label: t('nav.dashboard'), icon: 'dashboard' },
+    { href: '/dashboard/patients', label: t('nav.patients'), icon: 'group' },
+    { href: '/dashboard/exercises', label: t('nav.exercises'), icon: 'fitness_center' },
+  ];
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -84,7 +82,7 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
       <aside
         className={`
           fixed lg:static inset-y-0 left-0 z-50
-          w-64 flex-shrink-0 border-r border-[#e7f3f2] bg-white flex flex-col justify-between
+          w-64 shrink-0 border-r border-[#e7f3f2] bg-white flex flex-col justify-between
           transform transition-all duration-300 ease-in-out
           ${isCollapsed ? 'lg:w-16 xl:w-64' : 'lg:w-64'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -104,7 +102,7 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
                 <span className="material-symbols-outlined text-gray-400">close</span>
               </Button>
             </div>
-            <p className={`text-[#4c9a93] text-xs font-medium uppercase tracking-wider pl-10 ${textClass}`}>Therapist Portal</p>
+            <p className={`text-[#4c9a93] text-xs font-medium uppercase tracking-wider pl-10 ${textClass}`}>{t('nav.therapistPortal')}</p>
           </div>
           <nav className="flex flex-col gap-1">
             {navItems.map((item) => (
@@ -139,7 +137,7 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
             variant="ghost"
             onClick={() => setIsCollapsed(!isCollapsed)}
             className={`hidden lg:flex xl:hidden items-center gap-3 px-3 py-2.5 hover:bg-gray-100 text-gray-500 w-full ${isCollapsed ? 'justify-center' : 'justify-start'}`}
-            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={isCollapsed ? t('buttons.expand') : t('buttons.collapse')}
           >
             <span
               className="material-symbols-outlined transition-transform duration-300"
@@ -147,18 +145,18 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
             >
               chevron_right
             </span>
-            {!isCollapsed && <span className="text-sm font-medium">Collapse</span>}
+            {!isCollapsed && <span className="text-sm font-medium">{t('buttons.collapse')}</span>}
           </Button>
 
           {/* Logout button */}
           <Button
             variant="ghost"
             onClick={() => signOut({ callbackUrl: '/login' })}
-            title="Log Out"
+            title={t('nav.logout')}
             className={`flex items-center gap-3 px-3 py-2.5 hover:bg-red-50 text-gray-600 hover:text-red-600 group w-full ${justifyClass}`}
           >
             <span className="material-symbols-outlined group-hover:text-red-600 transition-colors">logout</span>
-            <span className={`text-sm font-medium ${textClass}`}>Log Out</span>
+            <span className={`text-sm font-medium ${textClass}`}>{t('nav.logout')}</span>
           </Button>
         </div>
       </aside>
@@ -167,6 +165,7 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
 }
 
 export function Header({ userName, userRole }: SidebarProps) {
+  const t = useTranslations('common');
   const initials = userName
     .split(' ')
     .map((n) => n[0])
@@ -182,7 +181,7 @@ export function Header({ userName, userRole }: SidebarProps) {
           </div>
           <input
             className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg leading-5 bg-gray-50 text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[#0d9488] focus:border-[#0d9488] sm:text-sm transition duration-150 ease-in-out"
-            placeholder="Search patients, appointments..."
+            placeholder={t('labels.search')}
             type="text"
           />
         </div>

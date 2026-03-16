@@ -76,8 +76,8 @@ export default function EditRoutinePage({
       exercise,
       sets: 3,
       repsPerSet: 10,
-      targetHoldSeconds: exercise.defaultConfig?.holdTime || 5, // Keep existing fallback logic
-      restBetweenSets: exercise.defaultConfig?.restTime || 60,
+      targetHoldSeconds: 5, // Keep existing fallback logic
+      restBetweenSets: 60,
       difficultyLevel: 1.0,
       strictMode: false,
       allowSkip: true,
