@@ -11,6 +11,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -21,6 +22,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -115,6 +117,34 @@ class HomeViewModelTest {
         viewModel.uiState.test {
             val state = awaitItem()
             assertEquals(HomeUiState.Empty, state)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `cached routine is shown while the refresh is still running`() = runTest {
+        coEvery { routineRepository.refreshRoutine() } coAnswers { awaitCancellation() }
+        routineFlow.value = createTestRoutine()
+
+        val viewModel = HomeViewModel(routineRepository)
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertTrue("Expected Content but got $state", state is HomeUiState.Content)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `cached routine stays visible when the server is down`() = runTest {
+        coEvery { routineRepository.refreshRoutine() } returns Result.failure(IOException("Server down"))
+        routineFlow.value = createTestRoutine()
+
+        val viewModel = HomeViewModel(routineRepository)
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertTrue("Expected Content but got $state", state is HomeUiState.Content)
             cancelAndConsumeRemainingEvents()
         }
     }

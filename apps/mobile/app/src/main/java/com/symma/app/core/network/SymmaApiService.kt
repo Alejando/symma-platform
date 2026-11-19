@@ -6,10 +6,12 @@ import com.symma.app.data.remote.dto.routine.RoutineDto
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Headers
 import retrofit2.http.POST
 
 interface SymmaApiService {
 
+    @Headers("$NO_AUTH_HEADER: true")
     @POST("api/v1/auth/patient/login")
     suspend fun loginPatient(
         @Body request: LoginRequestDto

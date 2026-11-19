@@ -1,8 +1,9 @@
 package com.symma.app.presentation.features.calibration
 
 import android.graphics.RectF
+import android.os.SystemClock
 import android.util.Log
-import android.util.Size
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
@@ -10,17 +11,24 @@ import com.symma.app.domain.logic.CALIBRATION_MIN_VALID_SAMPLES
 import com.symma.app.domain.logic.CALIBRATION_THRESHOLD_BROW_RAISE
 import com.symma.app.domain.logic.CALIBRATION_THRESHOLD_DEFAULT
 import com.symma.app.domain.logic.CALIBRATION_THRESHOLD_EYES_CLOSED
+import com.symma.app.domain.logic.CALIBRATION_THRESHOLD_EYES_WIDE
 import com.symma.app.domain.logic.CALIBRATION_THRESHOLD_JAW_OPEN
 import com.symma.app.domain.logic.CALIBRATION_THRESHOLD_KISS
 import com.symma.app.domain.logic.CALIBRATION_THRESHOLD_SMILE
 import com.symma.app.domain.logic.CalibrationUtils
-import com.symma.app.domain.logic.DistanceState
+import com.symma.app.domain.logic.HeadPose
 import com.symma.app.domain.model.CalibrationBaseline
+import com.symma.app.domain.model.MobileModule
 import com.symma.app.domain.repository.CalibrationRepository
+import com.symma.app.domain.repository.RoutineRepository
+import com.symma.app.presentation.components.camera.FaceLandmarkerHelper
+import com.symma.app.presentation.components.camera.VisionPerformanceSnapshot
+import com.symma.app.domain.logic.DistanceState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -31,13 +39,19 @@ private const val DISTANCE_OK_REQUIRED_MS = 1000L  // 1 second at correct distan
 
 @HiltViewModel
 class CalibrationViewModel @Inject constructor(
-    private val calibrationRepository: CalibrationRepository
+    private val calibrationRepository: CalibrationRepository,
+    private val routineRepository: RoutineRepository,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val routineId: String? = savedStateHandle["routineId"]
 
     private val _uiState = MutableStateFlow(CalibrationUiState())
     val uiState: StateFlow<CalibrationUiState> = _uiState.asStateFlow()
 
-    private var currentBaseline = CalibrationBaseline()
+    private val savedBaseline: CalibrationBaseline = calibrationRepository.getBaseline() ?: CalibrationBaseline()
+    private var currentBaseline = savedBaseline
+    private val calibratedGestureKeys = mutableSetOf<String>()
     
     // Sample buffers for statistical analysis
     private val neutralSamples = mutableMapOf<String, MutableList<Float>>()
@@ -45,12 +59,38 @@ class CalibrationViewModel @Inject constructor(
     
     // Head stability tracking
     private var previousFaceBox: RectF? = null
+    private var referenceHeadPose: HeadPose? = null
     private var consecutiveStableFrames = 0
     private var validSampleCount = 0
     
     // Distance validation tracking
     private var distanceOkStartTime: Long? = null
     
+    private var requiredSteps: List<CalibrationStep> = FULL_CALIBRATION_SEQUENCE
+    
+    init {
+        loadRoutineSteps()
+    }
+    
+    private fun loadRoutineSteps() {
+        val targetRoutineId = routineId ?: return
+        viewModelScope.launch {
+            try {
+                val routine = routineRepository.getRoutineFlow().firstOrNull()
+                if (routine == null || routine.id != targetRoutineId) {
+                    Log.w(TAG, "Routine $targetRoutineId not found, using the full calibration sequence")
+                    return@launch
+                }
+                val gestureSteps = routine.items.mapNotNull { item -> calibrationStepFor(item.module) }.distinct()
+                if (gestureSteps.isNotEmpty()) {
+                    requiredSteps = listOf(CalibrationStep.Neutral) + gestureSteps + CalibrationStep.Complete
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading routine for calibration, using the full calibration sequence", e)
+            }
+        }
+    }
+
     /**
      * Returns the step-specific minimum gesture intensity threshold.
      * - BrowRaise / EyesClosed: 0.10 (low-amplitude gestures, easy to miss)
@@ -59,6 +99,7 @@ class CalibrationViewModel @Inject constructor(
     private fun thresholdForStep(step: CalibrationStep): Float = when (step) {
         CalibrationStep.BrowRaise -> CALIBRATION_THRESHOLD_BROW_RAISE
         CalibrationStep.EyesClosed -> CALIBRATION_THRESHOLD_EYES_CLOSED
+        CalibrationStep.EyesWide -> CALIBRATION_THRESHOLD_EYES_WIDE
         CalibrationStep.Smile -> CALIBRATION_THRESHOLD_SMILE
         CalibrationStep.JawOpen -> CALIBRATION_THRESHOLD_JAW_OPEN
         CalibrationStep.Kiss -> CALIBRATION_THRESHOLD_KISS
@@ -81,10 +122,7 @@ class CalibrationViewModel @Inject constructor(
             // Use image dimensions for ratio calculation (face box is in image coordinates)
             val effectiveWidth = if (imageWidth > 0) imageWidth else _uiState.value.screenWidth
             val effectiveHeight = if (imageHeight > 0) imageHeight else _uiState.value.screenHeight
-            val imageSize = Size(effectiveWidth, effectiveHeight)
-            
-            // Check distance state using image coordinates
-            val distanceState = CalibrationUtils.isDistanceCorrect(faceBox, imageSize)
+            val distanceState = CalibrationUtils.isDistanceCorrect(faceBox, effectiveWidth, effectiveHeight)
             
             // Calculate debug ratio
             val faceAreaRatio = if (faceBox != null && effectiveWidth > 0 && effectiveHeight > 0) {
@@ -101,7 +139,7 @@ class CalibrationViewModel @Inject constructor(
             )
             
             // Track how long distance has been OK
-            val now = System.currentTimeMillis()
+            val now = SystemClock.elapsedRealtime()
             val isDistanceOk = distanceState == DistanceState.OK
             
             if (isDistanceOk && isInPosition) {
@@ -134,6 +172,20 @@ class CalibrationViewModel @Inject constructor(
         }
     }
 
+    /** MediaPipe delivers results on its own thread; calibration state only changes on the main dispatcher. */
+    fun onLandmarkerResult(resultBundle: FaceLandmarkerHelper.ResultBundle) {
+        viewModelScope.launch {
+            val result = resultBundle.result
+            val imageWidth = resultBundle.inputImageWidth
+            val imageHeight = resultBundle.inputImageHeight
+            _uiState.update { it.copy(visionPerformance = resultBundle.performance) }
+            val landmarks = result.faceLandmarks().firstOrNull()
+            val faceBox = landmarks?.let { CalibrationUtils.getFaceBoundingBox(it, imageWidth, imageHeight) }
+            onFaceDetected(landmarks != null, faceBox, imageWidth, imageHeight)
+            processFrame(result, imageWidth, imageHeight)
+        }
+    }
+
     fun setScreenDimensions(width: Int, height: Int) {
         _uiState.update { it.copy(screenWidth = width, screenHeight = height) }
     }
@@ -143,13 +195,10 @@ class CalibrationViewModel @Inject constructor(
         
         // Reset state and move to Neutral capture
         neutralSamples.clear()
-        neutralSamples[CalibrationBaseline.KEY_JAW_OPEN] = mutableListOf()
-        neutralSamples[CalibrationBaseline.KEY_SMILE] = mutableListOf()
-        neutralSamples[CalibrationBaseline.KEY_BROW_RAISE] = mutableListOf()
-        neutralSamples[CalibrationBaseline.KEY_KISS] = mutableListOf()
-        neutralSamples[CalibrationBaseline.KEY_EYES_CLOSED] = mutableListOf()
+        gestureReadings.keys.forEach { key -> neutralSamples[key] = mutableListOf() }
         
         previousFaceBox = null
+        referenceHeadPose = null
         consecutiveStableFrames = 0
         
         _uiState.update { 
@@ -173,7 +222,7 @@ class CalibrationViewModel @Inject constructor(
 
         val blendshapesOptional = result.faceBlendshapes()
         if (!blendshapesOptional.isPresent) {
-            Log.d("CalibrationVM", "processFrame: no blendshapes for phase=$phase, step=$step")
+            Log.d(TAG, "processFrame: no blendshapes for phase=$phase, step=$step")
             return
         }
         
@@ -183,15 +232,16 @@ class CalibrationViewModel @Inject constructor(
         // Get face bounding box for stability check
         val currentFaceBox = CalibrationUtils.getFaceBoundingBox(landmarks, imageWidth, imageHeight)
         
-        // Check head stability
-        val isStable = if (previousFaceBox != null && currentFaceBox != null) {
+        val isTranslationStable = if (previousFaceBox != null && currentFaceBox != null) {
             CalibrationUtils.isHeadStable(currentFaceBox, previousFaceBox)
         } else {
             true
         }
         previousFaceBox = currentFaceBox
-        
-        _uiState.update { it.copy(isHeadStable = isStable) }
+        val isHeadRotated = isHeadRotatedFromReference(result)
+        val isStable = isTranslationStable && !isHeadRotated
+
+        _uiState.update { it.copy(isHeadStable = isStable, isHeadRotated = isHeadRotated) }
 
         // Helper to extract blendshape scores
         fun getScore(name: String): Float {
@@ -201,11 +251,19 @@ class CalibrationViewModel @Inject constructor(
         when (phase) {
             CalibrationPhase.NEUTRAL_CAPTURE -> processNeutralFrame(::getScore, isStable)
             CalibrationPhase.ACTIVE_CAPTURE -> {
-                Log.d("CalibrationVM", "processFrame: ACTIVE_CAPTURE, step=$step, isStable=$isStable, validSamples=$validSampleCount")
+                Log.d(TAG, "processFrame: ACTIVE_CAPTURE, step=$step, isStable=$isStable, validSamples=$validSampleCount")
                 processActiveFrame(::getScore, isStable)
             }
             else -> {}
         }
+    }
+
+    /** The reference is the first pose of the capture, so a camera held below eye level is not mistaken for a turn. */
+    private fun isHeadRotatedFromReference(result: FaceLandmarkerResult): Boolean {
+        val matrix = result.facialTransformationMatrixes().orElse(null)?.firstOrNull() ?: return false
+        val pose = HeadPose.fromTransformationMatrix(matrix) ?: return false
+        val reference = referenceHeadPose ?: pose.also { referenceHeadPose = it }
+        return pose.isRotatedFrom(reference)
     }
 
     private fun processNeutralFrame(getScore: (String) -> Float, isStable: Boolean) {
@@ -216,18 +274,7 @@ class CalibrationViewModel @Inject constructor(
         
         consecutiveStableFrames++
         
-        // Collect neutral values for all blendshapes
-        neutralSamples[CalibrationBaseline.KEY_JAW_OPEN]?.add(getScore("jawOpen"))
-        neutralSamples[CalibrationBaseline.KEY_SMILE]?.add(
-            (getScore("mouthSmileLeft") + getScore("mouthSmileRight")) / 2
-        )
-        neutralSamples[CalibrationBaseline.KEY_BROW_RAISE]?.add(
-            (getScore("browInnerUp") + getScore("browOuterUpLeft") + getScore("browOuterUpRight")) / 3
-        )
-        neutralSamples[CalibrationBaseline.KEY_KISS]?.add(getScore("mouthPucker"))
-        neutralSamples[CalibrationBaseline.KEY_EYES_CLOSED]?.add(
-            (getScore("eyeBlinkLeft") + getScore("eyeBlinkRight")) / 2
-        )
+        gestureReadings.forEach { (key, reading) -> neutralSamples[key]?.add(reading(getScore)) }
         
         val framesCaptured = neutralSamples[CalibrationBaseline.KEY_JAW_OPEN]?.size ?: 0
         val progress = framesCaptured.toFloat() / NEUTRAL_CAPTURE_FRAMES
@@ -246,13 +293,8 @@ class CalibrationViewModel @Inject constructor(
     }
 
     private fun completeNeutralPhase() {
-        // Calculate average neutral offsets
-        val neutralOffsets = mutableMapOf<String, Float>()
-        neutralSamples.forEach { (key, samples) ->
-            neutralOffsets[key] = CalibrationUtils.calculateAverage(samples)
-        }
-        
-        currentBaseline = currentBaseline.copy(neutralOffsets = neutralOffsets)
+        val freshOffsets = neutralSamples.mapValues { (_, samples) -> CalibrationUtils.calculateAverage(samples) }
+        currentBaseline = currentBaseline.copy(neutralOffsets = mergeNeutralOffsets(freshOffsets))
         
         // Update baseline in state BEFORE starting active capture
         _uiState.update { 
@@ -260,26 +302,41 @@ class CalibrationViewModel @Inject constructor(
         }
         
         // Move to first active capture step (this sets stepCompleted = false)
-        startActiveCapture(CalibrationStep.Smile)
+        advanceToNextStep()
+    }
+
+    /** A module's tare and its max are measured together; a module left out of this run keeps its saved pair. */
+    private fun mergeNeutralOffsets(freshOffsets: Map<String, Float>): Map<String, Float> {
+        val keysBeingCalibrated = requiredSteps.mapNotNull { it.gestureKey }.toSet()
+        val preserved = savedBaseline.neutralOffsets.filterKeys { it !in keysBeingCalibrated }
+        return freshOffsets + preserved
     }
 
     private fun startActiveCapture(step: CalibrationStep) {
-        Log.d("CalibrationVM", "startActiveCapture: step=$step, clearing samples")
+        Log.d(TAG, "startActiveCapture: step=$step, clearing samples")
         activeSamples.clear()
         validSampleCount = 0
         previousFaceBox = null
+        
+        val globalIndex = requiredSteps.indexOf(step).coerceAtLeast(0)
+        val totalSteps = requiredSteps.size
+        // -1 to ignore Complete step in the denominator, though we just want a rough ~percentage
+        val globalProgressCalc = if (totalSteps > 1) {
+             globalIndex.toFloat() / (totalSteps - 1)
+        } else 0f
         
         _uiState.update { 
             it.copy(
                 phase = CalibrationPhase.ACTIVE_CAPTURE,
                 currentStep = step,
                 captureProgress = 0f,
+                globalProgress = globalProgressCalc,
                 isHeadStable = true,
                 stepCompleted = false,
                 framesCaptured = 0
             ) 
         }
-        Log.d("CalibrationVM", "startActiveCapture: state updated for $step, stepCompleted=${_uiState.value.stepCompleted}")
+        Log.d(TAG, "startActiveCapture: state updated for $step, stepCompleted=${_uiState.value.stepCompleted}")
     }
 
     private fun processActiveFrame(getScore: (String) -> Float, isStable: Boolean) {
@@ -288,38 +345,15 @@ class CalibrationViewModel @Inject constructor(
         
         // Skip if step is already completed (waiting for advance)
         if (stepCompleted) {
-            Log.d("CalibrationVM", "processActiveFrame: skipping, stepCompleted=true for $step")
+            Log.d(TAG, "processActiveFrame: skipping, stepCompleted=true for $step")
             return
         }
         
-        // Only capture when head is stable
-        if (!isStable) {
-            _uiState.update { it.copy(isHeadStable = false) }
-            return
-        }
+        if (!isStable) return
         
-        // Extract raw value based on current step.
-        // BrowRaise uses the same 3-blendshape formula as BrowsStrategy to ensure
-        // calibration and runtime scoring are aligned.
-        val rawValue = when (step) {
-            CalibrationStep.Smile -> (getScore("mouthSmileLeft") + getScore("mouthSmileRight")) / 2
-            CalibrationStep.BrowRaise -> (getScore("browInnerUp") + getScore("browOuterUpLeft") + getScore("browOuterUpRight")) / 3
-            CalibrationStep.Kiss -> getScore("mouthPucker")
-            CalibrationStep.JawOpen -> getScore("jawOpen")
-            CalibrationStep.EyesClosed -> (getScore("eyeBlinkLeft") + getScore("eyeBlinkRight")) / 2
-            else -> return
-        }
-        
-        // Apply neutral offset (Tare)
-        val neutralKey = when (step) {
-            CalibrationStep.Smile -> CalibrationBaseline.KEY_SMILE
-            CalibrationStep.BrowRaise -> CalibrationBaseline.KEY_BROW_RAISE
-            CalibrationStep.Kiss -> CalibrationBaseline.KEY_KISS
-            CalibrationStep.JawOpen -> CalibrationBaseline.KEY_JAW_OPEN
-            CalibrationStep.EyesClosed -> CalibrationBaseline.KEY_EYES_CLOSED
-            else -> return
-        }
-        val neutralOffset = currentBaseline.getNeutralOffset(neutralKey)
+        val gestureKey = step.gestureKey ?: return
+        val rawValue = gestureReadings.getValue(gestureKey)(getScore)
+        val neutralOffset = currentBaseline.getNeutralOffset(gestureKey)
         val correctedValue = (rawValue - neutralOffset).coerceAtLeast(0f)
         
         // Check if gesture intensity meets step-specific minimum threshold
@@ -358,16 +392,11 @@ class CalibrationViewModel @Inject constructor(
         
         val step = _uiState.value.currentStep
         val p95Value = CalibrationUtils.calculateP95(activeSamples)
-        Log.d("CalibrationVM", "completeActiveStep: step=$step, p95=$p95Value, samples=${activeSamples.size}")
+        Log.d(TAG, "completeActiveStep: step=$step, p95=$p95Value, samples=${activeSamples.size}")
         
-        // Update baseline with P95 value
-        currentBaseline = when (step) {
-            CalibrationStep.Smile -> currentBaseline.copy(mouthSmileMax = p95Value)
-            CalibrationStep.BrowRaise -> currentBaseline.copy(browRaiseMax = p95Value)
-            CalibrationStep.Kiss -> currentBaseline.copy(duckFaceMax = p95Value)
-            CalibrationStep.JawOpen -> currentBaseline.copy(mouthOpenMax = p95Value)
-            CalibrationStep.EyesClosed -> currentBaseline.copy(eyesClosedMax = p95Value)
-            else -> currentBaseline
+        step.gestureKey?.let { key ->
+            currentBaseline = currentBaseline.withGestureMax(key, p95Value)
+            calibratedGestureKeys += key
         }
         
         _uiState.update { 
@@ -383,30 +412,29 @@ class CalibrationViewModel @Inject constructor(
         // Auto-advance to next step after a short delay
         viewModelScope.launch {
             kotlinx.coroutines.delay(500)
-            Log.d("CalibrationVM", "After delay, calling advanceToNextStep from step=$step")
+            Log.d(TAG, "After delay, calling advanceToNextStep from step=$step")
             advanceToNextStep()
         }
     }
 
     private fun advanceToNextStep() {
         val current = _uiState.value.currentStep
-        Log.d("CalibrationVM", "advanceToNextStep: current=$current")
-        val next = when (current) {
-            CalibrationStep.Neutral -> CalibrationStep.Smile
-            CalibrationStep.Smile -> CalibrationStep.BrowRaise
-            CalibrationStep.BrowRaise -> CalibrationStep.Kiss
-            CalibrationStep.Kiss -> CalibrationStep.JawOpen
-            CalibrationStep.JawOpen -> CalibrationStep.EyesClosed
-            CalibrationStep.EyesClosed -> CalibrationStep.Complete
-            else -> CalibrationStep.Complete
+        Log.d(TAG, "advanceToNextStep: current=$current")
+        
+        val currentIndex = requiredSteps.indexOf(current)
+        val next = if (currentIndex != -1 && currentIndex + 1 < requiredSteps.size) {
+            requiredSteps[currentIndex + 1]
+        } else {
+            CalibrationStep.Complete
         }
-        Log.d("CalibrationVM", "advanceToNextStep: next=$next")
+        
+        Log.d(TAG, "advanceToNextStep: next=$next")
         
         if (next == CalibrationStep.Complete) {
-            Log.d("CalibrationVM", "Finishing calibration")
+            Log.d(TAG, "Finishing calibration")
             finishCalibration()
         } else {
-            Log.d("CalibrationVM", "Starting active capture for $next")
+            Log.d(TAG, "Starting active capture for $next")
             startActiveCapture(next)
         }
     }
@@ -427,8 +455,37 @@ class CalibrationViewModel @Inject constructor(
                 captureProgress = 1f
             ) 
         }
+        if (calibratedGestureKeys.isEmpty()) {
+            Log.w(TAG, "No gesture was calibrated, keeping the saved baseline")
+            return
+        }
         viewModelScope.launch {
             calibrationRepository.saveBaseline(currentBaseline)
+        }
+    }
+
+    private companion object {
+        const val TAG = "CalibrationVM"
+
+        val FULL_CALIBRATION_SEQUENCE = listOf(
+            CalibrationStep.Neutral,
+            CalibrationStep.Smile,
+            CalibrationStep.BrowRaise,
+            CalibrationStep.Kiss,
+            CalibrationStep.JawOpen,
+            CalibrationStep.EyesClosed,
+            CalibrationStep.EyesWide,
+            CalibrationStep.Complete
+        )
+
+        fun calibrationStepFor(module: MobileModule): CalibrationStep? = when (module) {
+            MobileModule.SMILE -> CalibrationStep.Smile
+            MobileModule.BROWS -> CalibrationStep.BrowRaise
+            MobileModule.KISS -> CalibrationStep.Kiss
+            MobileModule.JAW -> CalibrationStep.JawOpen
+            MobileModule.EYES -> CalibrationStep.EyesClosed
+            MobileModule.EYES_INVERSE -> CalibrationStep.EyesWide
+            MobileModule.UNKNOWN -> null
         }
     }
 }
@@ -437,9 +494,11 @@ data class CalibrationUiState(
     val phase: CalibrationPhase = CalibrationPhase.POSITIONING,
     val currentStep: CalibrationStep = CalibrationStep.Neutral,
     val captureProgress: Float = 0f,
+    val globalProgress: Float = 0f, // New field for global progression through required steps
     val framesCaptured: Int = 0,
     val isCapturing: Boolean = false,
     val isHeadStable: Boolean = true,
+    val isHeadRotated: Boolean = false,
     val isFaceDetected: Boolean = false,
     val isFaceInPosition: Boolean = false,
     val stepCompleted: Boolean = false,
@@ -459,7 +518,8 @@ data class CalibrationUiState(
     val isGestureIntensitySufficient: Boolean = false,
     // Debug info
     val debugFaceAreaRatio: Float = 0f,
-    val debugFaceBox: String = ""
+    val debugFaceBox: String = "",
+    val visionPerformance: VisionPerformanceSnapshot? = null
 )
 
 enum class CalibrationPhase {
@@ -469,12 +529,25 @@ enum class CalibrationPhase {
     COMPLETE
 }
 
-enum class CalibrationStep {
+enum class CalibrationStep(val gestureKey: String? = null) {
     Neutral,
-    Smile,
-    BrowRaise,
-    Kiss,
-    JawOpen,
-    EyesClosed,
+    Smile(CalibrationBaseline.KEY_SMILE),
+    BrowRaise(CalibrationBaseline.KEY_BROW_RAISE),
+    Kiss(CalibrationBaseline.KEY_KISS),
+    JawOpen(CalibrationBaseline.KEY_JAW_OPEN),
+    EyesClosed(CalibrationBaseline.KEY_EYES_CLOSED),
+    EyesWide(CalibrationBaseline.KEY_EYES_WIDE),
     Complete
 }
+
+/** Must stay aligned with the formulas in ExerciseStrategies so calibration and scoring measure the same signal. */
+private val gestureReadings: Map<String, ((String) -> Float) -> Float> = mapOf(
+    CalibrationBaseline.KEY_JAW_OPEN to { score -> score("jawOpen") },
+    CalibrationBaseline.KEY_SMILE to { score -> (score("mouthSmileLeft") + score("mouthSmileRight")) / 2 },
+    CalibrationBaseline.KEY_BROW_RAISE to { score ->
+        (score("browInnerUp") + score("browOuterUpLeft") + score("browOuterUpRight")) / 3
+    },
+    CalibrationBaseline.KEY_KISS to { score -> score("mouthPucker") },
+    CalibrationBaseline.KEY_EYES_CLOSED to { score -> (score("eyeBlinkLeft") + score("eyeBlinkRight")) / 2 },
+    CalibrationBaseline.KEY_EYES_WIDE to { score -> (score("eyeWideLeft") + score("eyeWideRight")) / 2 }
+)

@@ -1,10 +1,7 @@
 package com.symma.app.domain.usecase
 
 import android.util.Log
-import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.symma.app.core.sync.SyncSessionsWorker
 import com.symma.app.data.remote.dto.session.SessionItemRequest
@@ -15,7 +12,6 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 private const val TAG = "SaveAndSyncSession"
-private const val SYNC_WORK_NAME = "sync_sessions_work"
 
 class SaveAndSyncSessionUseCase @Inject constructor(
     private val sessionRepository: SessionRepository,
@@ -23,6 +19,7 @@ class SaveAndSyncSessionUseCase @Inject constructor(
 ) {
 
     suspend operator fun invoke(
+        sessionId: String,
         routineId: String,
         startTime: Long,
         endTime: Long,
@@ -31,6 +28,7 @@ class SaveAndSyncSessionUseCase @Inject constructor(
         items: List<SessionItemRequest>
     ): Result<String> {
         val saveResult = sessionRepository.saveSession(
+            sessionId = sessionId,
             routineId = routineId,
             startTime = startTime,
             endTime = endTime,
@@ -44,7 +42,6 @@ class SaveAndSyncSessionUseCase @Inject constructor(
             return saveResult
         }
 
-        val sessionId = saveResult.getOrThrow()
         Log.d(TAG, "Session saved locally: $sessionId")
 
         CoroutineScope(Dispatchers.IO).launch {
@@ -66,20 +63,10 @@ class SaveAndSyncSessionUseCase @Inject constructor(
     }
 
     private fun enqueueSyncWorker() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-
-        val syncRequest = OneTimeWorkRequestBuilder<SyncSessionsWorker>()
-            .setConstraints(constraints)
-            .build()
-
         workManager.enqueueUniqueWork(
-            SYNC_WORK_NAME,
+            SyncSessionsWorker.WORK_NAME,
             ExistingWorkPolicy.KEEP,
-            syncRequest
+            SyncSessionsWorker.buildRequest()
         )
-
-        Log.d(TAG, "SyncSessionsWorker enqueued with CONNECTED constraint")
     }
 }

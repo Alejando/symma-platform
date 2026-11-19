@@ -17,6 +17,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -95,6 +96,31 @@ class RoutineRepositoryImplTest {
         // Then
         assertTrue(result.isFailure)
         coVerify(exactly = 0) { routineDao.replaceRoutineWithItems(any(), any(), any()) }
+    }
+
+    @Test
+    fun `refreshRoutine keeps the cached routine on server errors`() = runTest {
+        listOf(401, 404, 500, 503).forEach { statusCode ->
+            coEvery { apiService.getActiveRoutine() } returns
+                retrofit2.Response.error(statusCode, "error".toResponseBody())
+
+            val result = repository.refreshRoutine()
+
+            assertTrue("Status $statusCode should fail", result.isFailure)
+        }
+        coVerify(exactly = 0) { routineDao.deleteAllRoutines() }
+        coVerify(exactly = 0) { routineDao.deleteAllRoutineItems() }
+        coVerify(exactly = 0) { routineDao.deleteAllExercises() }
+    }
+
+    @Test
+    fun `refreshRoutine clears the cache only when the server confirms there is no active routine`() = runTest {
+        coEvery { apiService.getActiveRoutine() } returns retrofit2.Response.success(null)
+
+        val result = repository.refreshRoutine()
+
+        assertTrue(result.isSuccess)
+        coVerify { routineDao.deleteAllRoutines() }
     }
 
     @Test

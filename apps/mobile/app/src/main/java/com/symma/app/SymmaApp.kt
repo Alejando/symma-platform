@@ -3,10 +3,7 @@ package com.symma.app
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.symma.app.core.sync.SyncSessionsWorker
 import dagger.hilt.android.HiltAndroidApp
@@ -31,18 +28,10 @@ class SymmaApp : Application(), Configuration.Provider {
     }
 
     private fun enqueueSyncWorkerOnStartup() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-
-        val syncRequest = OneTimeWorkRequestBuilder<SyncSessionsWorker>()
-            .setConstraints(constraints)
-            .build()
-
         WorkManager.getInstance(this).enqueueUniqueWork(
             SyncSessionsWorker.WORK_NAME,
             ExistingWorkPolicy.KEEP,
-            syncRequest
+            SyncSessionsWorker.buildRequest()
         )
     }
 }

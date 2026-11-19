@@ -30,10 +30,11 @@ class SaveAndSyncSessionUseCaseTest {
     @Test
     fun `invoke saves session before attempting sync`() = runBlocking {
         val sessionId = "session-123"
-        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any()) } returns Result.success(sessionId)
+        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any()) } returns Result.success(sessionId)
         coEvery { sessionRepository.syncSession(sessionId) } returns Result.success(Unit)
 
         val result = useCase(
+            sessionId = sessionId,
             routineId = "routine-1",
             startTime = 1000L,
             endTime = 2000L,
@@ -45,16 +46,17 @@ class SaveAndSyncSessionUseCaseTest {
         assertTrue(result.isSuccess)
         assertEquals(sessionId, result.getOrNull())
         coVerify(ordering = io.mockk.Ordering.ORDERED) {
-            sessionRepository.saveSession(any(), any(), any(), any(), any(), any())
+            sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any())
         }
     }
 
     @Test
     fun `invoke returns local session id immediately after save`() = runBlocking {
         val sessionId = "session-456"
-        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any()) } returns Result.success(sessionId)
+        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any()) } returns Result.success(sessionId)
 
         val result = useCase(
+            sessionId = sessionId,
             routineId = "routine-1",
             startTime = 1000L,
             endTime = 2000L,
@@ -75,9 +77,10 @@ class SaveAndSyncSessionUseCaseTest {
 
     @Test
     fun `invoke enqueues WorkManager with CONNECTED constraint`() = runBlocking {
-        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any()) } returns Result.success("session-123")
+        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any()) } returns Result.success("session-123")
 
         useCase(
+            sessionId = "session-123",
             routineId = "routine-1",
             startTime = 1000L,
             endTime = 2000L,
@@ -91,9 +94,10 @@ class SaveAndSyncSessionUseCaseTest {
 
     @Test
     fun `invoke returns failure when save fails`() = runBlocking {
-        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any()) } returns Result.failure(Exception("Save failed"))
+        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any()) } returns Result.failure(Exception("Save failed"))
 
         val result = useCase(
+            sessionId = "session-123",
             routineId = "routine-1",
             startTime = 1000L,
             endTime = 2000L,

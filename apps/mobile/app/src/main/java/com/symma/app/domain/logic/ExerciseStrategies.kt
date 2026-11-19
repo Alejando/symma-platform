@@ -83,28 +83,17 @@ class EyesStrategy : BaseExerciseStrategy() {
 }
 
 /**
- * EyesInverseStrategy (Inverse - Open Eyes Wide)
- * Logic: eyeBlink blendshape goes from 0.0 (Open) to 1.0 (Closed).
- * Goal: Reach a LOW value (Opening eyes wide).
- * Formula: Since the UI expects a progress bar filling up (0->100%), we invert the math.
- *   - invertedCurrent = 1.0 - currentAvg
- *   - invertedBaseline = 1.0 - baseline.eyesOpenMin
- *   - score = invertedCurrent / invertedBaseline
+ * EyesInverseStrategy (Open Eyes Wide)
+ * Uses the eyeWide blendshapes with the same tare and calibrated max as the other modules,
+ * so a resting face scores near zero instead of satisfying the exercise.
  */
 class EyesInverseStrategy : BaseExerciseStrategy() {
     override fun calculateScore(shapes: List<Category>, baseline: CalibrationBaseline, difficulty: Float): Float {
-        val left = getScore(shapes, "eyeBlinkLeft")
-        val right = getScore(shapes, "eyeBlinkRight")
-        val currentAvg = (left + right) / 2f
-        
-        val invertedCurrent = 1.0f - currentAvg
-        val invertedBaseline = 1.0f - baseline.eyesOpenMin
-        
-        if (invertedBaseline <= 0.001f) {
-            return invertedCurrent
-        }
-        
-        val score = invertedCurrent / (invertedBaseline * difficulty)
-        return min(score, 1.0f)
+        val left = getScore(shapes, "eyeWideLeft")
+        val right = getScore(shapes, "eyeWideRight")
+        val raw = (left + right) / 2f
+        val corrected = applyNeutralOffset(raw, baseline, CalibrationBaseline.KEY_EYES_WIDE)
+
+        return calculate(corrected, baseline.eyesWideMax, difficulty)
     }
 }

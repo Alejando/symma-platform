@@ -2,7 +2,10 @@ package com.symma.app.presentation.player
 
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
+import com.google.mediapipe.tasks.components.containers.Category
+import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
 import com.symma.app.MainDispatcherRule
+import com.symma.app.presentation.components.camera.FaceLandmarkerHelper
 import com.symma.app.domain.model.CalibrationBaseline
 import com.symma.app.domain.model.Exercise
 import com.symma.app.domain.model.ExerciseType
@@ -12,6 +15,7 @@ import com.symma.app.domain.repository.CalibrationRepository
 import com.symma.app.domain.repository.RoutineRepository
 import com.symma.app.domain.usecase.SaveAndSyncSessionUseCase
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,6 +29,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.util.Optional
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlayerViewModelTest {
@@ -350,6 +355,122 @@ class PlayerViewModelTest {
         assertEquals(1, restState.currentSet)
         assertEquals(3, restState.totalSets)
         assertTrue(restState.isSetRest)
+    }
+
+    @Test
+    fun `rest between sets carries the plain exercise name so the screen localizes the set label`() = runTest(testDispatcher) {
+        routineFlow.value = createMultiSetRoutine()
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
+        testDispatcher.scheduler.runCurrent()
+        advanceTimeBy(5100)
+
+        var ts = 1000L
+        repeat(2) {
+            repeat(60) { ts += 60; viewModel.processFrame(1.0f, ts) }
+            repeat(3) { ts += 60; viewModel.processFrame(0.0f, ts) }
+        }
+        testDispatcher.scheduler.runCurrent()
+
+        val rest = viewModel.uiState.value as PlayerUiState.Rest
+        assertEquals("Eyes Close", rest.nextExerciseName)
+        assertTrue(rest.isSetRest)
+        assertEquals(1, rest.currentSet)
+    }
+
+    private fun createStrictIsometricRoutine() = Routine(
+        id = "routine-strict",
+        name = "Strict Routine",
+        startDate = "2024-01-01",
+        endDate = null,
+        status = "active",
+        items = listOf(
+            RoutineItem(
+                id = "item-strict",
+                orderIndex = 0,
+                targetRepetitions = 2,
+                targetSets = 1,
+                holdTimeSeconds = 2,
+                restBetweenSetsSeconds = 0,
+                strictMode = true,
+                exercise = Exercise("ex-strict", "Smile Hold", "smile", "Hold smile", "ISOMETRIC", "CORE", "SMILE", null, null)
+            )
+        )
+    )
+
+    private fun startStrictExercise() {
+        routineFlow.value = createStrictIsometricRoutine()
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
+        testDispatcher.scheduler.runCurrent()
+        testDispatcher.scheduler.advanceTimeBy(5100)
+    }
+
+    @Test
+    fun `strict mode tolerates a single-frame dip below the threshold`() = runTest(testDispatcher) {
+        startStrictExercise()
+        var ts = 1000L
+
+        repeat(21) { ts += 60; viewModel.processFrame(1.0f, ts) }
+        ts += 60; viewModel.processFrame(0.0f, ts)
+        repeat(15) { ts += 60; viewModel.processFrame(1.0f, ts) }
+
+        assertEquals(2, (viewModel.uiState.value as PlayerUiState.Exercise).currentRep)
+    }
+
+    @Test
+    fun `strict mode resets the hold when the target is lost beyond the grace period`() = runTest(testDispatcher) {
+        startStrictExercise()
+        var ts = 1000L
+
+        repeat(21) { ts += 60; viewModel.processFrame(1.0f, ts) }
+        repeat(10) { ts += 60; viewModel.processFrame(0.0f, ts) }
+        repeat(15) { ts += 60; viewModel.processFrame(1.0f, ts) }
+
+        assertEquals(1, (viewModel.uiState.value as PlayerUiState.Exercise).currentRep)
+    }
+
+    private fun eyesClosedResult(): FaceLandmarkerHelper.ResultBundle {
+        val blendshapes = listOf(
+            Category.create(1.0f, 0, "eyeBlinkLeft", "eyeBlinkLeft"),
+            Category.create(1.0f, 0, "eyeBlinkRight", "eyeBlinkRight")
+        )
+        val result = mockk<FaceLandmarkerResult> {
+            every { faceBlendshapes() } returns Optional.of(listOf(blendshapes))
+        }
+        return FaceLandmarkerHelper.ResultBundle(result, inferenceTime = 10, inputImageHeight = 480, inputImageWidth = 640)
+    }
+
+    @Test
+    fun `landmarker results from the MediaPipe thread are applied on the main dispatcher`() = runTest(testDispatcher) {
+        routineFlow.value = createMultiSetRoutine()
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
+        testDispatcher.scheduler.runCurrent()
+        advanceTimeBy(5100)
+
+        val mediaPipeThread = Thread { viewModel.onResults(eyesClosedResult()) }
+        mediaPipeThread.start()
+        mediaPipeThread.join()
+
+        assertFalse((viewModel.uiState.value as PlayerUiState.Exercise).isTargetReached)
+
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue((viewModel.uiState.value as PlayerUiState.Exercise).isTargetReached)
+    }
+
+    @Test
+    fun `completed session hands the stored session id to the summary`() = runTest(testDispatcher) {
+        routineFlow.value = createIsotonicRoutine(reps = 1)
+        viewModel = PlayerViewModel(routineRepository, calibrationRepository, saveAndSyncSessionUseCase, savedStateHandle)
+        testDispatcher.scheduler.runCurrent()
+        advanceTimeBy(5100)
+
+        viewModel.processFrame(0.3f, 1_000L)
+        viewModel.processFrame(1.0f, 1_060L)
+        testDispatcher.scheduler.runCurrent()
+
+        val completed = viewModel.uiState.value as PlayerUiState.Completed
+        assertTrue(completed.sessionId.isNotBlank())
+        coVerify { saveAndSyncSessionUseCase(completed.sessionId, "routine-isotonic", any(), any(), any(), any(), any()) }
     }
 
     @Test

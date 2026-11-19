@@ -30,7 +30,7 @@ import javax.inject.Singleton
         SessionItemEntity::class
     ],
     version = 6,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class SymmaDatabase : RoomDatabase() {
     abstract fun routineDao(): RoutineDao
@@ -72,22 +72,23 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
     }
 }
 
+private const val DATABASE_NAME = "symma_db"
+
+/** Pre-release schemas with no migration path; any later version must be migrated so pending sessions survive. */
+private val VERSIONS_WITHOUT_MIGRATION_PATH = intArrayOf(1, 2, 3, 4)
+
+fun symmaDatabaseBuilder(context: Context, name: String = DATABASE_NAME): RoomDatabase.Builder<SymmaDatabase> =
+    Room.databaseBuilder(context, SymmaDatabase::class.java, name)
+        .addMigrations(MIGRATION_5_6)
+        .fallbackToDestructiveMigrationFrom(*VERSIONS_WITHOUT_MIGRATION_PATH)
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(app: Application): SymmaDatabase {
-        return Room.databaseBuilder(
-            app,
-            SymmaDatabase::class.java,
-            "symma_db"
-        )
-            .addMigrations(MIGRATION_5_6)
-            .fallbackToDestructiveMigration()
-            .build()
-    }
+    fun provideDatabase(app: Application): SymmaDatabase = symmaDatabaseBuilder(app).build()
 
     @Provides
     @Singleton

@@ -9,11 +9,14 @@ import com.symma.app.data.mapper.toCreateRequest
 import com.symma.app.data.mapper.toDomain
 import com.symma.app.data.mapper.toEntity
 import com.symma.app.data.remote.dto.session.SessionItemRequest
+import com.symma.app.domain.model.RetryableSyncException
 import com.symma.app.domain.model.Session
+import com.symma.app.domain.model.SessionExerciseResult
 import com.symma.app.domain.model.SyncStatus
 import com.symma.app.domain.repository.SessionRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.io.IOException
-import java.util.UUID
 import javax.inject.Inject
 
 private const val TAG = "SessionRepo"
@@ -24,6 +27,7 @@ class SessionRepositoryImpl @Inject constructor(
 ) : SessionRepository {
 
     override suspend fun saveSession(
+        sessionId: String,
         routineId: String,
         startTime: Long,
         endTime: Long,
@@ -32,8 +36,6 @@ class SessionRepositoryImpl @Inject constructor(
         items: List<SessionItemRequest>
     ): Result<String> {
         return try {
-            val sessionId = UUID.randomUUID().toString()
-            
             val sessionEntity = SessionEntity(
                 id = sessionId,
                 routineId = routineId,
@@ -48,8 +50,7 @@ class SessionRepositoryImpl @Inject constructor(
             
             val itemEntities = items.map { it.toEntity(sessionId) }
             
-            sessionDao.insertSession(sessionEntity)
-            sessionDao.insertSessionItems(itemEntities)
+            sessionDao.insertSessionWithItems(sessionEntity, itemEntities)
             
             Log.d(TAG, "Session saved locally with id: $sessionId")
             Result.success(sessionId)
@@ -96,15 +97,15 @@ class SessionRepositoryImpl @Inject constructor(
                     markSynced(sessionId)
                     Result.success(Unit)
                 }
-                response.code() in 400..499 -> {
+                response.code().isRetryableStatus() -> {
+                    val errorMsg = "Retryable error syncing session: ${response.code()}"
+                    Log.w(TAG, errorMsg)
+                    Result.failure(RetryableSyncException(errorMsg))
+                }
+                else -> {
                     val errorMsg = "Permanent error syncing session: ${response.code()}"
                     Log.e(TAG, errorMsg)
                     markError(sessionId)
-                    Result.failure(Exception(errorMsg))
-                }
-                else -> {
-                    val errorMsg = "Server error syncing session: ${response.code()}"
-                    Log.e(TAG, errorMsg)
                     Result.failure(Exception(errorMsg))
                 }
             }
@@ -116,6 +117,30 @@ class SessionRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    /** 401 is retryable because the patient can log in again; the session itself is still valid. */
+    private fun Int.isRetryableStatus() = this == 401 || this == 408 || this == 429 || this >= 500
+
+    override suspend fun requeueFailedSessions() {
+        try {
+            val requeued = sessionDao.requeueFailedSessions()
+            if (requeued > 0) Log.d(TAG, "Requeued $requeued sessions in ERROR")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to requeue sessions in ERROR: ${e.message}", e)
+        }
+    }
+
+    override fun observeExerciseResults(sessionId: String): Flow<List<SessionExerciseResult>> =
+        sessionDao.observeItemsWithExerciseName(sessionId).map { rows ->
+            rows.map { row ->
+                SessionExerciseResult(
+                    exerciseId = row.exerciseId,
+                    exerciseName = row.exerciseName,
+                    repsCompleted = row.repsCompleted,
+                    averageAccuracy = row.averageAccuracy
+                )
+            }
+        }
 
     override suspend fun markSynced(sessionId: String) {
         try {

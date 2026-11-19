@@ -39,9 +39,9 @@ class HomeViewModel @Inject constructor(
         _errorMessage
     ) { routine, isRefreshing, error ->
         when {
-            isRefreshing -> HomeUiState.Loading
-            error != null && routine == null -> HomeUiState.Error(error)
             routine != null -> HomeUiState.Content(routine)
+            isRefreshing -> HomeUiState.Loading
+            error != null -> HomeUiState.Error(error)
             else -> HomeUiState.Empty
         }
     }.stateIn(

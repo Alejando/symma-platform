@@ -1,13 +1,17 @@
 package com.symma.app.core.sync
 
 import android.content.Context
+import androidx.work.BackoffPolicy
 import androidx.work.ListenableWorker
+import androidx.work.NetworkType
 import androidx.work.WorkerParameters
+import com.symma.app.domain.model.RetryableSyncException
 import com.symma.app.domain.model.Session
 import com.symma.app.domain.model.SyncStatus
 import com.symma.app.domain.repository.SessionRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -109,6 +113,79 @@ class SyncSessionsWorkerTest {
 
         assertEquals(ListenableWorker.Result.retry(), result)
         coVerify(exactly = 3) { sessionRepository.syncSession(any()) }
+    }
+
+    // ==================== RNF-008 / RF-060: backoff and retry cap ====================
+
+    private fun workerOnAttempt(runAttemptCount: Int): SyncSessionsWorker {
+        val params = mockk<WorkerParameters>(relaxed = true) {
+            every { this@mockk.runAttemptCount } returns runAttemptCount
+        }
+        return SyncSessionsWorker(context, params, sessionRepository)
+    }
+
+    @Test
+    fun `three network failures followed by success sync the session`() = runBlocking {
+        coEvery { sessionRepository.getPendingSessions() } returns listOf(createSession("session-1"))
+        coEvery { sessionRepository.syncSession("session-1") } returnsMany listOf(
+            Result.failure(IOException("offline")),
+            Result.failure(IOException("offline")),
+            Result.failure(IOException("offline")),
+            Result.success(Unit)
+        )
+
+        val results = (0..3).map { attempt -> workerOnAttempt(attempt).doWork() }
+
+        assertEquals(
+            listOf(
+                ListenableWorker.Result.retry(),
+                ListenableWorker.Result.retry(),
+                ListenableWorker.Result.retry(),
+                ListenableWorker.Result.success()
+            ),
+            results
+        )
+        coVerify(exactly = 0) { sessionRepository.markError(any()) }
+    }
+
+    @Test
+    fun `gives up after three retries and marks the session ERROR`() = runBlocking {
+        coEvery { sessionRepository.getPendingSessions() } returns listOf(createSession("session-1"))
+        coEvery { sessionRepository.syncSession("session-1") } returns Result.failure(IOException("offline"))
+
+        val result = workerOnAttempt(SyncSessionsWorker.MAX_RETRIES).doWork()
+
+        assertEquals(ListenableWorker.Result.failure(), result)
+        coVerify(exactly = 1) { sessionRepository.markError("session-1") }
+    }
+
+    @Test
+    fun `server and authorization errors are retried`() = runBlocking {
+        coEvery { sessionRepository.getPendingSessions() } returns listOf(createSession("session-1"))
+        coEvery { sessionRepository.syncSession("session-1") } returns Result.failure(RetryableSyncException("503"))
+
+        val result = workerOnAttempt(1).doWork()
+
+        assertEquals(ListenableWorker.Result.retry(), result)
+    }
+
+    @Test
+    fun `a fresh run requeues sessions in ERROR and a retry does not`() = runBlocking {
+        coEvery { sessionRepository.getPendingSessions() } returns emptyList()
+
+        workerOnAttempt(0).doWork()
+        workerOnAttempt(2).doWork()
+
+        coVerify(exactly = 1) { sessionRepository.requeueFailedSessions() }
+    }
+
+    @Test
+    fun `sync request uses exponential backoff from 30 seconds and requires network`() {
+        val workSpec = SyncSessionsWorker.buildRequest().workSpec
+
+        assertEquals(BackoffPolicy.EXPONENTIAL, workSpec.backoffPolicy)
+        assertEquals(30_000L, workSpec.backoffDelayDuration)
+        assertEquals(NetworkType.CONNECTED, workSpec.constraints.requiredNetworkType)
     }
 
     private fun createSession(id: String): Session {

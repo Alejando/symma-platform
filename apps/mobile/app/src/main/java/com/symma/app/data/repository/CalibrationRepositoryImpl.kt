@@ -28,7 +28,7 @@ class CalibrationRepositoryImpl @Inject constructor(
             putFloat(KEY_MOUTH_OPEN_MAX, baseline.mouthOpenMax)
             putFloat(KEY_DUCK_FACE_MAX, baseline.duckFaceMax)
             putFloat(KEY_EYES_CLOSED_MAX, baseline.eyesClosedMax)
-            putFloat(KEY_EYES_OPEN_MIN, baseline.eyesOpenMin)
+            putFloat(KEY_EYES_WIDE_MAX, baseline.eyesWideMax)
             // Serialize neutral offsets as JSON
             putString(KEY_NEUTRAL_OFFSETS, serializeNeutralOffsets(baseline.neutralOffsets))
             apply()
@@ -50,7 +50,7 @@ class CalibrationRepositoryImpl @Inject constructor(
             mouthOpenMax = sharedPreferences.getFloat(KEY_MOUTH_OPEN_MAX, 0.5f),
             duckFaceMax = sharedPreferences.getFloat(KEY_DUCK_FACE_MAX, 0.5f),
             eyesClosedMax = sharedPreferences.getFloat(KEY_EYES_CLOSED_MAX, 0.8f),
-            eyesOpenMin = sharedPreferences.getFloat(KEY_EYES_OPEN_MIN, 0.1f),
+            eyesWideMax = sharedPreferences.getFloat(KEY_EYES_WIDE_MAX, 0.5f),
             neutralOffsets = deserializeNeutralOffsets(
                 sharedPreferences.getString(KEY_NEUTRAL_OFFSETS, null)
             )
@@ -83,7 +83,7 @@ class CalibrationRepositoryImpl @Inject constructor(
         private const val KEY_MOUTH_OPEN_MAX = "calibration_mouth_open_max"
         private const val KEY_DUCK_FACE_MAX = "calibration_duck_face_max"
         private const val KEY_EYES_CLOSED_MAX = "calibration_eyes_closed_max"
-        private const val KEY_EYES_OPEN_MIN = "calibration_eyes_open_min"
+        private const val KEY_EYES_WIDE_MAX = "calibration_eyes_wide_max"
         private const val KEY_NEUTRAL_OFFSETS = "calibration_neutral_offsets"
     }
 }

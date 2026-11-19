@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 import com.symma.app.presentation.components.camera.FaceLandmarkerHelper
 import com.symma.app.data.remote.dto.session.SessionItemRequest
@@ -42,6 +43,11 @@ private const val DEFAULT_REST_SECONDS = 10
  * large delta from completing a rep in one frame.
  */
 private const val MAX_FRAME_DELTA_MS = 200L
+
+/** Brief tracking dips in strict mode should not cost the patient the whole hold. */
+private const val STRICT_MODE_GRACE_MS = 300L
+
+private const val SCORE_SAMPLE_INTERVAL_MS = 500L
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
@@ -82,6 +88,7 @@ class PlayerViewModel @Inject constructor(
     private var currentExerciseIndex = 0
     private var isPaused = false
     private var sessionStartTime: Long = 0L
+    private var sessionId: String = ""
     
     // RFC-031: Clinical State Machine Variables
     private var currentSet = 1
@@ -89,6 +96,7 @@ class PlayerViewModel @Inject constructor(
     private var completedRepsCount = 0 // Track actual reps completed (not just index)
     private var wasSkipped = false // Track if exercise was skipped
     private var accumulatedHoldTimeMs: Long = 0L
+    private var targetLostDurationMs: Long = 0L
     private var isTargetReached = false
     private var wasTargetReached = false // For edge detection (Isotonic)
     private var lastFrameTime: Long = 0L
@@ -158,6 +166,7 @@ class PlayerViewModel @Inject constructor(
         Log.v(TAG, "📐 Calibration loaded: smileMax=${calibrationBaseline.mouthSmileMax}, eyesClosedMax=${calibrationBaseline.eyesClosedMax}")
         
         sessionStartTime = System.currentTimeMillis()
+        sessionId = UUID.randomUUID().toString()
         currentExerciseIndex = 0
         currentSet = 1
         currentRep = 1
@@ -208,6 +217,7 @@ class PlayerViewModel @Inject constructor(
         
         // Reset state for new exercise/rep
         accumulatedHoldTimeMs = 0L
+        targetLostDurationMs = 0L
         isTargetReached = false
         wasTargetReached = false
         // awaitingRelease is intentionally NOT reset here; it persists from the
@@ -317,13 +327,10 @@ class PlayerViewModel @Inject constructor(
         }
 
         // 2. Check Target using configurable engage threshold
-        val previousTargetReached = isTargetReached
         isTargetReached = score >= config.engageThreshold
-        
-        // Strict Mode: Reset hold time if user slips during isometric hold
-        if (!isTargetReached && previousTargetReached && config.strictMode && config.exerciseType == ExerciseType.ISOMETRIC) {
-            Log.d(TAG, "⚠️ Strict Mode: Target lost, resetting hold time")
-            accumulatedHoldTimeMs = 0L
+
+        if (config.strictMode && config.exerciseType == ExerciseType.ISOMETRIC) {
+            applyStrictModeReset(deltaTimeMs)
         }
         
         // 3. Time Accumulation (The "Hold")
@@ -384,6 +391,19 @@ class PlayerViewModel @Inject constructor(
         }
     }
     
+    private fun applyStrictModeReset(deltaTimeMs: Long) {
+        if (isTargetReached || accumulatedHoldTimeMs == 0L) {
+            targetLostDurationMs = 0L
+            return
+        }
+        targetLostDurationMs += deltaTimeMs
+        if (targetLostDurationMs > STRICT_MODE_GRACE_MS) {
+            Log.d(TAG, "Strict mode: target lost for ${targetLostDurationMs}ms, resetting hold time")
+            accumulatedHoldTimeMs = 0L
+            targetLostDurationMs = 0L
+        }
+    }
+
     /**
      * RFC-031: Called when a single rep is completed.
      * Handles Set/Rep transitions and Rest states.
@@ -442,7 +462,7 @@ class PlayerViewModel @Inject constructor(
                 
                 _uiState.value = PlayerUiState.Rest(
                     timeLeft = timeLeft,
-                    nextExerciseName = "${item.exercise.name} - Set ${currentSet + 1}",
+                    nextExerciseName = item.exercise.name,
                     currentSet = currentSet,
                     totalSets = item.config.sets,
                     isSetRest = true
@@ -577,7 +597,8 @@ class PlayerViewModel @Inject constructor(
         _uiState.value = PlayerUiState.Completed(
             routineId = routine?.id ?: "",
             totalExercises = routineItems.size,
-            totalTimeSeconds = totalTimeSeconds
+            totalTimeSeconds = totalTimeSeconds,
+            sessionId = sessionId
         )
         
         viewModelScope.launch {
@@ -591,6 +612,7 @@ class PlayerViewModel @Inject constructor(
             }
             
             val result = saveAndSyncSessionUseCase(
+                sessionId = sessionId,
                 routineId = routine?.id ?: "",
                 startTime = sessionStartTime,
                 endTime = endTime,
@@ -705,49 +727,38 @@ class PlayerViewModel @Inject constructor(
         Log.e(TAG, "FaceLandmarker error ($errorCode): $error")
     }
 
+    /** MediaPipe delivers results on its own thread; the state machine only runs on the main dispatcher. */
     override fun onResults(resultBundle: FaceLandmarkerHelper.ResultBundle) {
         _faceResult.value = resultBundle
-        
-        // Use Blendshapes for Clinical Accuracy (RFC-028)
-        val blendshapesOptional = resultBundle.result.faceBlendshapes()
-        if (blendshapesOptional.isPresent) {
-            val blendshapes = blendshapesOptional.get().firstOrNull()
-            
-            if (blendshapes != null) {
-                // Calculate Score using module-based strategy
-                var score = 0f
-                val currentItem = routineItems.getOrNull(currentExerciseIndex)
-                
-                if (currentItem != null) {
-                    val strategy = ExerciseStrategyFactory.getStrategy(currentItem.module)
-                        ?: ExerciseStrategyFactory.getStrategy(currentItem.exercise.keyName)
-                    if (strategy != null) {
-                        score = strategy.calculateScore(blendshapes, calibrationBaseline, currentItem.difficulty)
-                    } else {
-                        Log.w(TAG, "⚠️ No strategy found for module=${currentItem.module}, keyName=${currentItem.exercise.keyName}")
-                    }
-                }
-                
-                // Debug: Log score periodically
-                if (System.currentTimeMillis() % 1000 < 50) {
-                    Log.v(TAG, "📊 Score: ${"%.2f".format(score)} | Target: ${if (score >= 1.0f) "✅ REACHED" else "❌"} | frameProcessing=$frameProcessingEnabled")
-                }
-                
-                _symmetryScore.value = score
-                
-                // RFC-031: Process frame for clinical state machine
-                processFrame(score)
-                
-                // SAMPLING LOGIC (MOB-12)
-                val currentState = _uiState.value
-                if (currentState is PlayerUiState.Exercise && !currentState.isPaused) {
-                    val now = System.currentTimeMillis()
-                    if (now - lastSampleTime >= 500) {
-                        currentExerciseScores.add(score)
-                        lastSampleTime = now
-                    }
-                }
-            }
+        val blendshapes = resultBundle.result.faceBlendshapes().orElse(null)?.firstOrNull() ?: return
+        viewModelScope.launch { onBlendshapes(blendshapes) }
+    }
+
+    private fun onBlendshapes(blendshapes: List<Category>) {
+        val score = scoreForCurrentExercise(blendshapes)
+        _symmetryScore.value = score
+        processFrame(score)
+        sampleScore(score)
+    }
+
+    private fun scoreForCurrentExercise(blendshapes: List<Category>): Float {
+        val currentItem = routineItems.getOrNull(currentExerciseIndex) ?: return 0f
+        val strategy = ExerciseStrategyFactory.getStrategy(currentItem.module)
+            ?: ExerciseStrategyFactory.getStrategy(currentItem.exercise.keyName)
+        if (strategy == null) {
+            Log.w(TAG, "No strategy found for module=${currentItem.module}, keyName=${currentItem.exercise.keyName}")
+            return 0f
+        }
+        return strategy.calculateScore(blendshapes, calibrationBaseline, currentItem.difficulty)
+    }
+
+    private fun sampleScore(score: Float) {
+        val currentState = _uiState.value
+        if (currentState !is PlayerUiState.Exercise || currentState.isPaused) return
+        val now = System.currentTimeMillis()
+        if (now - lastSampleTime >= SCORE_SAMPLE_INTERVAL_MS) {
+            currentExerciseScores.add(score)
+            lastSampleTime = now
         }
     }
 }

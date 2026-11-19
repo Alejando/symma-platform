@@ -1,13 +1,6 @@
 package com.symma.app.presentation.features.calibration
 
-import android.content.Context
 import android.graphics.RectF
-import android.media.AudioManager
-import android.media.ToneGenerator
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -38,17 +31,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.symma.app.BuildConfig
 import com.symma.app.R
 import com.symma.app.domain.logic.CalibrationUtils
 import com.symma.app.domain.logic.DistanceState
 import com.symma.app.presentation.components.camera.CameraPermissionWrapper
 import com.symma.app.presentation.components.camera.CameraPreview
 import com.symma.app.presentation.components.camera.FaceLandmarkerHelper
+import com.symma.app.presentation.components.feedback.FeedbackCue
+import com.symma.app.presentation.components.feedback.rememberFeedbackPlayer
 
 @Composable
 fun CalibrationScreen(
@@ -56,7 +51,6 @@ fun CalibrationScreen(
     onCalibrationComplete: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
     
     var screenWidth by remember { mutableStateOf(1080) }
     var screenHeight by remember { mutableStateOf(1920) }
@@ -66,15 +60,10 @@ fun CalibrationScreen(
         viewModel.setScreenDimensions(screenWidth, screenHeight)
     }
 
-    // Handle feedback (sound & vibration)
+    val feedbackPlayer = rememberFeedbackPlayer()
     LaunchedEffect(uiState.shouldPlayCompletionSound, uiState.shouldVibrate) {
-        if (uiState.shouldPlayCompletionSound) {
-            playCompletionSound()
-        }
-        if (uiState.shouldVibrate) {
-            triggerVibration(context)
-        }
         if (uiState.shouldPlayCompletionSound || uiState.shouldVibrate) {
+            feedbackPlayer.play(FeedbackCue.CALIBRATION_STEP_COMPLETED)
             viewModel.onFeedbackConsumed()
         }
     }
@@ -84,19 +73,7 @@ fun CalibrationScreen(
             override fun onError(error: String, errorCode: Int) {}
 
             override fun onResults(resultBundle: FaceLandmarkerHelper.ResultBundle) {
-                val result = resultBundle.result
-                val landmarks = result.faceLandmarks().firstOrNull()
-                val imageWidth = resultBundle.inputImageWidth
-                val imageHeight = resultBundle.inputImageHeight
-                
-                // Get face box for positioning check
-                val faceBox = if (landmarks != null) {
-                    CalibrationUtils.getFaceBoundingBox(landmarks, imageWidth, imageHeight)
-                } else null
-                
-                // Pass image dimensions for correct ratio calculation
-                viewModel.onFaceDetected(landmarks != null, faceBox, imageWidth, imageHeight)
-                viewModel.processFrame(result, imageWidth, imageHeight)
+                viewModel.onLandmarkerResult(resultBundle)
             }
         }
     }
@@ -135,25 +112,26 @@ fun CalibrationScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "¡Calibración Completa!",
+                        text = stringResource(R.string.calib_complete),
                         style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(onClick = onCalibrationComplete) {
-                        Text("Continuar")
+                        Text(stringResource(R.string.calib_continue))
                     }
                 }
             }
         }
         
-        // Debug overlay - top left
-        DebugCalibrationOverlay(
-            uiState = uiState,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp)
-        )
+        if (BuildConfig.DEBUG) {
+            DebugCalibrationOverlay(
+                uiState = uiState,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(16.dp)
+            )
+        }
         
         // Progress and Instructions overlay
         if (uiState.phase != CalibrationPhase.COMPLETE) {
@@ -168,6 +146,19 @@ fun CalibrationScreen(
                 // Circular progress indicator (during capture phases)
                 if (uiState.phase == CalibrationPhase.NEUTRAL_CAPTURE || 
                     uiState.phase == CalibrationPhase.ACTIVE_CAPTURE) {
+                    
+                    // Optional: show global progress if we are in active capture
+                    if (uiState.phase == CalibrationPhase.ACTIVE_CAPTURE) {
+                        androidx.compose.material3.LinearProgressIndicator(
+                            progress = { uiState.globalProgress },
+                            modifier = Modifier
+                                .fillMaxWidth(0.6f)
+                                .padding(bottom = 16.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = Color.White.copy(alpha = 0.2f),
+                        )
+                    }
+                    
                     CaptureProgressIndicator(
                         progress = uiState.captureProgress,
                         isStable = uiState.isHeadStable,
@@ -178,7 +169,9 @@ fun CalibrationScreen(
                 // Head stability warning
                 if (!uiState.isHeadStable && uiState.phase != CalibrationPhase.POSITIONING) {
                     Text(
-                        text = "⚠️ Mantén la cabeza quieta",
+                        text = stringResource(
+                            if (uiState.isHeadRotated) R.string.calib_warn_face_camera else R.string.calib_warn_keep_still
+                        ),
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color(0xFFFF9800),
                         modifier = Modifier
@@ -193,7 +186,7 @@ fun CalibrationScreen(
                     uiState.isHeadStable && 
                     !uiState.isGestureIntensitySufficient) {
                     Text(
-                        text = "💪 ¡Hazlo con más intensidad!",
+                        text = stringResource(R.string.calib_warn_more_intensity),
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color(0xFFFF5722),
                         modifier = Modifier
@@ -404,7 +397,7 @@ fun InstructionText(text: String, isHighlight: Boolean = false) {
 }
 
 @Composable
-fun DebugCalibrationOverlay(
+private fun DebugCalibrationOverlay(
     uiState: CalibrationUiState,
     modifier: Modifier = Modifier
 ) {
@@ -466,6 +459,17 @@ fun DebugCalibrationOverlay(
             style = MaterialTheme.typography.bodySmall,
             color = if (uiState.isGestureIntensitySufficient) Color.Green else Color.Red
         )
+        uiState.visionPerformance?.let { performance ->
+            Text(
+                text = "FPS: %.1f | Inference avg %.0f ms, p95 %d ms".format(
+                    performance.framesPerSecond,
+                    performance.averageInferenceMs,
+                    performance.p95InferenceMs
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Cyan
+            )
+        }
         Text(
             text = uiState.debugFaceBox,
             style = MaterialTheme.typography.bodySmall,
@@ -502,6 +506,11 @@ fun DebugCalibrationOverlay(
             style = MaterialTheme.typography.bodySmall,
             color = Color.White
         )
+        Text(
+            text = "Eyes wide: %.3f".format(baseline.eyesWideMax),
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White
+        )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "--- Neutral Offsets ---",
@@ -533,39 +542,9 @@ fun getInstructionText(phase: CalibrationPhase, step: CalibrationStep, distanceS
             CalibrationStep.Kiss -> stringResource(R.string.calib_step_kiss)
             CalibrationStep.JawOpen -> stringResource(R.string.calib_step_jaw_open)
             CalibrationStep.EyesClosed -> stringResource(R.string.calib_step_eyes_closed)
+            CalibrationStep.EyesWide -> stringResource(R.string.calib_step_eyes_wide)
             else -> ""
         }
         CalibrationPhase.COMPLETE -> stringResource(R.string.calib_complete)
-    }
-}
-
-private fun playCompletionSound() {
-    try {
-        val toneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
-        toneGenerator.startTone(ToneGenerator.TONE_PROP_ACK, 150)
-        toneGenerator.release()
-    } catch (e: Exception) {
-        // Ignore audio errors
-    }
-}
-
-private fun triggerVibration(context: Context) {
-    try {
-        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            vibratorManager.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        }
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(100)
-        }
-    } catch (e: Exception) {
-        // Ignore vibration errors
     }
 }

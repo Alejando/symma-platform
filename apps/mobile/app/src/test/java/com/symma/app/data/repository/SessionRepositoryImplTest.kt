@@ -5,6 +5,7 @@ import com.symma.app.data.local.dao.SessionDao
 import com.symma.app.data.local.entity.SessionEntity
 import com.symma.app.data.local.entity.SessionItemEntity
 import com.symma.app.data.remote.dto.session.SessionItemRequest
+import com.symma.app.domain.model.RetryableSyncException
 import com.symma.app.domain.model.SyncStatus
 import io.mockk.Runs
 import io.mockk.coEvery
@@ -35,8 +36,7 @@ class SessionRepositoryImplTest {
 
     @Test
     fun `saveSession inserts session with PENDING status`() = runBlocking {
-        coEvery { sessionDao.insertSession(any()) } just Runs
-        coEvery { sessionDao.insertSessionItems(any()) } just Runs
+        coEvery { sessionDao.insertSessionWithItems(any(), any()) } just Runs
 
         val items = listOf(
             SessionItemRequest(
@@ -47,6 +47,7 @@ class SessionRepositoryImplTest {
         )
 
         val result = repository.saveSession(
+            sessionId = "session-123",
             routineId = "routine-123",
             startTime = 1000L,
             endTime = 2000L,
@@ -57,11 +58,11 @@ class SessionRepositoryImplTest {
 
         assertTrue(result.isSuccess)
         coVerify {
-            sessionDao.insertSession(match { 
-                it.syncStatus == SyncStatus.PENDING.name && it.routineId == "routine-123"
-            })
+            sessionDao.insertSessionWithItems(
+                match { it.id == "session-123" && it.syncStatus == SyncStatus.PENDING.name && it.routineId == "routine-123" },
+                match { it.size == 1 }
+            )
         }
-        coVerify { sessionDao.insertSessionItems(any()) }
     }
 
     @Test
@@ -117,6 +118,41 @@ class SessionRepositoryImplTest {
 
         assertTrue(result.isFailure)
         coVerify(exactly = 0) { sessionDao.updateSyncStatus(any(), any(), any()) }
+    }
+
+    @Test
+    fun `syncSession keeps the session PENDING and retryable on 5xx`() = runBlocking {
+        givenPendingSessionAnswering(503)
+
+        val result = repository.syncSession("session-123")
+
+        assertTrue(result.exceptionOrNull() is RetryableSyncException)
+        coVerify(exactly = 0) { sessionDao.updateSyncStatus(any(), any(), any()) }
+    }
+
+    @Test
+    fun `syncSession keeps the session PENDING and retryable on 401`() = runBlocking {
+        givenPendingSessionAnswering(401)
+
+        val result = repository.syncSession("session-123")
+
+        assertTrue(result.exceptionOrNull() is RetryableSyncException)
+        coVerify(exactly = 0) { sessionDao.updateSyncStatus(any(), any(), any()) }
+    }
+
+    @Test
+    fun `requeueFailedSessions moves ERROR sessions back to PENDING`() = runBlocking {
+        coEvery { sessionDao.requeueFailedSessions() } returns 2
+
+        repository.requeueFailedSessions()
+
+        coVerify { sessionDao.requeueFailedSessions() }
+    }
+
+    private fun givenPendingSessionAnswering(statusCode: Int) {
+        coEvery { sessionDao.getPendingSessions() } returns listOf(createSessionEntity("session-123", SyncStatus.PENDING.name))
+        coEvery { sessionDao.getItemsForSession("session-123") } returns emptyList()
+        coEvery { apiService.createSession(any()) } returns Response.error(statusCode, "error".toResponseBody())
     }
 
     @Test

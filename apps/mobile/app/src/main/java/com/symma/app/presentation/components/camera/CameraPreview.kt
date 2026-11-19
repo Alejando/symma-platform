@@ -17,6 +17,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.google.common.util.concurrent.ListenableFuture
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 
 private const val TAG = "CameraPreview"
 
@@ -39,6 +41,14 @@ fun CameraPreview(
     
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
     
+    val faceLandmarkerHelper = remember(landmarkerListener) {
+        FaceLandmarkerHelper(
+            context = context,
+            faceLandmarkerHelperListener = landmarkerListener
+        )
+    }
+    val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
+
     DisposableEffect(Unit) {
         onDispose {
             try {
@@ -48,14 +58,11 @@ fun CameraPreview(
             } catch (e: Exception) {
                 Log.e(TAG, "Error unbinding camera: ${e.message}")
             }
+            // The camera is unbound first so no new frame reaches the executor; closing on the
+            // analysis thread then waits for the frame still being analyzed.
+            analysisExecutor.execute { faceLandmarkerHelper.close() }
+            analysisExecutor.shutdown()
         }
-    }
-    
-    val faceLandmarkerHelper = remember(landmarkerListener) {
-        FaceLandmarkerHelper(
-            context = context,
-            faceLandmarkerHelperListener = landmarkerListener
-        )
     }
 
     AndroidView(
@@ -65,15 +72,14 @@ fun CameraPreview(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
-                // Mirror the preview for front camera (acts like a mirror)
-                scaleX = -1f
                 implementationMode = PreviewView.ImplementationMode.COMPATIBLE
             }.also { previewView ->
                 startCamera(
                     cameraProviderFuture = cameraProviderFuture,
                     lifecycleOwner = lifecycleOwner,
                     previewView = previewView,
-                    faceLandmarkerHelper = faceLandmarkerHelper
+                    faceLandmarkerHelper = faceLandmarkerHelper,
+                    analysisExecutor = analysisExecutor
                 )
             }
         },
@@ -85,7 +91,8 @@ private fun startCamera(
     cameraProviderFuture: ListenableFuture<ProcessCameraProvider>,
     lifecycleOwner: LifecycleOwner,
     previewView: PreviewView,
-    faceLandmarkerHelper: FaceLandmarkerHelper
+    faceLandmarkerHelper: FaceLandmarkerHelper,
+    analysisExecutor: Executor
 ) {
     cameraProviderFuture.addListener({
         try {
@@ -104,7 +111,7 @@ private fun startCamera(
                 .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                 .build()
                 .also {
-                    it.setAnalyzer(ContextCompat.getMainExecutor(previewView.context), faceLandmarkerHelper)
+                    it.setAnalyzer(analysisExecutor, faceLandmarkerHelper)
                 }
 
             // Select front camera
