@@ -1,16 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { format, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { SessionDetailResponse } from "@symma/shared-types";
 import { getSessionDetail } from "@/lib/api";
+import { useApiErrorHandler } from "@/hooks/use-api-error-handler";
+import { useDateFormatter } from "@/hooks/use-date-formatter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,8 @@ export default function SessionDetailPage() {
   const [sessionDetail, setSessionDetail] = useState<SessionDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const handleApiError = useApiErrorHandler();
+  const formatDate = useDateFormatter();
 
   useEffect(() => {
     async function fetchDetail() {
@@ -70,7 +72,7 @@ export default function SessionDetailPage() {
         const detail = await getSessionDetail(authSession.user.accessToken, sessionId);
         setSessionDetail(detail);
       } catch (fetchError) {
-        setError(fetchError instanceof Error ? fetchError.message : "Failed to load session detail");
+        setError(handleApiError(fetchError));
       } finally {
         setLoading(false);
       }
@@ -79,15 +81,7 @@ export default function SessionDetailPage() {
     if (sessionId) {
       fetchDetail();
     }
-  }, [authSession, sessionId]);
-
-  const detailDate = useMemo(() => {
-    if (!sessionDetail) {
-      return "";
-    }
-
-    return format(parseISO(sessionDetail.date), "PPP", { locale: es });
-  }, [sessionDetail]);
+  }, [authSession, sessionId, handleApiError]);
 
   if (loading) {
     return (
@@ -141,8 +135,8 @@ export default function SessionDetailPage() {
           <CardTitle>{t('sessionDetail.sessionMetadata')}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3 text-sm">
-          <Badge variant="outline">{detailDate}</Badge>
-          <Badge variant="outline">{Math.floor(sessionDetail.durationSeconds / 60)} min</Badge>
+          <Badge variant="outline">{formatDate.longDate(sessionDetail.date)}</Badge>
+          <Badge variant="outline">{t('analytics.min', { minutes: Math.floor(sessionDetail.durationSeconds / 60) })}</Badge>
           <Badge className={scoreBadgeClass(sessionDetail.score)}>{sessionDetail.score}%</Badge>
           <Badge variant="outline">{sessionDetail.isSynced ? t('sessionDetail.synced') : t('sessionDetail.pendingSync')}</Badge>
         </CardContent>
@@ -174,7 +168,7 @@ export default function SessionDetailPage() {
                         <TableCell>{item.exerciseName}</TableCell>
                         <TableCell>{item.repsCompleted}</TableCell>
                         <TableCell>
-                          {item.averageAccuracy === null ? "N/A" : `${item.averageAccuracy.toFixed(1)}%`}
+                          {item.averageAccuracy === null ? t('labels.notAvailable') : `${item.averageAccuracy.toFixed(1)}%`}
                         </TableCell>
                       </TableRow>
                       {repSeries.length > 0 ? (

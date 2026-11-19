@@ -2,14 +2,13 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import type { ExerciseResponse, Patient, CreateRoutineDto, RoutineResponse, UpdateRoutineDto, RoutineItemResponse, ExerciseType } from '@symma/shared-types';
+import type { ExerciseResponse, Patient, CreateRoutineDto, RoutineResponse, UpdateRoutineDto } from '@symma/shared-types';
 import { Button } from '@/components/ui/button';
+import { EnumLabel } from '@/components/ui/enum-label';
+import { ExerciseThumbnail } from './exercise-thumbnail';
 
 type Exercise = ExerciseResponse;
 type Routine = RoutineResponse;
-type RoutineItem = RoutineItemResponse;
-
-import { EnumLabel } from '@/components/ui/enum-label';
 
 export type BuilderItem = {
   id: string;
@@ -63,9 +62,8 @@ export function RoutineBuilder({
       ? new Date(initialData.endDate).toISOString().split('T')[0]
       : ''
   );
-  const [therapistNotes, setTherapistNotes] = useState(initialData?.therapistNotes || '');
+  const therapistNotes = initialData?.therapistNotes ?? '';
 
-  // Keep these handlers here or pass them? Logic is here, state update via prop.
   const handleRemoveItem = (itemId: string) => {
     if (isLocked) return;
     onItemsChange(items.filter((item) => item.id !== itemId));
@@ -93,7 +91,6 @@ export function RoutineBuilder({
     if (!patientId || !name || items.length === 0) return;
 
     if (mode === 'edit') {
-      // For edit mode, only send metadata if locked, or full data if unlocked
       const updateDto: UpdateRoutineDto = {
         name,
         startDate,
@@ -101,7 +98,6 @@ export function RoutineBuilder({
         therapistNotes: therapistNotes || undefined,
       };
 
-      // Only include items if not locked (routine has no sessions)
       if (!isLocked) {
         updateDto.items = items.map((item) => ({
           exerciseId: item.exercise.id,
@@ -146,7 +142,7 @@ export function RoutineBuilder({
       <div className="px-4 md:px-8 py-4 md:py-6 flex flex-col gap-4 bg-white border-b border-slate-200 shadow-sm shrink-0">
         <div className="flex flex-col gap-2 w-full">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${mode === 'edit' ? 'bg-blue-100 text-blue-700' : 'bg-[#0d9488]/10 text-[#0d9488]'}`}>
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${mode === 'edit' ? 'bg-blue-100 text-blue-700' : 'bg-brand/10 text-brand'}`}>
               {mode === 'edit' ? (isLocked ? t('routines.locked') : t('buttons.edit')) : t('routines.draft')}
             </span>
             <div className="flex items-center gap-2">
@@ -167,7 +163,7 @@ export function RoutineBuilder({
             </div>
           </div>
           <input
-            className="text-xl md:text-3xl font-bold text-slate-900 bg-transparent border-0 border-b border-transparent hover:border-slate-300 focus:border-[#0d9488] focus:ring-0 p-0 transition-colors placeholder-slate-300 w-full"
+            className="text-xl md:text-3xl font-bold text-slate-900 bg-transparent border-0 border-b border-transparent hover:border-slate-300 focus:border-brand focus:ring-0 p-0 transition-colors placeholder-slate-300 w-full"
             placeholder={t('routines.routineName')}
             type="text"
             value={name}
@@ -211,7 +207,7 @@ export function RoutineBuilder({
             <Button
               onClick={handleSubmit}
               disabled={loading || items.length === 0}
-              className="h-10 px-4 md:px-6 bg-[#0d9488] text-white text-sm font-bold shadow-sm hover:bg-[#0b847a]"
+              className="h-10 px-4 md:px-6 bg-brand text-white text-sm font-bold shadow-sm hover:bg-brand-hover"
             >
               {loading ? t('buttons.saving') : t('buttons.save')}
             </Button>
@@ -235,7 +231,7 @@ export function RoutineBuilder({
           {items.length === 0 ? (
             <div className="border-2 border-dashed border-slate-300 rounded-xl p-12 flex flex-col items-center justify-center text-center">
               <div className="bg-slate-100 p-4 rounded-full mb-4">
-                <span className="material-symbols-outlined text-slate-400 text-4xl">drag_indicator</span>
+                <span className="material-symbols-outlined text-slate-500 text-4xl">playlist_add</span>
               </div>
               <h4 className="text-lg font-medium text-slate-900">{t('routines.startBuilding')}</h4>
               <p className="text-slate-500 mt-1">{t('routines.addExercisesFromCatalog')}</p>
@@ -246,20 +242,16 @@ export function RoutineBuilder({
                 key={item.id}
                 className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5 group transition-all hover:shadow-md"
               >
-                {/* Top row: Drag handle, Exercise info, Delete button */}
                 <div className="flex items-start gap-3 mb-4">
-                  {/* Drag handle and index */}
-                  <div className="flex flex-col items-center gap-1 text-slate-400 pt-1">
-                    <span className="material-symbols-outlined cursor-move text-lg">drag_indicator</span>
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 rounded px-1.5 py-0.5">
+                  <div className="flex flex-col items-center gap-1 text-slate-500 pt-1">
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 rounded px-1.5 py-0.5">
                       {(index + 1).toString().padStart(2, '0')}
                     </span>
                   </div>
 
-                  {/* Exercise image */}
-                  <div
-                    className="size-14 md:size-16 rounded-lg bg-slate-100 bg-center bg-cover border border-slate-100 shrink-0"
-                    style={{ backgroundImage: `url('${item.exercise.assetAnimationUrl || '/placeholder-exercise.png'}')` }}
+                  <ExerciseThumbnail
+                    imageUrl={item.exercise.assetAnimationUrl}
+                    className="size-14 md:size-16 border border-slate-100"
                   />
 
                   {/* Exercise info */}
@@ -283,18 +275,19 @@ export function RoutineBuilder({
                         </div>
                         <div className="flex md:hidden gap-1">
                           <Button variant="ghost" size="icon-xs" onClick={() => moveItem(index, 'up')} disabled={index === 0}>
-                            <span className="material-symbols-outlined text-sm text-slate-400">arrow_upward</span>
+                            <span className="material-symbols-outlined text-sm text-slate-500">arrow_upward</span>
                           </Button>
                           <Button variant="ghost" size="icon-xs" onClick={() => moveItem(index, 'down')} disabled={index === items.length - 1}>
-                            <span className="material-symbols-outlined text-sm text-slate-400">arrow_downward</span>
+                            <span className="material-symbols-outlined text-sm text-slate-500">arrow_downward</span>
                           </Button>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon-xs"
                           onClick={() => handleRemoveItem(item.id)}
-                          className="text-slate-400 hover:text-red-500 hover:bg-red-50"
-                          title="Remove exercise"
+                          className="text-slate-500 hover:text-red-600 hover:bg-red-50"
+                          title={t('routines.removeExercise')}
+                          aria-label={t('routines.removeExercise')}
                         >
                           <span className="material-symbols-outlined text-[18px]">delete</span>
                         </Button>
@@ -305,7 +298,6 @@ export function RoutineBuilder({
 
                 {/* Inputs row */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                  {/* Row 1: Module & Type - REMOVED */}
                   {/* Row 2: Metrics */}
                   < div className="col-span-2 md:col-span-4 grid grid-cols-2 md:grid-cols-4 gap-3" >
 
@@ -313,7 +305,7 @@ export function RoutineBuilder({
                     <div>
                       <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">{t('labels.sets')}</label>
                       <input
-                        className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100' : 'bg-slate-50'}`}
+                        className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-brand focus:ring-brand ${isLocked ? 'bg-slate-100' : 'bg-slate-50'}`}
                         type="number"
                         min="1"
                         value={item.sets}
@@ -324,7 +316,7 @@ export function RoutineBuilder({
                     <div>
                       <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">{t('labels.reps')}</label>
                       <input
-                        className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100' : 'bg-slate-50'}`}
+                        className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-brand focus:ring-brand ${isLocked ? 'bg-slate-100' : 'bg-slate-50'}`}
                         type="number"
                         min="1"
                         value={item.repsPerSet}
@@ -335,7 +327,7 @@ export function RoutineBuilder({
                     <div>
                       <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">{t('labels.holdSeconds')}</label>
                       <input
-                        className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked || item.exercise.type === 'ISOTONIC' ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
+                        className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-brand focus:ring-brand ${isLocked || item.exercise.type === 'ISOTONIC' ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'}`}
                         type="number"
                         min="0"
                         value={item.targetHoldSeconds}
@@ -351,7 +343,7 @@ export function RoutineBuilder({
                   <div>
                     <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">{t('labels.restSeconds')}</label>
                     <input
-                      className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100' : 'bg-slate-50'}`}
+                      className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-brand focus:ring-brand ${isLocked ? 'bg-slate-100' : 'bg-slate-50'}`}
                       type="number"
                       min="0"
                       value={item.restBetweenSets}
@@ -362,7 +354,7 @@ export function RoutineBuilder({
                   <div>
                     <label className="block text-[10px] md:text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">{t('labels.difficulty')}</label>
                     <input
-                      className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-[#0d9488] focus:ring-[#0d9488] ${isLocked ? 'bg-slate-100' : 'bg-slate-50'}`}
+                      className={`w-full h-8 md:h-9 rounded-md border-slate-200 text-center text-sm focus:border-brand focus:ring-brand ${isLocked ? 'bg-slate-100' : 'bg-slate-50'}`}
                       type="number"
                       step="0.1"
                       min="0.1"
@@ -379,7 +371,7 @@ export function RoutineBuilder({
                         checked={item.strictMode}
                         onChange={(e) => handleUpdateItem(item.id, 'strictMode', e.target.checked)}
                         disabled={isLocked}
-                        className="rounded border-slate-300 text-[#0d9488] focus:ring-[#0d9488]"
+                        className="rounded border-slate-300 text-brand focus:ring-brand"
                       />
                       <span className="text-xs font-medium text-slate-600">{t('labels.strict')}</span>
                     </label>
@@ -389,7 +381,7 @@ export function RoutineBuilder({
                         checked={item.allowSkip}
                         onChange={(e) => handleUpdateItem(item.id, 'allowSkip', e.target.checked)}
                         disabled={isLocked}
-                        className="rounded border-slate-300 text-[#0d9488] focus:ring-[#0d9488]"
+                        className="rounded border-slate-300 text-brand focus:ring-brand"
                       />
                       <span className="text-xs font-medium text-slate-600">{t('labels.skip')}</span>
                     </label>
@@ -399,7 +391,7 @@ export function RoutineBuilder({
             ))
           )}
 
-          <div className="h-2 rounded-full bg-[#0d9488]/10 w-full mt-2"></div>
+          <div className="h-2 rounded-full bg-brand/10 w-full mt-2"></div>
         </div>
       </div>
     </div>

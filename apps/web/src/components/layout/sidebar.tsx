@@ -1,18 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useTranslations } from 'next-intl'; // Import useTranslations hook
+import { useTranslations } from 'next-intl';
 import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
+import { LanguageSwitcher } from '@/components/i18n/language-switcher';
 
 interface SidebarProps {
+  userName: string;
+}
+
+interface HeaderProps {
   userName: string;
   userRole: string;
 }
 
-export function Sidebar({ userName, userRole }: SidebarProps) {
+function getInitials(userName: string) {
+  return userName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase();
+}
+
+export function Sidebar({ userName }: SidebarProps) {
   const t = useTranslations('common');
   const [isOpen, setIsOpen] = useState(false); // Mobile drawer
   const [isCollapsed, setIsCollapsed] = useState(true); // Desktop collapse (LG only)
@@ -31,16 +44,8 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
     return pathname.startsWith(href);
   };
 
-  const initials = userName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase();
+  const initials = getInitials(userName);
 
-  // Determine if we should show text based on collapse state and screen size
-  // On mobile: always show text (drawer)
-  // On LG: show/hide based on isCollapsed state
-  // On XL+: always show text
   const textClass = isCollapsed ? 'lg:hidden xl:inline' : 'inline';
   const justifyClass = isCollapsed ? 'lg:justify-center xl:justify-start' : 'justify-start';
 
@@ -64,16 +69,12 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
           >
             <span className="material-symbols-outlined text-gray-600">menu</span>
           </Button>
-          <span className="material-symbols-outlined text-[#0d9488] text-2xl">medical_services</span>
+          <span className="material-symbols-outlined text-brand text-2xl">medical_services</span>
           <span className="font-bold text-[#0d1b1a]">Symma</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon-sm" className="relative text-gray-400 hover:text-gray-500">
-            <span className="material-symbols-outlined text-xl">notifications</span>
-            <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-[#E11D48] ring-2 ring-white"></span>
-          </Button>
-          <div className="h-8 w-8 rounded-full bg-[#0d9488]/20 flex items-center justify-center">
-            <span className="text-[#0d9488] font-bold text-xs">{initials}</span>
+          <div className="h-8 w-8 rounded-full bg-brand/20 flex items-center justify-center">
+            <span className="text-brand font-bold text-xs">{initials}</span>
           </div>
         </div>
       </header>
@@ -91,7 +92,7 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
         <div className={`flex flex-col gap-4 p-6 ${isCollapsed ? 'lg:p-3 xl:p-6' : ''}`}>
           <div className="flex flex-col mb-4">
             <div className={`flex items-center gap-2 mb-1 ${justifyClass}`}>
-              <span className="material-symbols-outlined text-[#0d9488] text-3xl">medical_services</span>
+              <span className="material-symbols-outlined text-brand text-3xl">medical_services</span>
               <h1 className={`text-[#0d1b1a] text-xl font-bold leading-normal tracking-tight ${textClass}`}>Symma</h1>
               <Button
                 variant="ghost"
@@ -99,10 +100,10 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
                 onClick={() => setIsOpen(false)}
                 className="lg:hidden ml-auto"
               >
-                <span className="material-symbols-outlined text-gray-400">close</span>
+                <span className="material-symbols-outlined text-gray-500">close</span>
               </Button>
             </div>
-            <p className={`text-[#4c9a93] text-xs font-medium uppercase tracking-wider pl-10 ${textClass}`}>{t('nav.therapistPortal')}</p>
+            <p className={`text-brand-muted text-xs font-medium uppercase tracking-wider pl-10 ${textClass}`}>{t('nav.therapistPortal')}</p>
           </div>
           <nav className="flex flex-col gap-1">
             {navItems.map((item) => (
@@ -112,12 +113,12 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
                 onClick={() => setIsOpen(false)}
                 title={item.label}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${justifyClass} ${isActive(item.href)
-                  ? 'bg-[#0d9488]/10 text-[#0d9488]'
+                  ? 'bg-brand/10 text-brand'
                   : 'hover:bg-gray-50 text-gray-600'
                   }`}
               >
                 <span
-                  className={`material-symbols-outlined transition-colors ${isActive(item.href) ? '' : 'group-hover:text-[#0d9488]'}`}
+                  className={`material-symbols-outlined transition-colors ${isActive(item.href) ? '' : 'group-hover:text-brand'}`}
                   style={isActive(item.href) ? { fontVariationSettings: "'FILL' 1" } : undefined}
                 >
                   {item.icon}
@@ -132,7 +133,15 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
 
         {/* Bottom section with collapse toggle and logout */}
         <div className={`p-6 border-t border-[#e7f3f2] space-y-2 ${isCollapsed ? 'lg:p-3 xl:p-6' : ''}`}>
-          {/* Collapse Toggle - Only visible on lg screens, hidden on xl+ */}
+          <LanguageSwitcher className="lg:hidden px-3 py-2" />
+          <Link
+            href="/privacy"
+            title={t('privacy.link')}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 ${justifyClass}`}
+          >
+            <span className="material-symbols-outlined">policy</span>
+            <span className={`text-sm font-medium ${textClass}`}>{t('privacy.link')}</span>
+          </Link>
           <Button
             variant="ghost"
             onClick={() => setIsCollapsed(!isCollapsed)}
@@ -148,7 +157,6 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
             {!isCollapsed && <span className="text-sm font-medium">{t('buttons.collapse')}</span>}
           </Button>
 
-          {/* Logout button */}
           <Button
             variant="ghost"
             onClick={() => signOut({ callbackUrl: '/login' })}
@@ -164,40 +172,20 @@ export function Sidebar({ userName, userRole }: SidebarProps) {
   );
 }
 
-export function Header({ userName, userRole }: SidebarProps) {
-  const t = useTranslations('common');
-  const initials = userName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase();
+export function Header({ userName, userRole }: HeaderProps) {
+  const initials = getInitials(userName);
 
   return (
-    <header className="hidden lg:flex items-center justify-between border-b border-[#e7f3f2] bg-white px-8 py-4 h-18 shrink-0">
-      <div className="w-full max-w-md">
-        <div className="relative group">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <span className="material-symbols-outlined text-gray-400 group-focus-within:text-[#0d9488] transition-colors">search</span>
-          </div>
-          <input
-            className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg leading-5 bg-gray-50 text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[#0d9488] focus:border-[#0d9488] sm:text-sm transition duration-150 ease-in-out"
-            placeholder={t('labels.search')}
-            type="text"
-          />
-        </div>
-      </div>
+    <header className="hidden lg:flex items-center justify-end border-b border-[#e7f3f2] bg-white px-8 py-4 h-18 shrink-0">
       <div className="flex items-center gap-6">
-        <Button variant="ghost" size="icon" className="relative text-gray-400 hover:text-gray-500">
-          <span className="material-symbols-outlined">notifications</span>
-          <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-[#E11D48] ring-2 ring-white"></span>
-        </Button>
+        <LanguageSwitcher />
         <div className="flex items-center gap-3 pl-6 border-l border-gray-200">
           <div className="text-right">
             <p className="text-sm font-semibold text-gray-900 leading-none">{userName}</p>
             <p className="text-xs text-gray-500 mt-1">{userRole}</p>
           </div>
-          <div className="h-10 w-10 rounded-full bg-[#0d9488]/20 flex items-center justify-center ring-2 ring-[#0d9488]/20">
-            <span className="text-[#0d9488] font-bold text-sm">{initials}</span>
+          <div className="h-10 w-10 rounded-full bg-brand/20 flex items-center justify-center ring-2 ring-brand/20">
+            <span className="text-brand font-bold text-sm">{initials}</span>
           </div>
         </div>
       </div>

@@ -6,9 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Area, CartesianGrid, ComposedChart, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis } from "recharts";
-import { format, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
 import type { HistoryItemSummary } from "@symma/shared-types";
+import { useDateFormatter } from "@/hooks/use-date-formatter";
 
 export type MetricType = "score" | "reps" | "time";
 
@@ -49,13 +48,65 @@ export function getSelectedSessions(
   return sessions.filter((session) => selectedIds.has(session.id));
 }
 
+export function sortByDateAscending<T extends { date: string }>(points: T[]): T[] {
+  return [...points].sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+}
+
+function toDay(date: string): string {
+  return date.slice(0, 10);
+}
+
+export interface PlottedPoint {
+  key: string;
+  date: string;
+  value: number;
+  color: string;
+}
+
+interface PlottedPointsInput {
+  data: ChartDataPoint[];
+  sessions: SessionChartPoint[];
+  metric: MetricType;
+  exerciseId: string;
+  selectedIds?: Set<string>;
+}
+
+const DEFAULT_POINT_COLOR = "#0D9488";
+
+export function buildPlottedPoints({
+  data,
+  sessions,
+  metric,
+  exerciseId,
+  selectedIds,
+}: PlottedPointsInput): PlottedPoint[] {
+  const plotsFullScoreHistory =
+    metric === "score" && exerciseId === "average" && (!selectedIds || selectedIds.size === 0);
+
+  if (plotsFullScoreHistory) {
+    const colorByDay = new Map(sessions.map((session) => [toDay(session.date), session.color]));
+    return sortByDateAscending(data).map((point, index) => ({
+      key: `${point.date}-${index}`,
+      date: point.date,
+      value: point.score,
+      color: colorByDay.get(toDay(point.date)) ?? DEFAULT_POINT_COLOR,
+    }));
+  }
+
+  return sortByDateAscending(getSelectedSessions(sessions, selectedIds)).map((session) => ({
+    key: session.id,
+    date: session.date,
+    value: getMetricValue(session, metric, exerciseId),
+    color: session.color,
+  }));
+}
 
 function getMetricValue(
   session: SessionChartPoint,
   metric: MetricType,
-  exerciseId: string | null
+  exerciseId: string
 ): number {
-  if (exerciseId === null || exerciseId === "average") {
+  if (exerciseId === "average") {
     switch (metric) {
       case "score":
         return session.score;
@@ -83,6 +134,7 @@ function getMetricValue(
 
 export function ProgressChart({ data, sessions = [], selectedIds, exercises = [] }: ProgressChartProps) {
   const t = useTranslations('common');
+  const formatDate = useDateFormatter();
   const [metric, setMetric] = useState<MetricType>("score");
   const [selectedExercise, setSelectedExercise] = useState<string>("average");
 
@@ -92,29 +144,19 @@ export function ProgressChart({ data, sessions = [], selectedIds, exercises = []
     time: t('analytics.time'),
   };
 
-  const METRIC_UNITS: Record<MetricType, string> = {
-    score: "%",
-    reps: " reps",
-    time: " min",
-  };
+  const formatMetricValue = (value: number) => t(`analytics.metricValue.${metric}`, { value });
 
-  const selectedSessions = getSelectedSessions(sessions, selectedIds);
-
-  const sessionByDate = new Map<string, SessionChartPoint>();
+  const sessionByDay = new Map<string, SessionChartPoint>();
   sessions.forEach((session) => {
-    if (!sessionByDate.has(session.date)) {
-      sessionByDate.set(session.date, session);
+    if (!sessionByDay.has(toDay(session.date))) {
+      sessionByDay.set(toDay(session.date), session);
     }
   });
 
-  const chartData = useMemo(() => {
-    return selectedSessions.map((session) => ({
-      date: session.date,
-      value: getMetricValue(session, metric, selectedExercise),
-      color: session.color,
-      id: session.id,
-    }));
-  }, [selectedSessions, metric, selectedExercise]);
+  const chartData = useMemo(
+    () => buildPlottedPoints({ data, sessions, metric, exerciseId: selectedExercise, selectedIds }),
+    [data, sessions, metric, selectedExercise, selectedIds]
+  );
 
   const yAxisDomain = useMemo(() => {
     if (metric === "score") return [0, 100];
@@ -165,20 +207,14 @@ export function ProgressChart({ data, sessions = [], selectedIds, exercises = []
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(str) => {
-                  try {
-                    return format(parseISO(str), "dd/MM");
-                  } catch {
-                    return str;
-                  }
-                }}
+                tickFormatter={(date: string) => formatDate.dayAndMonth(date)}
               />
               <YAxis
                 stroke="#888888"
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => `${value}${METRIC_UNITS[metric]}`}
+                tickFormatter={formatMetricValue}
                 domain={yAxisDomain}
               />
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -190,22 +226,18 @@ export function ProgressChart({ data, sessions = [], selectedIds, exercises = []
                   if (!dataPoint) return null;
                   
                   const value = dataPoint.value as number;
-                  const matchedSession = typeof label === 'string' ? sessionByDate.get(label) : null;
+                  const matchedSession = typeof label === 'string' ? sessionByDay.get(toDay(label)) : null;
                   
-                  let formattedDate = '';
-                  try {
-                    formattedDate = typeof label === 'string' ? format(parseISO(label), "d 'de' MMM, yyyy", { locale: es }) : String(label);
-                  } catch {
-                    formattedDate = String(label);
-                  }
-                  
-                  const duration = matchedSession ? ` • ${Math.floor(matchedSession.durationSeconds / 60)} min` : '';
+                  const formattedDate = typeof label === 'string' ? formatDate.longDate(label) : String(label);
+                  const duration = matchedSession
+                    ? ` • ${t('analytics.min', { minutes: Math.floor(matchedSession.durationSeconds / 60) })}`
+                    : '';
                   
                   return (
                     <div className="rounded-lg border bg-background p-2 shadow-sm">
                       <p className="text-sm font-medium text-muted-foreground">{formattedDate}{duration}</p>
                       <p className="text-sm font-semibold">
-                        {METRIC_LABELS[metric]}: {value}{METRIC_UNITS[metric]}
+                        {METRIC_LABELS[metric]}: {formatMetricValue(value)}
                       </p>
                     </div>
                   );

@@ -8,7 +8,7 @@ const withNextIntl = createNextIntlPlugin(
 const nextConfig: NextConfig = {
   /* config options here */
   output: "standalone", // Required for Docker deployment
-  transpilePackages: ["@symma/shared-types", "@symma/ui", "@symma/i18n"],
+  transpilePackages: ["@symma/shared-types", "@symma/i18n"],
   reactCompiler: true,
 };
 

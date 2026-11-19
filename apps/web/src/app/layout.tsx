@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { SessionProvider } from 'next-auth/react';
 import { NextIntlClientProvider } from 'next-intl';
-import { getLocale, getMessages } from 'next-intl/server';
+import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import './globals.css';
 
 const inter = Inter({
@@ -10,10 +10,13 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
-export const metadata: Metadata = {
-  title: 'Symma - Therapist Portal',
-  description: 'Facial Paralysis Rehabilitation Platform',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('common.meta');
+  return {
+    title: t('title'),
+    description: t('description'),
+  };
+}
 
 export default async function RootLayout({
   children,
@@ -26,6 +29,7 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <head>
+        {/* eslint-disable-next-line @next/next/no-page-custom-font -- the App Router root layout already applies to every page */}
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"

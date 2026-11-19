@@ -18,5 +18,6 @@
   "network": {
     "offline": "No hay conexión a internet",
     "syncFailed": "Error al sincronizar datos"
-  }
+  },
+  "generic": "Ha ocurrido un error. Por favor intenta de nuevo."
 }

@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithIntl } from "@/test/render-with-intl";
 import SessionDetailPage from "./page";
 
 const mockPush = vi.fn();
@@ -36,7 +37,7 @@ describe("SessionDetailPage", () => {
   it("renders loading skeleton initially", () => {
     mockGetSessionDetail.mockReturnValue(new Promise(() => undefined));
 
-    const { container } = render(<SessionDetailPage />);
+    const { container } = renderWithIntl(<SessionDetailPage />);
 
     expect(container.querySelector(".h-24")).toBeInTheDocument();
   });
@@ -67,13 +68,13 @@ describe("SessionDetailPage", () => {
       },
     });
 
-    render(<SessionDetailPage />);
+    renderWithIntl(<SessionDetailPage />);
 
-    expect(await screen.findByText("Exercise Breakdown")).toBeInTheDocument();
+    expect(await screen.findByText("Desglose de ejercicios")).toBeInTheDocument();
     expect(screen.getByText("Smile Stretch")).toBeInTheDocument();
-    expect(screen.getByText("N/A")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Previous Session" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Next Session" })).toBeDisabled();
+    expect(screen.getByText("N/D")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sesión anterior" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Siguiente sesión" })).toBeDisabled();
   });
 
   it("shows empty state when no exercise items are present", async () => {
@@ -92,19 +93,19 @@ describe("SessionDetailPage", () => {
       },
     });
 
-    render(<SessionDetailPage />);
+    renderWithIntl(<SessionDetailPage />);
 
-    expect(await screen.findByText("No exercise data recorded")).toBeInTheDocument();
+    expect(await screen.findByText("Sin datos de ejercicios registrados")).toBeInTheDocument();
   });
 
   it("shows error state and retries", async () => {
     mockGetSessionDetail.mockRejectedValue(new Error("boom"));
 
-    render(<SessionDetailPage />);
+    renderWithIntl(<SessionDetailPage />);
 
-    expect(await screen.findByText("Unable to load session")).toBeInTheDocument();
+    expect(await screen.findByText("No se pudo cargar la sesión")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar" }));
     await waitFor(() => {
       expect(mockRefresh).toHaveBeenCalled();
     });

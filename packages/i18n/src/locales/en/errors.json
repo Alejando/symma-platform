@@ -1,1 +1,23 @@
-{}
+{
+  "auth": {
+    "unauthorized": "Unauthorized",
+    "forbidden": "You do not have permission to perform this action",
+    "tokenExpired": "Your session has expired, please sign in again",
+    "invalidCredentials": "Invalid credentials"
+  },
+  "server": {
+    "internalError": "Internal server error",
+    "badRequest": "Bad request",
+    "notFound": "Resource not found",
+    "timeout": "Request timed out"
+  },
+  "database": {
+    "uniqueConstraint": "This record already exists",
+    "foreignKeyConstraint": "The operation cannot be completed because of related records"
+  },
+  "network": {
+    "offline": "No internet connection",
+    "syncFailed": "Failed to sync data"
+  },
+  "generic": "An error occurred. Please try again."
+}

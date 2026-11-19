@@ -68,7 +68,8 @@
     "selectPatient": "Seleccionar paciente",
     "selectGender": "Seleccionar género",
     "selectGrade": "Seleccionar grado",
-    "selectModule": "Seleccionar módulo..."
+    "selectModule": "Seleccionar módulo...",
+    "notAvailable": "N/D"
   },
   "messages": {
     "noData": "No hay datos disponibles",
@@ -84,9 +85,7 @@
     "addFirstPatient": "Agrega tu primer paciente para comenzar.",
     "addFirstExercise": "Agrega tu primer ejercicio para comenzar.",
     "noExercisesFoundCreate": "No se encontraron ejercicios. Crea uno para comenzar.",
-    "confirmDeleteExercise": "¿Estás seguro de que deseas eliminar este ejercicio?",
-    "failedToSave": "Error al guardar",
-    "failedToSaveExercise": "Error al guardar el ejercicio"
+    "confirmDeleteExercise": "¿Estás seguro de que deseas eliminar este ejercicio?"
   },
   "pagination": {
     "previous": "Anterior",
@@ -107,10 +106,8 @@
   "login": {
     "welcomeBack": "Bienvenido de nuevo",
     "enterCredentials": "Ingresa tus credenciales para acceder al portal de pacientes de Symma.",
-    "forgotPassword": "¿Olvidaste tu contraseña?",
     "enterPassword": "Ingresa tu contraseña",
-    "noAccount": "¿No tienes una cuenta?",
-    "joinNetwork": "Únete a la red"
+    "emailPlaceholder": "nombre@clinica.com"
   },
   "dashboard": {
     "goodMorning": "Buenos días, {name}",
@@ -124,8 +121,6 @@
     "allClear": "Todo en orden",
     "quickActions": "Acciones rápidas",
     "exercisesLibrary": "Biblioteca de ejercicios",
-    "activeRoutines": "Rutinas activas",
-    "mobileAccess": "Acceso móvil",
     "attentionRequired": "Atención requerida",
     "patientsAtRisk": "{count, plural, one {# Paciente} other {# Pacientes}} en riesgo",
     "allCompliant": "Todos los pacientes activos cumplen",
@@ -150,7 +145,11 @@
     "clinicalNotes": "Notas clínicas",
     "houseBrackmann": "Escala House-Brackmann",
     "diagnosisPlaceholder": "Ej., Parálisis de Bell, Síndrome de Ramsay Hunt...",
-    "notesPlaceholder": "Notas adicionales sobre el paciente..."
+    "notesPlaceholder": "Notas adicionales sobre el paciente...",
+    "firstNamePlaceholder": "Ej., Ana",
+    "lastNamePlaceholder": "Ej., López",
+    "emailPlaceholder": "paciente@correo.com",
+    "phonePlaceholder": "xxx-xxx-xxxx"
   },
   "exercises": {
     "title": "Ejercicios",
@@ -159,7 +158,10 @@
     "editExercise": "Editar ejercicio",
     "exerciseCatalog": "Catálogo de ejercicios",
     "searchExercises": "Buscar ejercicios...",
-    "all": "Todos"
+    "all": "Todos",
+    "keyNamePlaceholder": "clave_unica_del_ejercicio",
+    "namePlaceholder": "Ej., Estiramiento de sonrisa",
+    "addExerciseNamed": "Agregar {name}"
   },
   "routines": {
     "title": "Rutinas",
@@ -171,7 +173,8 @@
     "startBuilding": "Comienza a construir",
     "addExercisesFromCatalog": "Agrega ejercicios del catálogo de la izquierda",
     "routineHasSessions": "La rutina tiene sesiones",
-    "exercisesLocked": "Los ejercicios están bloqueados para preservar datos históricos. Clona esta rutina para hacer cambios."
+    "exercisesLocked": "Los ejercicios están bloqueados para preservar datos históricos. Clona esta rutina para hacer cambios.",
+    "removeExercise": "Quitar ejercicio"
   },
   "gender": {
     "male": "Masculino",
@@ -193,11 +196,7 @@
     "gradeValue": "Grado {value}",
     "noNotesAvailable": "Sin notas disponibles.",
     "noEmergencyContact": "Sin contacto de emergencia registrado.",
-    "quickStats": "Estadísticas rápidas",
-    "adherence": "Adherencia",
-    "sessions": "Sesiones",
-    "phone": "Teléfono",
-    "na": "N/D"
+    "phone": "Teléfono"
   },
   "mobileAccess": {
     "title": "Acceso móvil",
@@ -236,8 +235,7 @@
     "notFound": "Paciente no encontrado",
     "overview": "Resumen",
     "assignRoutine": "Asignar rutina",
-    "yrs": "{age} años",
-    "postOpRecovery": "Recuperación post-operatoria"
+    "yrs": "{age} años"
   },
   "analytics": {
     "routineAnalytics": "Analíticas de rutina",
@@ -261,7 +259,14 @@
     "repetitions": "Repeticiones",
     "time": "Tiempo",
     "selectExercise": "Seleccionar ejercicio",
-    "allExercisesAvg": "Todos los ejercicios (Prom)"
+    "allExercisesAvg": "Todos los ejercicios (Prom)",
+    "setsByReps": "{sets} series × {reps} repeticiones",
+    "metricValue": {
+      "score": "{value}%",
+      "reps": "{value} reps",
+      "time": "{value} min"
+    },
+    "showingLatestSessions": "Mostrando las {shown} sesiones más recientes de {total}"
   },
   "sessionDetail": {
     "title": "Detalle de sesión",
@@ -279,5 +284,32 @@
     "nextSession": "Siguiente sesión",
     "unableToLoad": "No se pudo cargar la sesión",
     "retry": "Reintentar"
+  },
+  "language": {
+    "label": "Idioma",
+    "es": "Español",
+    "en": "English"
+  },
+  "meta": {
+    "title": "Symma - Portal del Terapeuta",
+    "description": "Plataforma de rehabilitación de parálisis facial"
+  },
+  "privacy": {
+    "title": "Aviso de privacidad",
+    "intro": "Symma es una plataforma de rehabilitación de parálisis facial. Este aviso describe cómo se tratan los datos personales de los pacientes y terapeutas que la utilizan, conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP).",
+    "controllerTitle": "Responsable del tratamiento",
+    "controller": "El terapeuta o la clínica que registra al paciente en Symma es el responsable del tratamiento de sus datos personales.",
+    "dataTitle": "Datos que se recaban",
+    "data": "Datos de identificación y contacto (nombre, correo electrónico, teléfono, fecha de nacimiento, género y contacto de emergencia) y datos personales sensibles de salud (diagnóstico, grado de parálisis, notas clínicas y resultados de las sesiones de ejercicio).",
+    "purposeTitle": "Finalidad",
+    "purpose": "Los datos se utilizan exclusivamente para planear, dar seguimiento y evaluar el proceso de rehabilitación del paciente.",
+    "transfersTitle": "Transferencias",
+    "transfers": "Los datos no se transfieren a terceros sin el consentimiento del titular, salvo en los casos previstos por la LFPDPPP.",
+    "rightsTitle": "Derechos ARCO",
+    "rights": "El titular puede solicitar el acceso, rectificación, cancelación u oposición al tratamiento de sus datos, así como revocar su consentimiento, dirigiéndose al terapeuta o a la clínica responsable.",
+    "changesTitle": "Cambios a este aviso",
+    "changes": "Cualquier modificación a este aviso se publicará en esta misma página.",
+    "link": "Aviso de privacidad",
+    "back": "Volver"
   }
 }

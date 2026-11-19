@@ -8,27 +8,49 @@ import enEnums from './locales/en/enums.json';
 import enErrors from './locales/en/errors.json';
 import enValidation from './locales/en/validation.json';
 
-describe('Locales Validation', () => {
-  it('should have valid ES translations', () => {
-    expect(esCommon).toBeDefined();
-    expect(esEnums).toBeDefined();
-    expect(esErrors).toBeDefined();
-    expect(esValidation).toBeDefined();
+type Catalog = { [key: string]: string | Catalog };
+
+const namespaces: Record<string, { es: Catalog; en: Catalog }> = {
+  common: { es: esCommon, en: enCommon },
+  enums: { es: esEnums, en: enEnums },
+  errors: { es: esErrors, en: enErrors },
+  validation: { es: esValidation, en: enValidation },
+};
+
+function flatten(catalog: Catalog, prefix = ''): Map<string, string> {
+  const entries = new Map<string, string>();
+  for (const [key, value] of Object.entries(catalog)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (typeof value === 'string') {
+      entries.set(path, value);
+    } else {
+      flatten(value, path).forEach((nested, nestedPath) => entries.set(nestedPath, nested));
+    }
+  }
+  return entries;
+}
+
+function placeholdersOf(message: string): string[] {
+  return [...message.matchAll(/\{\s*(\w+)/g)].map((match) => match[1] ?? '').sort();
+}
+
+describe.each(Object.entries(namespaces))('%s catalog', (_namespace, { es, en }) => {
+  const spanish = flatten(es);
+  const english = flatten(en);
+
+  it('has exactly the same keys in Spanish and English', () => {
+    expect([...english.keys()].sort()).toEqual([...spanish.keys()].sort());
   });
 
-  it('should have valid EN translations', () => {
-    expect(enCommon).toBeDefined();
-    expect(enEnums).toBeDefined();
-    expect(enErrors).toBeDefined();
-    expect(enValidation).toBeDefined();
+  it('has no empty translations', () => {
+    const emptyKeys = [...spanish, ...english].filter(([, value]) => value.trim() === '').map(([key]) => key);
+    expect(emptyKeys).toEqual([]);
   });
 
-  // Example for strict structural equality checks across languages in the future
-  it('should have matching keys between ES and EN for enums', () => {
-    const esKeys = Object.keys(esEnums).sort();
-    const enKeys = Object.keys(enEnums).sort();
-    // Enums structure might be empty for en currently, so let's check basic existence
-    expect(Array.isArray(esKeys)).toBe(true);
-    expect(Array.isArray(enKeys)).toBe(true);
+  it('uses the same placeholders in both languages', () => {
+    const mismatches = [...spanish]
+      .filter(([key, value]) => english.has(key) && placeholdersOf(value).join() !== placeholdersOf(english.get(key)!).join())
+      .map(([key]) => key);
+    expect(mismatches).toEqual([]);
   });
 });

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import type { Exercise } from '@symma/shared-types';
 import { EnumLabel } from '@/components/ui/enum-label';
 import { Button } from '@/components/ui/button';
+import { ExerciseThumbnail } from './exercise-thumbnail';
 
 interface ExerciseCatalogProps {
   exercises: Exercise[];
@@ -26,7 +27,6 @@ export function ExerciseCatalog({ exercises, onAddExercise }: ExerciseCatalogPro
 
   const handleAddExercise = (exercise: Exercise) => {
     onAddExercise(exercise);
-    // On mobile, close the drawer after adding
     if (window.innerWidth < 768) {
       setIsOpen(false);
     }
@@ -37,7 +37,7 @@ export function ExerciseCatalog({ exercises, onAddExercise }: ExerciseCatalogPro
       {/* Mobile Toggle Button */}
       <Button
         onClick={() => setIsOpen(true)}
-        className="md:hidden fixed bottom-4 left-4 z-30 px-4 py-3 bg-[#0d9488] text-white rounded-full shadow-lg hover:bg-[#0b857a]"
+        className="md:hidden fixed bottom-4 left-4 z-30 px-4 py-3 bg-brand text-white rounded-full shadow-lg hover:bg-brand-hover"
       >
         <span className="material-symbols-outlined">add</span>
         {t('buttons.addExercise')}
@@ -68,20 +68,20 @@ export function ExerciseCatalog({ exercises, onAddExercise }: ExerciseCatalogPro
               onClick={() => setIsOpen(false)}
               className="md:hidden"
             >
-              <span className="material-symbols-outlined text-slate-400">close</span>
+              <span className="material-symbols-outlined text-slate-500">close</span>
             </Button>
           </div>
 
           {/* Search */}
           <div className="relative mb-3">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
               <span className="material-symbols-outlined text-[20px]">search</span>
             </span>
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full py-2 pl-10 pr-4 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0d9488] focus:border-[#0d9488] placeholder-slate-400 transition-shadow"
+              className="w-full py-2 pl-10 pr-4 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand placeholder-slate-400 transition-shadow"
               placeholder={t('exercises.searchExercises')}
             />
           </div>
@@ -95,7 +95,7 @@ export function ExerciseCatalog({ exercises, onAddExercise }: ExerciseCatalogPro
                 size="xs"
                 onClick={() => setFilter(cat)}
                 className={`rounded-full shrink-0 ${filter === cat
-                  ? 'bg-[#0d9488] text-white hover:bg-[#0b847a]'
+                  ? 'bg-brand text-white hover:bg-brand-hover'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
               >
@@ -110,12 +110,9 @@ export function ExerciseCatalog({ exercises, onAddExercise }: ExerciseCatalogPro
           {filteredExercises.map((exercise) => (
             <div
               key={exercise.id}
-              className="group flex items-center gap-3 p-2 bg-white border border-slate-200 rounded-lg hover:border-[#0d9488]/50 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all"
+              className="group flex items-center gap-3 p-2 bg-white border border-slate-200 rounded-lg hover:border-brand/50 hover:shadow-sm transition-all"
             >
-              <div
-                className="h-12 w-12 rounded-md bg-slate-100 bg-center bg-cover shrink-0"
-                style={{ backgroundImage: `url('${exercise.assetAnimationUrl || '/placeholder-exercise.png'}')` }}
-              />
+              <ExerciseThumbnail imageUrl={exercise.assetAnimationUrl} className="h-12 w-12 rounded-md" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-800 truncate">{exercise.name}</p>
                 <div className="text-xs text-slate-500 truncate flex items-center gap-1">
@@ -129,8 +126,8 @@ export function ExerciseCatalog({ exercises, onAddExercise }: ExerciseCatalogPro
                 variant="ghost"
                 size="icon-xs"
                 onClick={() => handleAddExercise(exercise)}
-                className="text-slate-400 hover:text-[#0d9488] hover:bg-[#0d9488]/10 rounded-full"
-                aria-label={`Add ${exercise.name}`}
+                className="text-slate-500 hover:text-brand hover:bg-brand/10 rounded-full"
+                aria-label={t('exercises.addExerciseNamed', { name: exercise.name })}
               >
                 <span className="material-symbols-outlined text-[20px]">add_circle</span>
               </Button>

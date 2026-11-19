@@ -5,6 +5,7 @@ import { usePatient } from "@/components/patients/patient-context";
 import { PatientAccessCard } from "@/components/patients/patient-access-card";
 import { formatPhoneNumber } from "@/lib/utils";
 import { EnumLabel } from "@/components/ui/enum-label";
+import { useDateFormatter } from "@/hooks/use-date-formatter";
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -29,11 +30,12 @@ function LabelValue({ label, value }: { label: string; value: React.ReactNode })
 export default function PatientOverviewPage() {
   const t = useTranslations('common');
   const { patient, loading } = usePatient();
+  const formatDate = useDateFormatter();
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0d9488]"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -53,7 +55,7 @@ export default function PatientOverviewPage() {
           <LabelValue label={t('patientDetail.phone')} value={formatPhoneNumber(patient.phoneNumber)} />
           <LabelValue
             label={t('labels.dateOfBirth')}
-            value={patient.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString('es-MX') : t('patientDetail.na')}
+            value={patient.dateOfBirth ? formatDate.mediumDate(patient.dateOfBirth) : t('labels.notAvailable')}
           />
           <LabelValue 
             label={t('labels.gender')} 
@@ -66,7 +68,7 @@ export default function PatientOverviewPage() {
       <InfoCard title={t('patients.emergencyContact')}>
         <div className="space-y-4">
           <div className="bg-red-50 p-4 rounded-lg border border-red-100 flex items-start gap-3">
-            <span className="material-symbols-outlined text-red-500 mt-0.5">contact_emergency</span>
+            <span className="material-symbols-outlined text-red-600 mt-0.5">contact_emergency</span>
             <div>
               <LabelValue label={t('labels.name')} value={patient.emergencyContactName} />
               <div className="h-2"></div>
@@ -96,22 +98,6 @@ export default function PatientOverviewPage() {
             <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 text-sm text-gray-700 min-h-[80px]">
               {patient.clinicalNotes || t('patientDetail.noNotesAvailable')}
             </div>
-          </div>
-        </div>
-      </InfoCard>
-
-      {/* Activity Summary (Placeholder) */}
-      <InfoCard title={t('patientDetail.quickStats')}>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-[#0d9488]/5 p-4 rounded-lg text-center">
-            <span className="material-symbols-outlined text-[#0d9488] text-2xl mb-1">check_circle</span>
-            <p className="text-2xl font-bold text-[#0d1b1a]">85%</p>
-            <p className="text-xs text-gray-500 font-medium uppercase">{t('patientDetail.adherence')}</p>
-          </div>
-          <div className="bg-[#0d9488]/5 p-4 rounded-lg text-center">
-            <span className="material-symbols-outlined text-[#0d9488] text-2xl mb-1">fitness_center</span>
-            <p className="text-2xl font-bold text-[#0d1b1a]">12</p>
-            <p className="text-xs text-gray-500 font-medium uppercase">{t('patientDetail.sessions')}</p>
           </div>
         </div>
       </InfoCard>

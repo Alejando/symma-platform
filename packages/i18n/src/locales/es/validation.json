@@ -18,5 +18,6 @@
   "dateOfBirthRequired": "La fecha de nacimiento es obligatoria",
   "phoneDigits": "El teléfono debe tener 10 dígitos",
   "keyNameRequired": "El nombre clave es obligatorio",
-  "nameRequired": "El nombre es obligatorio"
+  "nameRequired": "El nombre es obligatorio",
+  "url": "Debe ser una URL válida (http o https)"
 }

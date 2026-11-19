@@ -1,20 +1,8 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { RoutineBuilder } from './routine-builder';
 import type { ExerciseResponse, Patient } from '@symma/shared-types';
 import { vi, describe, it, expect } from 'vitest';
-import { NextIntlClientProvider } from 'next-intl';
-
-const mockTranslations = {
-  ExerciseCategory: {
-    CORE: 'Principal',
-  },
-  ExerciseType: {
-    ISOMETRIC: 'Isométrico',
-  },
-  MobileModule: {
-    SMILE: 'Sonrisa',
-  }
-};
+import { renderWithIntl } from '@/test/render-with-intl';
 
 const mockExercise: ExerciseResponse = {
   id: 'ex-1',
@@ -53,8 +41,7 @@ describe('RoutineBuilder', () => {
     const setItems = vi.fn();
     const handleSubmit = vi.fn();
 
-    render(
-      <NextIntlClientProvider locale="es" messages={{ enums: mockTranslations }}>
+    renderWithIntl(
         <RoutineBuilder
           patients={[mockPatient]}
           items={[]}
@@ -62,11 +49,10 @@ describe('RoutineBuilder', () => {
           onSubmit={handleSubmit}
           loading={false}
         />
-      </NextIntlClientProvider>
     );
 
-    expect(screen.getByText(/Select Patient/i)).toBeInTheDocument();
-    expect(screen.getByText(/Add exercises from the catalog/i)).toBeInTheDocument();
+    expect(screen.getByText('Seleccionar paciente')).toBeInTheDocument();
+    expect(screen.getByText('Agrega ejercicios del catálogo de la izquierda')).toBeInTheDocument();
   });
 
   it('displays routine items with new fields', () => {
@@ -86,8 +72,7 @@ describe('RoutineBuilder', () => {
     }];
 
 
-    render(
-      <NextIntlClientProvider locale="es" messages={{ enums: mockTranslations }}>
+    renderWithIntl(
         <RoutineBuilder
           patients={[mockPatient]}
           preSelectedPatientId="p-1"
@@ -96,7 +81,6 @@ describe('RoutineBuilder', () => {
           onSubmit={handleSubmit}
           loading={false}
         />
-      </NextIntlClientProvider>
     );
 
     expect(screen.getByText('Test Exercise')).toBeInTheDocument();
@@ -104,6 +88,4 @@ describe('RoutineBuilder', () => {
     expect(screen.getByDisplayValue('10')).toBeInTheDocument(); // reps
 
   });
-
-  // Add more tests as needed for interaction
 });

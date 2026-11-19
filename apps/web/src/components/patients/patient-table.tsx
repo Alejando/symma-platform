@@ -6,6 +6,7 @@ import { EnumLabel } from "@/components/ui/enum-label";
 import type { Patient } from '@symma/shared-types';
 import { formatPhoneNumber } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 
 interface PatientTableProps {
   patients: Patient[];
@@ -26,20 +27,9 @@ function getStatusBadge(status: string) {
   return styles[status] || styles.INACTIVE;
 }
 
-function formatDate(dateString: string): string {
-  try {
-    return new Date(dateString).toLocaleDateString('es-MX', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  } catch {
-    return '-';
-  }
-}
-
 export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) {
   const t = useTranslations('common');
+  const formatDate = useDateFormatter();
 
   if (patients.length === 0) {
     return (
@@ -84,13 +74,13 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <Link href={`/dashboard/patients/${patient.id}`} className="group flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-[#0d9488]/20 flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105">
-                        <span className="text-[#0d9488] font-bold text-sm">
+                      <div className="h-10 w-10 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105">
+                        <span className="text-brand font-bold text-sm">
                           {getInitials(patient.firstName, patient.lastName)}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900 group-hover:text-[#0d9488] transition-colors">
+                        <p className="font-medium text-gray-900 group-hover:text-brand transition-colors">
                           {patient.firstName} {patient.lastName}
                         </p>
                         {patient.phoneNumber && (
@@ -104,7 +94,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                   <span className="text-sm text-gray-600">{patient.email}</span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-sm text-gray-600">{patient.dateOfBirth ? formatDate(patient.dateOfBirth) : 'N/A'}</span>
+                  <span className="text-sm text-gray-600">{patient.dateOfBirth ? formatDate.mediumDate(patient.dateOfBirth) : t('labels.notAvailable')}</span>
                 </td>
                 <td className="px-6 py-4">
                   <span
@@ -126,10 +116,10 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                       variant="ghost"
                       size="icon-sm"
                       onClick={() => onEdit(patient)}
-                      className="hover:bg-[#0d9488]/10 group"
+                      className="hover:bg-brand/10 group"
                       title={t('buttons.edit')}
                     >
-                      <span className="material-symbols-outlined text-gray-400 group-hover:text-[#0d9488] text-xl">
+                      <span className="material-symbols-outlined text-gray-500 group-hover:text-brand text-xl">
                         edit
                       </span>
                     </Button>
@@ -140,7 +130,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                       className="hover:bg-red-50 group"
                       title={t('buttons.archive')}
                     >
-                      <span className="material-symbols-outlined text-gray-400 group-hover:text-red-600 text-xl">
+                      <span className="material-symbols-outlined text-gray-500 group-hover:text-red-600 text-xl">
                         archive
                       </span>
                     </Button>
@@ -160,8 +150,8 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
             className="bg-white rounded-xl border border-[#e7f3f2] p-4"
           >
             <div className="flex items-start gap-3">
-              <div className="h-12 w-12 rounded-full bg-[#0d9488]/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-[#0d9488] font-bold">
+              <div className="h-12 w-12 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-brand font-bold">
                   {getInitials(patient.firstName, patient.lastName)}
                 </span>
               </div>
@@ -169,7 +159,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <Link href={`/dashboard/patients/${patient.id}`}>
-                      <h3 className="font-medium text-gray-900 hover:text-[#0d9488] transition-colors">
+                      <h3 className="font-medium text-gray-900 hover:text-brand transition-colors">
                         {patient.firstName} {patient.lastName}
                       </h3>
                     </Link>
@@ -184,7 +174,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                   </span>
                 </div>
                 <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
-                  <span>{patient.dateOfBirth ? formatDate(patient.dateOfBirth) : 'N/A'}</span>
+                  <span>{patient.dateOfBirth ? formatDate.mediumDate(patient.dateOfBirth) : t('labels.notAvailable')}</span>
                   {patient.diagnosis && (
                     <span className="truncate">{patient.diagnosis}</span>
                   )}
@@ -193,7 +183,7 @@ export function PatientTable({ patients, onEdit, onDelete }: PatientTableProps) 
                   <Button
                     variant="ghost"
                     onClick={() => onEdit(patient)}
-                    className="flex-1 text-sm font-medium text-[#0d9488] hover:bg-[#0d9488]/10"
+                    className="flex-1 text-sm font-medium text-brand hover:bg-brand/10"
                   >
                     <span className="material-symbols-outlined text-lg">edit</span>
                     {t('buttons.edit')}

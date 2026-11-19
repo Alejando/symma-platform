@@ -16,12 +16,12 @@ export default async function DashboardLayout({
 
   const t = await getTranslations('enums.Role');
 
-  const userName = session.user.name || 'User';
-  const userRole = session.user.role ? t(session.user.role as any) : t('THERAPIST');
+  const userName = session.user.name ?? '';
+  const userRole = t(session.user.role ?? 'THERAPIST');
 
   return (
     <div className="flex h-screen w-full font-display text-[#0d1b1a] bg-[#f6f8f8] antialiased overflow-hidden">
-      <Sidebar userName={userName} userRole={userRole} />
+      <Sidebar userName={userName} />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden relative">

@@ -6,7 +6,6 @@ import type { Patient } from '@symma/shared-types';
 interface PatientContextType {
   patient: Patient | null;
   loading: boolean;
-  refreshPatient: () => Promise<void>;
 }
 
 const PatientContext = createContext<PatientContextType | undefined>(undefined);

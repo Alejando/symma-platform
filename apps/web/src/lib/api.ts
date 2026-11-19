@@ -12,9 +12,11 @@ import type {
   RoutineStatsResponse,
   SessionDetailResponse,
   DashboardStatsResponse,
+  PaginatedResponse,
+  PaginationQuery,
 } from '@symma/shared-types';
 
-import { AuthenticationError } from './errors';
+import { ApiError, AuthenticationError, extractApiMessage } from './errors';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
 
@@ -28,30 +30,41 @@ async function fetchWithAuth(
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
+      ...(typeof document !== 'undefined' && document.documentElement.lang
+        ? { 'Accept-Language': document.documentElement.lang }
+        : {}),
       ...options.headers,
     },
   });
 
+  if (response.status === 401) {
+    throw new AuthenticationError();
+  }
+
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      throw new AuthenticationError('Session expired or unauthorized');
-    }
-    const error = await response.json().catch(() => ({ message: 'Request failed' }));
-    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    const body = await response.json().catch(() => null);
+    throw new ApiError(response.status, extractApiMessage(body));
   }
 
   return response;
 }
 
-export async function getPatients(token: string, search?: string): Promise<Patient[]> {
-  const url = new URL(`${API_URL}/api/v1/patients`);
-  if (search) {
-    url.searchParams.set('search', search);
-  }
-  const response = await fetchWithAuth(url.toString(), token);
-  const result = await response.json();
-  // API returns PaginatedResponse { data, total, page, limit }
-  return result.data ?? result;
+const MAX_PAGE_SIZE = 100;
+
+function withPagination(path: string, { page, limit, search }: PaginationQuery): string {
+  const url = new URL(`${API_URL}${path}`);
+  if (page) url.searchParams.set('page', String(page));
+  if (limit) url.searchParams.set('limit', String(limit));
+  if (search) url.searchParams.set('search', search);
+  return url.toString();
+}
+
+export async function getPatients(
+  token: string,
+  query: PaginationQuery = {},
+): Promise<PaginatedResponse<Patient>> {
+  const response = await fetchWithAuth(withPagination('/api/v1/patients', query), token);
+  return response.json();
 }
 
 export async function getPatient(token: string, id: string): Promise<Patient> {
@@ -89,11 +102,23 @@ export async function deletePatient(token: string, id: string): Promise<Patient>
   return response.json();
 }
 
-export async function getExercises(token: string): Promise<Exercise[]> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/exercises`, token);
-  const result = await response.json();
-  // API returns PaginatedResponse { data, total, page, limit }
-  return result.data ?? result;
+export async function getExercises(
+  token: string,
+  query: PaginationQuery = {},
+): Promise<PaginatedResponse<Exercise>> {
+  const response = await fetchWithAuth(withPagination('/api/v1/exercises', query), token);
+  return response.json();
+}
+
+export async function getAllExercises(token: string): Promise<Exercise[]> {
+  const exercises: Exercise[] = [];
+  for (let page = 1; ; page++) {
+    const result = await getExercises(token, { page, limit: MAX_PAGE_SIZE });
+    exercises.push(...result.data);
+    if (result.data.length === 0 || exercises.length >= result.total) {
+      return exercises;
+    }
+  }
 }
 
 export async function createRoutine(
@@ -126,6 +151,7 @@ export async function getSessionDetail(token: string, sessionId: string): Promis
   const response = await fetchWithAuth(`${API_URL}/api/v1/sessions/${sessionId}`, token);
   return response.json();
 }
+
 export async function createExercise(token: string, data: CreateExerciseRequest): Promise<Exercise> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/exercises`, token, {
     method: 'POST',
@@ -148,8 +174,6 @@ export async function deleteExercise(token: string, id: string): Promise<Exercis
   });
   return response.json();
 }
-
-// Routine Lifecycle Functions
 
 export async function getRoutine(token: string, routineId: string): Promise<Routine> {
   const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}`, token);
@@ -181,10 +205,6 @@ export async function cloneRoutine(token: string, routineId: string): Promise<Ro
   });
   return response.json();
 }
-
-// ============================================
-// Patient Access Code (Mobile PIN)
-// ============================================
 
 export async function generatePatientAccessCode(
   token: string,
