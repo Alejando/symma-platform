@@ -14,7 +14,7 @@ Este es un monorepo gestionado con **Turborepo** que contiene 3 aplicaciones:
 - `packages/shared-types` - Tipos TypeScript compartidos entre web y api
 - `packages/eslint-config` - Configuración de ESLint compartida
 - `packages/typescript-config` - Configuración de TypeScript compartida
-- `packages/ui` - Componentes UI compartidos
+- `packages/i18n` - Catálogos de traducción compartidos
 
 ---
 

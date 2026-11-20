@@ -1,135 +1,112 @@
-# Turborepo starter
+# Symma Platform
 
-This Turborepo starter is maintained by the Turborepo core team.
+Ecosistema digital para la rehabilitación de la parálisis facial. El terapeuta prescribe y supervisa rutinas de ejercicios faciales desde un portal web; el paciente las ejecuta en una app Android que, con MediaPipe, mide en el propio dispositivo la precisión de cada gesto y la simetría facial izquierda/derecha, y sincroniza los resultados con el backend aunque haya trabajado sin conexión.
 
-## Using this example
+La especificación de la tesis vive en [`docs/`](docs): requerimientos funcionales y no funcionales, historias de usuario, documentación de la API, diagrama entidad-relación y diagramas de arquitectura.
 
-Run the following command:
+## Estructura del monorepo
 
-```sh
-npx create-turbo@latest
+```text
+symma-platform/
+├── apps/
+│   ├── api/                 # API REST (NestJS + Prisma), puerto 4001, prefijo /api/v1
+│   ├── web/                 # Portal del terapeuta (Next.js + Auth.js), puerto 4000
+│   └── mobile/              # App del paciente (Android, Kotlin + Jetpack Compose); Gradle independiente
+├── packages/
+│   ├── database/            # Esquema, migraciones y seed de Prisma (PostgreSQL 15)
+│   ├── shared-types/        # Contratos TypeScript compartidos entre API y web
+│   ├── i18n/                # Catálogos de traducción (es, en)
+│   ├── eslint-config/       # Configuración compartida de ESLint
+│   └── typescript-config/   # Configuración compartida de TypeScript
+├── specs/                   # Contratos OpenAPI y especificaciones
+├── docs/                    # Documentación de la tesis
+├── docker-compose.yml       # PostgreSQL, MinIO (S3), API y portal web
+└── .github/workflows/ci.yml # Pipeline de CI
 ```
 
-## What's inside?
+Las tareas de Node se orquestan con Turborepo sobre workspaces de pnpm.
 
-This Turborepo includes the following packages/apps:
+## Requisitos
 
-### Apps and Packages
+- Node.js 20 y pnpm 9 (`corepack enable` activa la versión fijada en `package.json`).
+- Docker con Docker Compose v2.
+- Para la app móvil: JDK 17 y Android SDK 34 (Android Studio), con un emulador o dispositivo con Android 8.0 (API 26) o superior.
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+## Variables de entorno
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+Cada componente tiene su propio archivo de ejemplo, versionado y sin valores reales. Ningún secreto tiene valor por defecto: si falta, Docker Compose o la API se niegan a arrancar con un mensaje que indica la variable. Los secretos se pueden generar con `openssl rand -base64 32`.
 
-### Utilities
+| Archivo | Lo usa | Variables obligatorias |
+|---|---|---|
+| `.env.example` → `.env` | Docker Compose | `POSTGRES_PASSWORD`, `JWT_SECRET`, `PIN_HMAC_SECRET`, `AUTH_SECRET`, `MINIO_ROOT_PASSWORD` |
+| `apps/api/.env.example` → `apps/api/.env` | API en local | `DATABASE_URL`, `JWT_SECRET`, `PIN_HMAC_SECRET` |
+| `apps/web/.env.example` → `apps/web/.env.local` | Portal en local | `AUTH_SECRET`, `AUTH_URL`, `NEXT_PUBLIC_API_URL` |
 
-This Turborepo has some additional tools already setup for you:
+Prisma (migraciones y seed) lee `packages/database/.env`, que debe contener `DATABASE_URL` y el mismo `PIN_HMAC_SECRET` que la API, porque el seed calcula el hash del PIN del paciente demo.
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+Las variables de S3 (`S3_*`) son opcionales para la API: sin ellas arranca y los endpoints de snapshots responden 503. Docker Compose las configura automáticamente contra MinIO.
 
-### Build
+## Levantar todo con Docker Compose
 
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+```bash
+cp .env.example .env    # rellenar los valores vacíos
+docker compose up --build
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+| Servicio | URL |
+|---|---|
+| Portal web | http://localhost:4000 |
+| API | http://localhost:4001/api/v1 (Swagger en http://localhost:4001/api/docs) |
+| PostgreSQL | localhost:5440 |
+| MinIO (S3) | http://localhost:9000 (consola en http://localhost:9001) |
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+El contenedor de la API aplica `prisma migrate deploy` al arrancar, y MinIO crea el bucket de snapshots (`S3_BUCKET`). Los puertos se cambian con `POSTGRES_PORT`, `API_PORT`, `WEB_PORT`, `MINIO_API_PORT` y `MINIO_CONSOLE_PORT`. Las URLs firmadas de snapshots usan `S3_ENDPOINT`, que debe ser alcanzable desde el navegador y desde el teléfono (con un dispositivo físico, la IP de la máquina en la red local).
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+La base levantada así está vacía. Para cargar los datos de demostración, con `packages/database/.env` apuntando a ella:
 
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+```bash
+pnpm --filter @symma/database db:seed
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+El seed crea las cuentas `admin@symma.com` / `Admin123!` (rol ADMIN) y `dra.garcia@symma.com` / `Therapist123!`, y un paciente demo con PIN `123456`.
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+## Desarrollo local
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+```bash
+pnpm install
+docker compose up -d postgres                   # solo la base de datos
+pnpm --filter @symma/database db:generate       # cliente de Prisma
+pnpm --filter @symma/database exec prisma migrate deploy
+pnpm --filter @symma/database db:seed           # opcional
+pnpm dev                                        # API en :4001 y portal en :4000
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+Docker Compose valida todas las variables obligatorias del archivo aunque solo se levante `postgres`, así que el `.env` de la raíz debe estar completo.
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+### App móvil
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
+Abrir `apps/mobile` en Android Studio, o desde la terminal:
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+```bash
+cd apps/mobile
+./gradlew installDebug
 ```
 
-## Useful Links
+La URL de la API se toma de `api.baseUrl` en `apps/mobile/local.properties` (por defecto `http://10.0.2.2:4001/`, el host visto desde el emulador). Las builds release solo aceptan HTTPS.
 
-Learn more about the power of Turborepo:
+## Pruebas y verificaciones
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+```bash
+pnpm build                                   # compila paquetes, API y portal
+pnpm lint
+pnpm check-types
+pnpm test                                    # unitarias de API, portal y paquetes
+pnpm --filter web exec tsc --noEmit          # tipos del portal
+E2E_DATABASE_URL=postgresql://USER:PASSWORD@localhost:5440/symma_e2e?schema=public \
+  pnpm --filter api test:e2e                 # e2e de la API contra una base desechable ya migrada
+cd apps/mobile && ./gradlew testDebugUnitTest  # unitarias de Android
+```
+
+Las pruebas e2e crean y borran registros: `E2E_DATABASE_URL` debe apuntar a una base distinta de la de desarrollo (la suite se niega a usar la de `apps/api/.env`).
+
+El pipeline de CI (`.github/workflows/ci.yml`) ejecuta en cada push la instalación, `prisma migrate deploy` contra un PostgreSQL vacío, build, lint, typecheck, las pruebas unitarias y e2e de la API, portal y paquetes, y las pruebas unitarias de Android.

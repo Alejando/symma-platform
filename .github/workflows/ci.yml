@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: API, web and packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: symma_ci
+          POSTGRES_PASSWORD: symma_ci
+          POSTGRES_DB: symma_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U symma_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://symma_ci:symma_ci@localhost:5432/symma_ci?schema=public
+      E2E_DATABASE_URL: postgresql://symma_ci:symma_ci@localhost:5432/symma_ci?schema=public
+      JWT_SECRET: ci-jwt-secret
+      PIN_HMAC_SECRET: ci-pin-hmac-secret
+      AUTH_SECRET: ci-auth-secret
+      NEXT_TELEMETRY_DISABLED: 1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @symma/database db:generate
+
+      - name: Apply migrations to an empty database
+        run: pnpm --filter @symma/database exec prisma migrate deploy
+
+      - name: Build
+        run: pnpm build
+
+      - name: Lint
+        run: |
+          pnpm turbo run lint --filter=!api
+          pnpm --filter api exec eslint "{src,test}/**/*.ts"
+
+      - name: Typecheck
+        run: |
+          pnpm turbo run check-types
+          pnpm --filter @symma/i18n typecheck
+          pnpm --filter api exec tsc --noEmit -p tsconfig.json
+          pnpm --filter web exec tsc --noEmit
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: API end-to-end tests
+        run: pnpm --filter api test:e2e
+
+  android:
+    name: Android unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Point Gradle at the runner's Android SDK
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-reports
+          path: apps/mobile/app/build/reports/tests/
