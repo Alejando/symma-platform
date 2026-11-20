@@ -58,7 +58,7 @@
 | RF-049  | Detección de landmarks faciales con MediaPipe                 | Visión Computacional                 | US-022, US-023             |
 | RF-050  | Superposición de malla facial sobre cámara                    | Visión Computacional                 | US-023                    |
 | RF-051  | Cálculo de índice de simetría facial                          | Visión Computacional                 | US-024                    |
-| RF-052  | Indicador visual de calidad de simetría                       | Visión Computacional                 | US-025, US-026             |
+| RF-052  | Indicador visual de precisión del gesto                       | Visión Computacional                 | US-025, US-026             |
 | RF-053  | Wizard de calibración facial en 5 pasos                       | Calibración del Paciente             | US-027, US-032             |
 | RF-054  | Captura automática con algoritmo P95 por paso                 | Calibración del Paciente             | US-027                    |
 | RF-055  | Tare neutral y guardia de estabilidad de cabeza               | Calibración del Paciente             | US-027, US-032             |
@@ -91,7 +91,7 @@
 
 ### RF-003 — Generación de PIN de acceso para paciente
 
-**Descripción:** El sistema debe permitir al terapeuta generar un código PIN de 6 dígitos para un paciente específico. El PIN se almacenará en la base de datos en formato hash utilizando bcrypt, de modo que nunca se persista en texto plano.
+**Descripción:** El sistema debe permitir al terapeuta generar un código PIN de 6 dígitos para un paciente específico, obtenido con un generador de números aleatorios criptográficamente seguro. El PIN se almacenará en la base de datos únicamente como HMAC-SHA256 calculado con un secreto del servidor (variable de entorno `PIN_HMAC_SECRET`), de modo que nunca se persista en texto plano ni pueda revertirse sin conocer el secreto. Se emplea un hash determinista con secreto, y no bcrypt, porque el paciente inicia sesión solo con el PIN (RF-035): el servidor debe localizar al paciente a partir del propio código.
 
 **US relacionada(s):** US-009
 
@@ -199,7 +199,7 @@
 
 ### RF-016 — Creación de ejercicio en catálogo
 
-**Descripción:** El sistema debe permitir al terapeuta crear un nuevo ejercicio en el catálogo global, especificando nombre, tipo (ISOTONIC o ISOMETRIC), categoría (WARMUP, CORE o COOLDOWN), módulo móvil (EYES, EYES_INVERSE, BROWS, JAW, SMILE o KISS), URLs de recursos multimedia y un identificador único de clave (key_name) empleado para internacionalización.
+**Descripción:** El sistema debe permitir a un usuario con rol ADMIN crear un nuevo ejercicio en el catálogo global, especificando nombre, tipo (ISOTONIC o ISOMETRIC), categoría (WARMUP, CORE o COOLDOWN), módulo móvil (EYES, EYES_INVERSE, BROWS, JAW, SMILE o KISS), URLs de recursos multimedia y un identificador único de clave (key_name) empleado para internacionalización.
 
 **US relacionada(s):** US-007
 
@@ -207,7 +207,7 @@
 
 ### RF-017 — Edición y consulta de ejercicios
 
-**Descripción:** El sistema debe permitir al terapeuta consultar el catálogo completo de ejercicios y editar los atributos de cualquier ejercicio existente, con excepción de aquellos que estén siendo utilizados en rutinas activas, cuya edición estará restringida.
+**Descripción:** El sistema debe permitir a cualquier terapeuta consultar el catálogo completo de ejercicios. Solo los usuarios con rol ADMIN podrán editar los atributos de un ejercicio existente; a cualquier otro terapeuta se le responderá HTTP 403. La edición de ejercicios utilizados en rutinas activas estará restringida y retornará HTTP 409 con un mensaje descriptivo.
 
 **US relacionada(s):** US-007
 
@@ -215,7 +215,7 @@
 
 ### RF-018 — Restricción de eliminación de ejercicios activos
 
-**Descripción:** El sistema debe impedir la eliminación de un ejercicio que esté referenciado en al menos una rutina activa. Al intentar eliminarlo, el sistema retornará un error descriptivo indicando que el ejercicio se encuentra en uso.
+**Descripción:** El sistema debe impedir la eliminación de un ejercicio que esté referenciado en al menos una rutina activa. Al intentar eliminarlo, el sistema retornará HTTP 409 con un error descriptivo indicando que el ejercicio se encuentra en uso. Solo los usuarios con rol ADMIN pueden eliminar ejercicios del catálogo.
 
 **US relacionada(s):** US-007
 
@@ -265,7 +265,7 @@
 
 ### RF-024 — Clonación de rutina
 
-**Descripción:** El sistema debe permitir al terapeuta clonar una rutina existente, generando una nueva rutina con todos sus RoutineItems copiados y con el contador de sesiones en cero. La rutina clonada será independiente de la original y podrá editarse libremente.
+**Descripción:** El sistema debe permitir al terapeuta clonar una rutina existente, generando una nueva rutina con todos sus RoutineItems copiados y con el contador de sesiones en cero. La rutina clonada se crea en estado DRAFT (borrador): es independiente de la original, puede editarse libremente y no se entrega al paciente, por lo que la rutina original no cambia. Cuando el terapeuta la activa (`POST /routines/:id/activate`), el sistema la pasa a ACTIVE y archiva, en la misma transacción, la rutina ACTIVE anterior del paciente, garantizando como máximo una rutina activa por paciente.
 
 **US relacionada(s):** US-004, US-008
 
@@ -307,7 +307,7 @@
 
 ### RF-029 — KPI de eficacia promedio en dashboard
 
-**Descripción:** El sistema debe calcular y mostrar el promedio del índice de simetría (symmetry_score) de todas las sesiones completadas en los últimos 7 días por los pacientes del terapeuta, expresado como porcentaje.
+**Descripción:** El sistema debe calcular y mostrar el promedio de la precisión del gesto (`averageAccuracy`, escala 0–100, ver RF-052) de todas las sesiones completadas en los últimos 7 días por los pacientes del terapeuta, expresado como porcentaje. La simetría facial (RF-051) es una métrica distinta y no forma parte de este KPI.
 
 **US relacionada(s):** US-010
 
@@ -325,7 +325,7 @@
 
 ### RF-031 — Consulta de estadísticas agregadas de rutina
 
-**Descripción:** El sistema debe exponer un endpoint que, dado el identificador de una rutina, retorne las estadísticas agregadas: número total de sesiones, puntuación promedio de simetría, racha actual de días consecutivos con sesión registrada y datos históricos para la construcción de gráficas de evolución.
+**Descripción:** El sistema debe exponer un endpoint que, dado el identificador de una rutina, retorne las estadísticas agregadas: número total de sesiones, puntuación promedio de precisión del gesto, simetría facial promedio, racha actual de días calendario consecutivos con sesión registrada y datos históricos para la construcción de gráficas de evolución.
 
 **US relacionada(s):** US-006, US-035
 
@@ -341,7 +341,7 @@
 
 ### RF-033 — Consulta de detalle de sesión por ejercicio
 
-**Descripción:** El sistema debe exponer un endpoint que, dado el identificador de una sesión, retorne el detalle de rendimiento por ejercicio: repeticiones completadas, precisión promedio y tiempo de hold promedio.
+**Descripción:** El sistema debe exponer un endpoint que, dado el identificador de una sesión, retorne el detalle de rendimiento por ejercicio: repeticiones completadas, precisión promedio del gesto, índice de simetría facial, tiempo de hold promedio y, si existe, la imagen del mejor intento mediante una URL firmada de corta duración.
 
 **US relacionada(s):** US-006, US-035
 
@@ -349,7 +349,7 @@
 
 ### RF-034 — Gráfica de evolución de precisión en portal web
 
-**Descripción:** El sistema debe presentar en el portal web una gráfica de área que muestre la evolución temporal del índice de precisión del paciente a lo largo de sus sesiones, permitiendo al terapeuta evaluar la progresión clínica de forma visual.
+**Descripción:** El sistema debe presentar en el portal web una gráfica de área que muestre, en orden cronológico ascendente, la evolución temporal de la precisión del gesto del paciente a lo largo de sus sesiones, permitiendo al terapeuta evaluar la progresión clínica de forma visual. La gráfica permitirá también consultar la evolución del índice de simetría facial (RF-051) como serie independiente.
 
 **US relacionada(s):** US-006, US-035
 
@@ -359,7 +359,7 @@
 
 ### RF-035 — Endpoint de autenticación móvil del paciente
 
-**Descripción:** El sistema debe exponer el endpoint POST /auth/patient/login que reciba el identificador del paciente y el código de acceso, valide las credenciales contra la base de datos y, en caso de éxito, retorne un JWT para uso exclusivo de la aplicación móvil.
+**Descripción:** El sistema debe exponer el endpoint POST /auth/patient/login que reciba únicamente el código de acceso (PIN de 6 dígitos), lo valide contra el hash almacenado en la base de datos (RF-003) y, en caso de éxito, retorne un JWT para uso exclusivo de la aplicación móvil. Para mitigar ataques de fuerza bruta, tras 5 intentos fallidos en 15 minutos desde un mismo cliente el endpoint responderá HTTP 429 hasta que expire la ventana.
 
 **US relacionada(s):** US-011
 
@@ -383,7 +383,7 @@
 
 ### RF-038 — Idempotencia en registro de sesiones desde móvil
 
-**Descripción:** El sistema debe garantizar que el envío duplicado de una misma sesión —identificada por una clave única compuesta— no genere registros redundantes en la base de datos. Peticiones repetidas con la misma sesión retornarán HTTP 200 sin crear un nuevo registro.
+**Descripción:** El sistema debe garantizar que el envío duplicado de una misma sesión no genere registros redundantes en la base de datos. Cada sesión se identifica por un UUID obligatorio generado por la aplicación móvil (`id`). La primera petición crea la sesión y retorna HTTP 201; las peticiones repetidas con el mismo `id` por el mismo paciente retornan HTTP 200 con la sesión existente, sin crear un nuevo registro, incluso si llegan de forma simultánea. Reenviar el `id` de una sesión de otro paciente retorna HTTP 403.
 
 **US relacionada(s):** US-011
 
@@ -477,7 +477,7 @@
 
 ### RF-049 — Detección de landmarks faciales con MediaPipe
 
-**Descripción:** El sistema debe integrar FaceLandmarker de MediaPipe en modo LIVE_STREAM para detectar en tiempo real los 468 landmarks del rostro del paciente a una tasa mínima de 30 fotogramas por segundo, utilizando la cámara frontal del dispositivo durante la ejecución de los ejercicios.
+**Descripción:** El sistema debe integrar FaceLandmarker de MediaPipe en modo LIVE_STREAM para detectar en tiempo real los 478 landmarks del rostro del paciente (468 de la malla facial y 10 del iris) a una tasa mínima de 30 fotogramas por segundo, utilizando la cámara frontal del dispositivo durante la ejecución de los ejercicios.
 
 **US relacionada(s):** US-022, US-023
 
@@ -493,15 +493,15 @@
 
 ### RF-051 — Cálculo de índice de simetría facial
 
-**Descripción:** El sistema debe calcular un índice de simetría facial expresado en un rango de 0 a 100 % a partir de las distancias relativas de puntos clave del rostro (incluyendo las comisuras labiales) extraídas de los landmarks de MediaPipe. El cálculo se realizará en cada fotograma procesado durante la fase activa del ejercicio.
+**Descripción:** El sistema debe calcular un índice de simetría facial izquierda/derecha expresado en un rango de 0 a 100 % (100 = movimiento perfectamente simétrico) a partir de las distancias de pares de puntos espejo del rostro (incluyendo las comisuras labiales) extraídas de los landmarks de MediaPipe, según la región que entrena cada ejercicio. El cálculo se realizará en cada fotograma procesado durante la fase activa del ejercicio, y su promedio por ejercicio se enviará al backend como `symmetryScore`, una métrica independiente de la precisión del gesto (`averageAccuracy`, RF-052).
 
 **US relacionada(s):** US-024
 
 ---
 
-### RF-052 — Indicador visual de calidad de simetría
+### RF-052 — Indicador visual de precisión del gesto
 
-**Descripción:** El sistema debe mostrar una barra de calidad animada cuyo color cambie según el índice de simetría calculado: verde para valores iguales o superiores al 80 %, amarillo para valores entre el 50 % y el 79 %, y rojo para valores inferiores al 50 %. La barra se acompañará de un texto motivacional dinámico acorde al nivel alcanzado.
+**Descripción:** El sistema debe mostrar una barra de calidad animada que refleje la precisión del gesto, es decir, qué tan cerca está la puntuación del ejercicio del umbral calibrado del paciente (RF-056, RF-057), y cuyo color cambie según ese valor: verde para valores iguales o superiores al 80 %, amarillo para valores entre el 50 % y el 79 %, y rojo para valores inferiores al 50 %. La barra se acompañará de un texto motivacional dinámico acorde al nivel alcanzado. El promedio de esta precisión por ejercicio se envía al backend como `averageAccuracy` en escala 0–100.
 
 **US relacionada(s):** US-025, US-026
 
@@ -527,7 +527,7 @@
 
 ### RF-055 — Tare neutral y guardia de estabilidad de cabeza
 
-**Descripción:** El sistema debe registrar el estado neutro del rostro del paciente en el primer paso de calibración como línea de base (neutral tare), restando este offset a las mediciones activas para normalizar las diferencias de posición en reposo. Adicionalmente, el sistema debe pausar automáticamente la captura de muestras si detecta una rotación de cabeza superior a 10°, reanudándola al recuperar la estabilidad.
+**Descripción:** El sistema debe registrar el estado neutro del rostro del paciente en el primer paso de calibración como línea de base (neutral tare), restando este offset a las mediciones activas para normalizar las diferencias de posición en reposo. Adicionalmente, el sistema debe pausar automáticamente la captura de muestras si detecta una rotación de cabeza (yaw o pitch) superior a 10°, medida en valor absoluto respecto a la cámara a partir de la matriz de transformación facial de MediaPipe, reanudándola al recuperar la estabilidad.
 
 **US relacionada(s):** US-027, US-032
 
@@ -563,7 +563,7 @@
 
 ### RF-059 — Sincronización diferida de sesiones con WorkManager
 
-**Descripción:** El sistema debe utilizar WorkManager de Android para programar una tarea de sincronización en segundo plano que se ejecute únicamente cuando exista conectividad de red disponible. Si el envío de una sesión al servidor falla por ausencia de conexión, la sesión se almacenará en Room Database con el campo is_synced establecido en falso, y WorkManager gestionará su envío en cuanto la red sea recuperada.
+**Descripción:** El sistema debe utilizar WorkManager de Android para programar una tarea de sincronización en segundo plano que se ejecute únicamente cuando exista conectividad de red disponible. Si el envío de una sesión al servidor falla por ausencia de conexión, la sesión se almacenará en Room Database con el campo `syncStatus` en `PENDING`, y WorkManager gestionará su envío en cuanto la red sea recuperada.
 
 **US relacionada(s):** US-015, US-034
 
@@ -571,7 +571,7 @@
 
 ### RF-060 — Reintentos con backoff exponencial en sincronización
 
-**Descripción:** El sistema debe configurar la tarea de sincronización de WorkManager con una política de reintentos de backoff exponencial, con un máximo de tres intentos. Tras una sincronización exitosa, el sistema actualizará los campos is_synced y synced_at del registro en Room Database para reflejar el estado sincronizado.
+**Descripción:** El sistema debe configurar la tarea de sincronización de WorkManager con una política de reintentos de backoff exponencial, con un máximo de tres intentos en total (el envío inicial y dos reintentos). Si los tres intentos fallan, la sesión se marca con estado `ERROR` y se conserva en Room para reenviarse en una ejecución posterior. Tras una sincronización exitosa, el sistema actualizará los campos `syncStatus` (`SYNCED`) y `syncedAt` del registro en Room Database para reflejar el estado sincronizado.
 
 **US relacionada(s):** US-019, US-034
 

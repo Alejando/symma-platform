@@ -97,7 +97,7 @@
 - CA-1: Al ingresar las credenciales válidas (`admin@symma.com` / `admin123`) en el formulario de login y hacer clic en "Iniciar sesión", el backend retorna un JWT válido con los datos del terapeuta en el payload.
 - CA-2: Tras una autenticación exitosa, el portal web redirige automáticamente al terapeuta a la ruta `/dashboard` y el JWT se almacena de forma segura mediante NextAuth.js (cookie HttpOnly).
 - CA-3: Al ingresar credenciales incorrectas, el sistema muestra un mensaje de error descriptivo en la interfaz sin revelar si el email o la contraseña son los incorrectos.
-- CA-4: El diseño visual del formulario de login (campos, botones, logotipo) corresponde al mockup aprobado, utilizando la paleta de color Teal 600 (`#0D9488`) como color primario.
+- CA-4: El diseño visual del formulario de login (campos, botones, logotipo) corresponde al mockup aprobado, utilizando la paleta de color Teal 700 (`#0F766E`, contraste 5.47:1 sobre blanco) como color primario.
 - CA-5: Al acceder a cualquier ruta protegida sin un JWT válido, el sistema redirige automáticamente a la página de login.
 
 ---
@@ -164,7 +164,7 @@
 
 **Criterios de Aceptación:**
 - CA-1: La vista de detalle de rutina muestra tres tarjetas KPI con valores reales provenientes de la base de datos: "Total de Sesiones", "Precisión Promedio" (en porcentaje) y "Racha Actual" (días consecutivos).
-- CA-2: La página incluye una gráfica de área (AreaChart de Recharts) con el color Teal (`#0D9488`) que muestra la evolución de la precisión promedio a lo largo de las sesiones registradas.
+- CA-2: La página incluye una gráfica de área (AreaChart de Recharts) con el color Teal (`#0F766E`) que muestra, en orden cronológico ascendente, la evolución de la precisión promedio a lo largo de las sesiones registradas.
 - CA-3: La base de datos contiene datos de seed con al menos 14 sesiones simuladas que muestran una tendencia de mejora progresiva, lo que permite visualizar una curva ascendente en la gráfica al cargar los datos.
 - CA-4: La vista incluye la lista de ejercicios prescritos en la rutina con sus parámetros (reps, sets, hold time) y el historial cronológico de sesiones con fecha, duración y precisión de cada una.
 - CA-5: El layout de la página es correcto y los elementos (KPIs, gráfica, lista de ejercicios, historial) están organizados de acuerdo al mockup aprobado, sin desbordamientos de contenido en resolución de escritorio.
@@ -195,7 +195,7 @@
 
 **Criterios de Aceptación:**
 - CA-1: Si una rutina tiene sesiones registradas, el sistema impide modificar los ejercicios, el número de repeticiones y el número de series; solo permite editar el nombre y las fechas de vigencia. Al intentar modificar campos bloqueados, se muestra un mensaje explicativo al terapeuta.
-- CA-2: Al clonar una rutina, el sistema crea una nueva rutina independiente con todos sus RoutineItems copiados (mismo orden, mismos parámetros), manteniendo la rutina original intacta y sin sesiones heredadas en la copia.
+- CA-2: Al clonar una rutina, el sistema crea una nueva rutina independiente en estado `DRAFT` con todos sus RoutineItems copiados (mismo orden, mismos parámetros), manteniendo la rutina original intacta y sin sesiones heredadas en la copia. El paciente sigue recibiendo la rutina original hasta que el terapeuta activa la copia; al activarla, la rutina activa anterior se archiva.
 - CA-3: Si una rutina no tiene sesiones registradas, la acción de eliminar realiza un hard delete (borrado físico del registro); si tiene al menos una sesión, la acción cambia el estado a `ARCHIVED` (soft delete) y conserva todos los datos.
 - CA-4: Los cinco escenarios del ciclo de vida están cubiertos y verificados: (1) edición de rutina sin sesiones, (2) edición de rutina con sesiones (bloqueado), (3) clonación, (4) archivado de rutina con sesiones, (5) eliminación de rutina sin sesiones.
 - CA-5: El portal muestra claramente el estado de cada rutina (activa, archivada) y las acciones disponibles cambian de acuerdo al estado y al historial de sesiones.
@@ -211,8 +211,8 @@
 
 **Criterios de Aceptación:**
 - CA-1: Al generar el PIN, el portal web muestra el código de 6 dígitos en texto plano dentro de un modal por única vez; al cerrar el modal o refrescar la página, el PIN ya no se vuelve a mostrar en ninguna parte de la interfaz.
-- CA-2: El PIN generado se almacena en la base de datos únicamente como hash bcrypt; en ningún campo de la base de datos existe el PIN en texto plano.
-- CA-3: La acción de revocar el acceso de un paciente establece el campo `auth_pin_hash` en `null` en la base de datos, impidiendo que el paciente pueda autenticarse en la app móvil hasta que se genere un nuevo PIN.
+- CA-2: El PIN generado se almacena en la base de datos únicamente como HMAC-SHA256 calculado con el secreto `PIN_HMAC_SECRET`; en ningún campo de la base de datos existe el PIN en texto plano y el hash no aparece en ninguna respuesta de la API.
+- CA-3: La acción de revocar el acceso de un paciente establece el campo `access_code_hash` en `null` en la base de datos, impidiendo que el paciente pueda autenticarse en la app móvil hasta que se genere un nuevo PIN; los tokens ya emitidos dejan de ser válidos.
 - CA-4: El endpoint de revocación de PIN responde correctamente y el terapeuta recibe una confirmación visual en el portal de que el acceso del paciente ha sido revocado.
 - CA-5: El PIN solo puede ser generado o revocado por el terapeuta que tiene asignado al paciente; un terapeuta diferente no puede gestionar el PIN de un paciente ajeno.
 
@@ -374,8 +374,8 @@
 
 **Criterios de Aceptación:**
 - CA-1: Al completar todos los ejercicios de la rutina, la app navega automáticamente a una pantalla de resumen que muestra al paciente los datos de la sesión: fecha, duración total y ejercicios completados.
-- CA-2: La app ejecuta un `POST /sessions` al backend con el cuerpo correcto: `routineId`, `startTime`, `endTime` y un arreglo `items` con `exerciseId` y `repsCompleted` de cada ejercicio.
-- CA-3: Tras enviar la sesión exitosamente, el registro de la sesión es visible en la base de datos del backend con los datos correctos, y el campo `is_synced` del registro local queda en `true`.
+- CA-2: La app ejecuta un `POST /sessions` al backend con el cuerpo correcto: el `id` UUID de la sesión generado en el dispositivo, `routineId`, `startTime`, `endTime` y un arreglo `items` con `exerciseId`, `repsCompleted` y las métricas de cada ejercicio.
+- CA-3: Tras enviar la sesión exitosamente, el registro de la sesión es visible en la base de datos del backend con los datos correctos, y el campo `syncStatus` del registro local queda en `SYNCED`.
 - CA-4: Al presionar el botón "Finalizar" o "Volver al inicio" desde la pantalla de resumen, la app navega a la pantalla de inicio y la pila de navegación se limpia (back stack cleared) de modo que el usuario no puede regresar a la sesión recién completada con el botón de retroceso del dispositivo.
 - CA-5: Si el envío de la sesión al backend falla por error de red, la app muestra un mensaje informativo al paciente indicando que los datos se guardarán localmente y se sincronizarán cuando haya conexión.
 
@@ -426,7 +426,7 @@
 **Criterios de Aceptación:**
 - CA-1: El proyecto Android compila exitosamente con la dependencia de MediaPipe Tasks Vision incluida en el archivo `build.gradle`; el modelo `face_landmarker.task` está presente en el directorio `assets` de la app.
 - CA-2: La integración de `ImageAnalysis` con CameraX procesa los frames de la cámara frontal y los envía al `FaceLandmarker` en modo `LIVE_STREAM`, obteniendo resultados de forma asíncrona sin bloquear el hilo principal.
-- CA-3: Los datos de los 468 landmarks del rostro detectado (coordenadas X, Y, Z normalizadas) se pueden observar en los registros de Logcat mientras el usuario está frente a la cámara, confirming que el modelo está operativo.
+- CA-3: Los datos de los 478 landmarks del rostro detectado (coordenadas X, Y, Z normalizadas) se pueden observar en los registros de Logcat mientras el usuario está frente a la cámara, confirming que el modelo está operativo.
 - CA-4: El procesamiento de landmarks opera a una tasa mínima de 30 frames por segundo (fps) en dispositivos con hardware de gama media; el rendimiento se puede verificar en Logcat mediante los timestamps de cada resultado del detector.
 - CA-5: Si no se detecta ningún rostro en el frame, el sistema retorna un resultado vacío de forma silenciosa sin lanzar excepciones; la UI maneja este estado correctamente.
 
@@ -440,7 +440,7 @@
 **Prioridad:** Alta  
 
 **Criterios de Aceptación:**
-- CA-1: Un `Canvas` de Compose dibuja los 468 landmarks del rostro como puntos sobre la imagen de cámara en tiempo real; los puntos se actualizan en cada frame nuevo del detector de MediaPipe.
+- CA-1: Un `Canvas` de Compose dibuja los 478 landmarks del rostro como puntos sobre la imagen de cámara en tiempo real; los puntos se actualizan en cada frame nuevo del detector de MediaPipe.
 - CA-2: La transformación de coordenadas es correcta: las coordenadas normalizadas (valores de 0.0 a 1.0) retornadas por MediaPipe se convierten a coordenadas de píxeles en pantalla, teniendo en cuenta las dimensiones reales del componente `Canvas` en la pantalla del dispositivo.
 - CA-3: Los puntos del face mesh están orientados correctamente: cuando el paciente mueve la cabeza hacia la izquierda, los puntos se desplazan hacia la izquierda en la pantalla (efecto espejo por la cámara frontal espejada).
 - CA-4: La superposición del face mesh no introduce una latencia perceptible entre el movimiento del rostro y el desplazamiento de los puntos en pantalla; la diferencia temporal es menor a 100ms.
@@ -450,16 +450,16 @@
 ### US-024: Algoritmo de Simetría Facial
 
 **Actor:** Sistema  
-**Historia:** Como sistema, quiero calcular un índice de simetría facial entre 0% y 100% a partir de los landmarks del rostro, para cuantificar objetivamente el progreso de rehabilitación del paciente en cada ejercicio.  
+**Historia:** Como sistema, quiero calcular un índice de simetría facial izquierda/derecha entre 0% y 100% a partir de los landmarks del rostro, para cuantificar objetivamente el progreso de rehabilitación del paciente en cada ejercicio, de forma independiente de la precisión del gesto.  
 **Sprint:** Sprint 3  
 **Prioridad:** Alta  
 
 **Criterios de Aceptación:**
-- CA-1: La clase `SymmetryCalculator` implementa el cálculo del índice de simetría utilizando las distancias relativas de las comisuras labiales izquierda y derecha con respecto al punto central de la boca, expresando el resultado como un valor de 0.0 a 1.0 (equivalente a 0–100%).
-- CA-2: Cuando el paciente mantiene un rostro en reposo neutro, el índice de simetría calculado es igual o superior a 0.90 (90%), validado con al menos 3 sujetos de prueba durante el proceso de QA.
-- CA-3: Cuando el paciente realiza una sonrisa visiblemente asimétrica (un lado de la boca sube significativamente más que el otro), el índice de simetría calculado es inferior a 0.60 (60%).
-- CA-4: El cálculo de `SymmetryCalculator` es una función pura sin efectos secundarios; dado el mismo conjunto de landmarks, siempre retorna el mismo valor de simetría.
-- CA-5: El algoritmo tiene cobertura de prueba unitaria que verifica al menos los escenarios: rostro simétrico (resultado ≥ 0.90), rostro asimétrico moderado (resultado entre 0.60 y 0.89), y rostro muy asimétrico (resultado < 0.60).
+- CA-1: El cálculo de simetría (`FacialSymmetry`) compara las distancias de pares de landmarks espejo del lado izquierdo y derecho de la región que entrena cada ejercicio (por ejemplo, las comisuras labiales respecto al centro del labio superior en la sonrisa), expresando el resultado en la escala 0–100 (100 = perfectamente simétrico).
+- CA-2: Cuando el paciente mantiene un rostro en reposo neutro, el índice de simetría calculado es igual o superior a 90, validado con al menos 3 sujetos de prueba durante el proceso de QA.
+- CA-3: Cuando el paciente realiza una sonrisa visiblemente asimétrica (un lado de la boca sube significativamente más que el otro), el índice de simetría calculado es inferior a 60.
+- CA-4: El cálculo de simetría es una función pura sin efectos secundarios; dado el mismo conjunto de landmarks, siempre retorna el mismo valor de simetría.
+- CA-5: El algoritmo tiene cobertura de prueba unitaria que verifica al menos los escenarios: rostro simétrico (resultado ≥ 90), rostro asimétrico moderado (resultado entre 60 y 89), y rostro muy asimétrico (resultado < 60).
 
 ---
 
@@ -471,26 +471,26 @@
 **Prioridad:** Alta  
 
 **Criterios de Aceptación:**
-- CA-1: El componente `QualityBar` se muestra en la pantalla del reproductor de ejercicios y refleja el índice de simetría actual con tres estados de color: verde cuando el score es igual o superior a 80%, amarillo cuando está entre 50% y 79%, y rojo cuando es inferior a 50%.
-- CA-2: La transición de color y el llenado de la barra se animan de forma suave (con una animación de al menos 200ms de duración) al cambiar el valor del índice de simetría, evitando cambios bruscos que distraigan al paciente.
+- CA-1: El componente `QualityBar` se muestra en la pantalla del reproductor de ejercicios y refleja la precisión actual del gesto (qué tan cerca está la puntuación del ejercicio del umbral calibrado del paciente) con tres estados de color: verde cuando el score es igual o superior a 80%, amarillo cuando está entre 50% y 79%, y rojo cuando es inferior a 50%.
+- CA-2: La transición de color y el llenado de la barra se animan de forma suave (con una animación de al menos 200ms de duración) al cambiar el valor de la precisión del gesto, evitando cambios bruscos que distraigan al paciente.
 - CA-3: La barra muestra un texto motivacional dinámico que cambia de acuerdo al estado de calidad: un mensaje de aliento cuando el color es verde, un mensaje de ajuste cuando es amarillo, y un mensaje de corrección cuando es rojo.
-- CA-4: La `QualityBar` responde a los cambios del índice de simetría en tiempo real (cada frame), con una latencia visual perceptible menor a 150ms desde que cambia el score hasta que se refleja en la barra.
+- CA-4: La `QualityBar` responde a los cambios de la precisión del gesto en tiempo real (cada frame), con una latencia visual perceptible menor a 150ms desde que cambia el score hasta que se refleja en la barra.
 
 ---
 
 ### US-026: Recolección y Envío de Métricas de IA
 
 **Actor:** Sistema  
-**Historia:** Como sistema, quiero recolectar y promediar el índice de simetría facial durante cada repetición de ejercicio y enviar estos datos al backend al finalizar la sesión, para que el terapeuta pueda ver métricas objetivas de la ejecución del paciente.  
+**Historia:** Como sistema, quiero recolectar y promediar la precisión del gesto y el índice de simetría facial durante cada repetición de ejercicio y enviar estos datos al backend al finalizar la sesión, para que el terapeuta pueda ver métricas objetivas de la ejecución del paciente.  
 **Sprint:** Sprint 3  
 **Prioridad:** Alta  
 
 **Criterios de Aceptación:**
-- CA-1: Durante la fase activa de cada ejercicio (estado `Exercise` en el PlayerViewModel), el sistema muestrea el índice de simetría cada 500ms y acumula los valores para calcular el promedio por repetición y el promedio total por ejercicio.
+- CA-1: Durante la fase activa de cada ejercicio (estado `Exercise` en el PlayerViewModel), el sistema muestrea la precisión del gesto y el índice de simetría cada 500ms y acumula los valores para calcular el promedio por repetición y el promedio total por ejercicio.
 - CA-2: Los frames en los que MediaPipe no detecta ningún rostro son excluidos del cálculo del promedio; únicamente se promedian los frames con detección exitosa.
-- CA-3: El valor de `averageAccuracy` enviado en el campo correspondiente del POST `/sessions` es un número entre 0.0 y 1.0 que refleja de forma realista el desempeño del paciente durante el ejercicio (no es siempre 0, 0.5 o 1.0 exactos).
-- CA-4: El valor de `averageAccuracy` se persiste correctamente en el campo `avg_symmetry_score` de la tabla `SESSION_RESULT` en la base de datos del backend, verificable mediante consulta directa a la DB o a través del portal web del terapeuta.
-- CA-5: Si el paciente completa un ejercicio sin que se detecte ningún rostro en ningún frame, el sistema envía el valor `null` o `0.0` para `averageAccuracy` en ese ejercicio, sin lanzar excepciones de división entre cero.
+- CA-3: Los valores de `averageAccuracy` (precisión del gesto) y `symmetryScore` (simetría izquierda/derecha) enviados en el POST `/sessions` son números entre 0 y 100 que reflejan de forma realista el desempeño del paciente durante el ejercicio (no son siempre 0, 50 o 100 exactos).
+- CA-4: Los valores se persisten correctamente en los campos `average_accuracy` y `symmetry_score` de la tabla `session_items` en la base de datos del backend, verificable mediante consulta directa a la DB o a través del portal web del terapeuta.
+- CA-5: Si el paciente completa un ejercicio sin que se detecte ningún rostro en ningún frame, el sistema envía el valor `null` para `averageAccuracy` y `symmetryScore` en ese ejercicio, sin lanzar excepciones de división entre cero.
 
 ---
 
@@ -590,7 +590,7 @@
 **Criterios de Aceptación:**
 - CA-1: El sistema de calibración calcula el valor baseline usando el percentil 95 estadístico (P95): de todas las muestras recolectadas en la ventana de 3 segundos, se descartan el 5% de valores más altos (spikes de cámara o movimientos involuntarios) y se toma el percentil 95 del resto como valor baseline.
 - CA-2: Se aplica un "Neutral Tare" (offset de reposo): el sistema detecta el nivel de activación de cada blendshape en el primer paso de calibración (expresión Neutral) y lo usa como offset que se resta de todos los valores subsiguientes, de modo que el reposo del paciente siempre mapea a 0.0 en la escala normalizada.
-- CA-3: El "Head Stability Guard" está activo durante la calibración: si la rotación de la cabeza del paciente (detectada mediante los landmarks de MediaPipe) supera 10 grados en cualquier eje, la captura del frame se pausa automáticamente y se muestra un indicador visual pidiendo al paciente que estabilice su cabeza.
+- CA-3: El "Head Stability Guard" está activo durante la calibración: si la rotación de la cabeza del paciente (yaw o pitch, medida en valor absoluto respecto a la cámara a partir de la matriz de transformación facial de MediaPipe) supera 10 grados, la captura del frame se pausa automáticamente y se muestra un indicador visual pidiendo al paciente que estabilice su cabeza.
 - CA-4: La pantalla de calibración incluye una silueta facial (outline o ilustración) que guía al paciente a posicionar su rostro correctamente frente a la cámara antes de iniciar cada paso.
 - CA-5: El objeto `CalibrationBaseline` almacena un mapa de `neutralOffsets` con el offset calculado para cada blendshape relevante, y este mapa se persiste localmente; los cálculos de score en ejercicios posteriores consultan este mapa para normalizar correctamente.
 - CA-6: Tras una calibración con spike de cámara (valor atípico significativo en uno de los frames), el valor baseline calculado no se ve afectado significativamente, validando que el filtro P95 está descartando los valores extremos correctamente.
@@ -626,11 +626,11 @@
 **Prioridad:** Alta  
 
 **Criterios de Aceptación:**
-- CA-1: Cuando el paciente completa una sesión de ejercicios sin conexión a internet, la sesión se guarda localmente en Room con el campo `is_synced` en `false`; la app muestra al paciente una confirmación de que los datos fueron guardados localmente.
+- CA-1: Cuando el paciente completa una sesión de ejercicios sin conexión a internet, la sesión se guarda localmente en Room con el campo `syncStatus` en `PENDING`; la app muestra al paciente una confirmación de que los datos fueron guardados localmente.
 - CA-2: WorkManager registra una tarea de sincronización con constraint de red disponible; cuando la conectividad se restaura, WorkManager ejecuta automáticamente la tarea de subida de sesiones pendientes sin intervención del usuario.
-- CA-3: El backend implementa idempotencia en el endpoint `POST /sessions`: si se envía la misma sesión dos veces (mismo `sessionId` o los mismos `startTime` y `patientId`), el servidor retorna HTTP 200 sin crear un registro duplicado.
-- CA-4: Tras una sincronización exitosa, el campo `is_synced` del registro local en Room cambia a `true` y el campo `synced_at` registra el timestamp de sincronización; la sesión ahora es visible en el portal del terapeuta.
-- CA-5: Si el intento de sincronización falla (error 5xx del servidor), WorkManager reintenta la tarea con backoff exponencial hasta un máximo de 3 reintentos; los registros de Room permanecen con `is_synced` en `false` hasta que la sincronización sea exitosa.
+- CA-3: El backend implementa idempotencia en el endpoint `POST /sessions`: cada sesión lleva un `id` UUID obligatorio generado en el dispositivo; si se envía la misma sesión dos veces (mismo `id`), la primera petición retorna HTTP 201 y la segunda HTTP 200 con la sesión existente, sin crear un registro duplicado.
+- CA-4: Tras una sincronización exitosa, el campo `syncStatus` del registro local en Room cambia a `SYNCED` y el campo `syncedAt` registra el timestamp de sincronización; la sesión ahora es visible en el portal del terapeuta.
+- CA-5: Si el intento de sincronización falla (error 5xx del servidor), WorkManager reintenta la tarea con backoff exponencial hasta un máximo de 3 intentos en total; si se agotan, la sesión queda en `ERROR` y se conserva en Room para reenviarse en una ejecución posterior, sin perder datos.
 
 ---
 
@@ -717,8 +717,8 @@ El sistema Symma Platform define tres actores principales que interactúan con l
 **Responsabilidades:**
 - Ejecutar la autenticación y autorización de terapeutas y pacientes mediante JWT.
 - Persistir y sincronizar los datos clínicos entre la app móvil (Room DB) y el backend (PostgreSQL via Prisma).
-- Procesar los frames de cámara en tiempo real mediante MediaPipe FaceLandmarker para extraer los 468 landmarks faciales y los blendshapes de expresión.
-- Calcular el índice de simetría facial y los scores de ejercicio usando los algoritmos implementados (SymmetryCalculator, ExerciseStrategy pattern).
+- Procesar los frames de cámara en tiempo real mediante MediaPipe FaceLandmarker para extraer los 478 landmarks faciales y los blendshapes de expresión.
+- Calcular el índice de simetría facial y los scores de ejercicio usando los algoritmos implementados (`FacialSymmetry`, patrón ExerciseStrategy).
 - Gestionar la sincronización offline de sesiones mediante WorkManager, garantizando que los datos se suban al backend cuando la conectividad esté disponible.
 - Mantener el aislamiento de datos entre terapeutas y proteger la información sensible de los pacientes conforme a los principios de la LFPDPPP.
 

@@ -3,7 +3,7 @@
 **Proyecto:** Symma Platform (Ecosistema de Rehabilitación de Parálisis Facial)
 **Versión del Schema:** Producción (Sprint 0+)
 **Fuente:** `packages/database/prisma/schema.prisma`
-**Fecha de generación:** Mayo 2026
+**Fecha de generación:** Mayo 2026 (actualizado en noviembre de 2026)
 
 ---
 
@@ -54,7 +54,7 @@ erDiagram
         String clinical_notes "nullable"
         String emergency_contact_name "nullable"
         String emergency_contact_phone "nullable"
-        String access_code_hash "nullable, UNIQUE — acceso offline"
+        String access_code_hash "nullable, UNIQUE — HMAC-SHA256 del PIN"
         DateTime created_at
         DateTime updated_at
     }
@@ -87,7 +87,7 @@ erDiagram
         String name "ej: Fase 1 - Movilidad"
         DateTime start_date
         DateTime end_date "nullable"
-        RoutineStatus status "ACTIVE | ARCHIVED"
+        RoutineStatus status "DRAFT | ACTIVE | ARCHIVED"
         String therapist_notes "nullable"
         DateTime created_at
         DateTime updated_at
@@ -119,8 +119,9 @@ erDiagram
         String routine_id FK
         DateTime date
         Int duration_seconds
-        Float score "puntaje global de la sesión"
+        Float score "puntaje global de la sesión (0–100)"
         Boolean is_synced "false = pendiente de sincronización"
+        Json calibration "nullable — calibración usada en la sesión"
         DateTime created_at
     }
 
@@ -129,7 +130,10 @@ erDiagram
         String session_id FK
         String exercise_id FK
         Int reps_completed
-        Float average_accuracy "nullable — métrica IA (RFC-026)"
+        Float average_accuracy "nullable — precisión del gesto (0–100)"
+        Float symmetry_score "nullable — simetría izquierda/derecha (0–100)"
+        Float average_hold_seconds "nullable"
+        String snapshot_key "nullable — clave S3 del mejor intento"
         Json series_data "nullable — datos detallados por serie (RFC-030)"
     }
 ```
@@ -183,7 +187,7 @@ Representa al profesional de salud que utiliza el portal web (Symma Web) para ge
 
 **Tabla:** `patients`
 
-Entidad central del dominio clínico. Almacena los datos personales, clínicos y de contacto del paciente con parálisis facial. El campo `access_code_hash` habilita la autenticación local en la aplicación móvil sin requerir conexión a internet.
+Entidad central del dominio clínico. Almacena los datos personales, clínicos y de contacto del paciente con parálisis facial. El campo `access_code_hash` guarda el PIN de acceso a la aplicación móvil, con el que el paciente inicia sesión contra la API.
 
 | Atributo | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -201,7 +205,7 @@ Entidad central del dominio clínico. Almacena los datos personales, clínicos y
 | `clinical_notes` | `String` | nullable | Notas clínicas adicionales del terapeuta |
 | `emergency_contact_name` | `String` | nullable | Nombre del contacto de emergencia |
 | `emergency_contact_phone` | `String` | nullable | Teléfono del contacto de emergencia |
-| `access_code_hash` | `String` | UNIQUE, nullable | Hash del código de acceso para autenticación offline en la app móvil |
+| `access_code_hash` | `String` | UNIQUE, nullable | HMAC-SHA256 del PIN de acceso, calculado con el secreto `PIN_HMAC_SECRET`; `null` = acceso revocado |
 | `created_at` | `DateTime` | NOT NULL, default now() | Fecha de alta en el sistema |
 | `updated_at` | `DateTime` | NOT NULL, auto-update | Última modificación del registro |
 
@@ -209,7 +213,7 @@ Entidad central del dominio clínico. Almacena los datos personales, clínicos y
 - Un `Patient` es atendido por **un** `Therapist` (N : 1).
 - Un `Patient` puede tener **una o más** `Routine` asignadas (1 : N).
 
-**Nota de diseño:** El campo `access_code_hash` reemplaza al campo `auth_pin_hash` del brief original. Este cambio nominaliza el concepto como "código de acceso" en lugar de "PIN", permitiendo mayor flexibilidad en el mecanismo de autenticación offline.
+**Nota de diseño:** El campo `access_code_hash` reemplaza al campo `auth_pin_hash` del brief original. Este cambio nominaliza el concepto como "código de acceso" en lugar de "PIN", permitiendo mayor flexibilidad en el mecanismo de autenticación.
 
 ---
 
@@ -251,7 +255,7 @@ Representa la prescripción terapéutica formal que el terapeuta diseña para un
 | `name` | `String` | NOT NULL | Nombre descriptivo (ej: "Fase 1 - Movilidad Básica") |
 | `start_date` | `DateTime` | NOT NULL | Fecha de inicio de la prescripción |
 | `end_date` | `DateTime` | nullable | Fecha de fin (null = sin fecha de caducidad) |
-| `status` | `RoutineStatus` | NOT NULL, default `ACTIVE` | Estado de la rutina |
+| `status` | `RoutineStatus` | NOT NULL, default `ACTIVE` | Estado de la rutina; un índice único parcial garantiza como máximo una rutina `ACTIVE` por paciente |
 | `therapist_notes` | `String` | nullable | Instrucciones o anotaciones del terapeuta |
 | `created_at` | `DateTime` | NOT NULL, default now() | Fecha de creación |
 | `updated_at` | `DateTime` | NOT NULL, auto-update | Última modificación |
@@ -293,7 +297,7 @@ Representa la instancia de un ejercicio dentro de una rutina específica, con to
 
 **Tabla:** `sessions`
 
-Registro de una ejecución completa de una rutina por parte del paciente. Captura los metadatos globales de la sesión: fecha, duración y puntaje general. El campo `is_synced` es crítico para la estrategia offline-first de la app móvil.
+Registro de una ejecución completa de una rutina por parte del paciente. Captura los metadatos globales de la sesión: fecha, duración, puntaje general y la calibración utilizada. Su `id` lo genera la aplicación móvil y sirve como clave de idempotencia de `POST /sessions`. El campo `is_synced` es crítico para la estrategia offline-first de la app móvil.
 
 | Atributo | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -301,8 +305,9 @@ Registro de una ejecución completa de una rutina por parte del paciente. Captur
 | `routine_id` | `String` (UUID) | FK → `routines.id`, NOT NULL | Rutina ejecutada (CASCADE DELETE) |
 | `date` | `DateTime` | NOT NULL | Fecha y hora de realización de la sesión |
 | `duration_seconds` | `Int` | NOT NULL | Duración total de la sesión en segundos |
-| `score` | `Float` | NOT NULL | Puntaje global de la sesión (métrica compuesta) |
+| `score` | `Float` | NOT NULL | Puntaje global de la sesión (métrica compuesta, escala 0–100) |
 | `is_synced` | `Boolean` | NOT NULL, default `false` | Indica si la sesión fue enviada al servidor (`false` = pendiente) |
+| `calibration` | `Json` | nullable | Calibración con la que el paciente ejecutó la sesión: `{ capturedAt, values }` (cifrada en el dispositivo y enviada con la sesión) |
 | `created_at` | `DateTime` | NOT NULL, default now() | Fecha de creación del registro (puede ser offline) |
 
 **Relaciones:**
@@ -315,7 +320,7 @@ Registro de una ejecución completa de una rutina por parte del paciente. Captur
 
 **Tabla:** `session_items`
 
-Registro granular de la ejecución de **un ejercicio específico** dentro de una sesión. Almacena las métricas de rendimiento capturadas por el motor de visión computacional (MediaPipe). El campo `series_data` (JSON) permite guardar datos estructurados por serie para análisis retrospectivo avanzado.
+Registro granular de la ejecución de **un ejercicio específico** dentro de una sesión. Almacena las métricas de rendimiento capturadas por el motor de visión computacional (MediaPipe): la precisión del gesto respecto al umbral calibrado y, como métrica independiente, la simetría facial izquierda/derecha. El campo `series_data` (JSON) permite guardar datos estructurados por serie para análisis retrospectivo avanzado.
 
 | Atributo | Tipo | Restricciones | Descripción |
 |---|---|---|---|
@@ -323,7 +328,10 @@ Registro granular de la ejecución de **un ejercicio específico** dentro de una
 | `session_id` | `String` (UUID) | FK → `sessions.id`, NOT NULL | Sesión a la que pertenece (CASCADE DELETE) |
 | `exercise_id` | `String` (UUID) | FK → `exercises.id`, NOT NULL | Ejercicio ejecutado |
 | `reps_completed` | `Int` | NOT NULL | Número de repeticiones completadas |
-| `average_accuracy` | `Float` | nullable | Precisión promedio del gesto detectada por IA — RFC-026 |
+| `average_accuracy` | `Float` | nullable | Precisión promedio del gesto respecto al umbral calibrado, escala 0–100 — RFC-026 |
+| `symmetry_score` | `Float` | nullable | Simetría facial izquierda/derecha promedio, escala 0–100 (100 = perfectamente simétrico) |
+| `average_hold_seconds` | `Float` | nullable | Tiempo promedio de sostenimiento del gesto, en segundos |
+| `snapshot_key` | `String` | nullable | Clave del objeto en el almacenamiento S3 con el snapshot del mejor intento; la API solo expone URLs firmadas de corta duración |
 | `series_data` | `Json` | nullable | Datos detallados por serie (blendshapes, scores, timestamps) — RFC-030 |
 
 **Relaciones:**
@@ -341,7 +349,7 @@ Define el nivel de acceso del terapeuta dentro del portal web Symma.
 | Valor | Descripción |
 |---|---|
 | `THERAPIST` | Terapeuta regular. Puede gestionar sus propios pacientes y rutinas. |
-| `ADMIN` | Administrador de clínica. Tiene acceso completo a todos los terapeutas y pacientes de la clínica. |
+| `ADMIN` | Administrador. Además de las capacidades de `THERAPIST`, es el único rol que puede crear, modificar y eliminar ejercicios del catálogo global. |
 
 ---
 
@@ -415,7 +423,8 @@ Controla el ciclo de vida de una rutina prescrita.
 
 | Valor | Descripción |
 |---|---|
-| `ACTIVE` | La rutina está vigente. El paciente puede ejecutarla en la app móvil. |
+| `DRAFT` | Borrador (p. ej., una rutina clonada). No se entrega a la app móvil hasta que el terapeuta la activa. |
+| `ACTIVE` | La rutina está vigente. El paciente puede ejecutarla en la app móvil. Como máximo una por paciente: activar una rutina archiva la anterior. |
 | `ARCHIVED` | La rutina fue archivada (venció o fue reemplazada). Se conserva para historial clínico. |
 
 ---
@@ -424,7 +433,7 @@ Controla el ciclo de vida de una rutina prescrita.
 
 ### 4.1. `access_code_hash` en lugar de `auth_pin_hash`
 
-El brief original contemplaba un campo `auth_pin_hash` en la entidad `Patient`. En el schema de producción este campo se renombró a `access_code_hash`. Esta decisión refleja que el mecanismo de autenticación local puede no ser exclusivamente un PIN numérico; el término "código de acceso" es más genérico y permite evolucionar el mecanismo (ej: combinación alfanumérica, biometría con fallback) sin cambios de schema. El campo es `UNIQUE` para garantizar que no existan dos pacientes con el mismo código en la base de datos.
+El brief original contemplaba un campo `auth_pin_hash` en la entidad `Patient`. En el schema de producción este campo se renombró a `access_code_hash`. Esta decisión refleja que el mecanismo de autenticación local puede no ser exclusivamente un PIN numérico; el término "código de acceso" es más genérico y permite evolucionar el mecanismo (ej: combinación alfanumérica, biometría con fallback) sin cambios de schema. El campo es `UNIQUE` para garantizar que no existan dos pacientes con el mismo código en la base de datos, condición necesaria porque el login del paciente recibe solo el PIN. Por la misma razón el hash es determinista: HMAC-SHA256 con un secreto del servidor (`PIN_HMAC_SECRET`) en lugar de bcrypt, de modo que una copia de la base de datos no basta para recuperar los PIN.
 
 ### 4.2. Session vinculada a Routine (no a Patient)
 
@@ -444,11 +453,11 @@ La introducción del enum `MobileModule` vincula directamente cada ejercicio del
 
 ### 4.6. Estrategia offline-first con `is_synced`
 
-El campo `is_synced` en `Session` (valor por defecto `false`) es el mecanismo central de la estrategia offline-first. La app Android crea registros de sesión en la base de datos local (Room/SQLite cifrada con SQLCipher) con `is_synced = false`. WorkManager, al detectar conectividad, envía los registros pendientes al API NestJS y actualiza el campo a `true`. Esta arquitectura garantiza continuidad terapéutica sin dependencia de red.
+La estrategia offline-first se apoya en el estado de sincronización de la base local de la app Android (Room/SQLite cifrada con SQLCipher), donde cada sesión nace con `syncStatus = PENDING`. WorkManager, al detectar conectividad, envía los registros pendientes al API NestJS con el UUID generado en el dispositivo, de modo que los reintentos no duplican sesiones, y marca la sesión local como `SYNCED`. El campo `is_synced` de la tabla `sessions` del servidor indica que el registro llegó por sincronización. Esta arquitectura garantiza continuidad terapéutica sin dependencia de red.
 
 ### 4.7. Cascade Delete en relaciones de ejecución
 
-Las relaciones `Routine → RoutineItem`, `Routine → Session` y `Session → SessionItem` utilizan `onDelete: Cascade`. Esto asegura integridad referencial: al archivar o eliminar una rutina, todos sus ítems y sesiones asociadas se eliminan en cadena, evitando registros huérfanos. Las relaciones con el catálogo de ejercicios (`Exercise`) no tienen cascada, ya que el catálogo es un recurso compartido que no debe modificarse por operaciones en rutinas individuales.
+Las relaciones `Routine → RoutineItem`, `Routine → Session` y `Session → SessionItem` utilizan `onDelete: Cascade`. Esto asegura integridad referencial: al eliminar físicamente una rutina, todos sus ítems y sesiones asociadas se eliminan en cadena, evitando registros huérfanos. Archivar una rutina no borra nada; por eso una rutina con sesiones registradas nunca se elimina físicamente, sino que se archiva (RF-025). Las relaciones con el catálogo de ejercicios (`Exercise`) no tienen cascada, ya que el catálogo es un recurso compartido que no debe modificarse por operaciones en rutinas individuales.
 
 ### 4.8. UUIDs como claves primarias
 

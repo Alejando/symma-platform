@@ -220,7 +220,7 @@ La siguiente tabla presenta todas las historias de usuario del proyecto ordenada
 - [ ] La vista analítica de rutina muestra 3 KPIs reales (sesiones, precisión, racha) y un AreaChart de Recharts
 - [ ] El ciclo de vida de rutinas cubre los 5 escenarios: edición sin sesiones, edición con sesiones (bloqueada), clonación, archivado y eliminación
 - [ ] La clonación crea una rutina independiente con todos sus RoutineItems copiados
-- [ ] El PIN de 6 dígitos se muestra por única vez en modal y se almacena como hash bcrypt
+- [ ] El PIN de 6 dígitos se muestra por única vez en modal y se almacena como HMAC-SHA256 con el secreto `PIN_HMAC_SECRET`
 - [ ] La revocación de PIN establece `auth_pin_hash = null` en la base de datos
 - [ ] El dashboard muestra KPIs de Pacientes Activos, Alertas de Cumplimiento y Eficacia Promedio con datos reales
 - [ ] Los datos del dashboard se renderizan desde Server Components de Next.js
@@ -341,7 +341,7 @@ La siguiente tabla presenta todas las historias de usuario del proyecto ordenada
 - [ ] La pantalla mantiene el dispositivo encendido durante toda la sesión
 - [ ] Al completar la rutina, la app navega a pantalla de resumen
 - [ ] La app ejecuta `POST /sessions` con el cuerpo correcto al finalizar
-- [ ] Si el envío falla, el registro local en Room queda con `is_synced = false`
+- [ ] Si el envío falla, el registro local en Room queda con `syncStatus = PENDING`
 - [ ] El tema de la app usa los tokens de color de Symma sin valores hexadecimales hardcodeados
 - [ ] `SymmaButton`, `SymmaCard` y `SymmaScaffold` son Composables reutilizables usados en al menos 3 pantallas
 - [ ] El botón "Test Camera" ya no aparece en `HomeScreen` en ninguna compilación
@@ -373,10 +373,10 @@ La siguiente tabla presenta todas las historias de usuario del proyecto ordenada
 **Definición de Terminado (DoD):**
 - [ ] La dependencia de MediaPipe Tasks Vision está en `build.gradle` y el modelo `face_landmarker.task` está en `assets/`
 - [ ] `ImageAnalysis` de CameraX procesa frames y los envía a `FaceLandmarker` en modo `LIVE_STREAM`
-- [ ] Los 468 landmarks del rostro detectado son visibles en Logcat como coordenadas X, Y, Z normalizadas
+- [ ] Los 478 landmarks del rostro detectado son visibles en Logcat como coordenadas X, Y, Z normalizadas
 - [ ] El procesamiento opera a mínimo 30fps en hardware de gama media
 - [ ] Si no se detecta ningún rostro, el sistema retorna resultado vacío sin lanzar excepciones
-- [ ] Un `Canvas` de Compose dibuja los 468 landmarks como puntos sobre la imagen de cámara
+- [ ] Un `Canvas` de Compose dibuja los 478 landmarks como puntos sobre la imagen de cámara
 - [ ] Los puntos se actualizan en cada frame nuevo del detector
 - [ ] La transformación de coordenadas es correcta: las coordenadas normalizadas (0.0–1.0) se convierten a píxeles de pantalla
 - [ ] Los puntos están orientados correctamente (efecto espejo de cámara frontal)
@@ -385,7 +385,7 @@ La siguiente tabla presenta todas las historias de usuario del proyecto ordenada
 **Entregables verificables:**
 - `FaceLandmarkerHelper` con integración de MediaPipe en modo `LIVE_STREAM`
 - Pipeline `CameraX ImageAnalysis → FaceLandmarkerHelper → callback de resultados`
-- Composable `FaceMeshOverlay` que renderiza los 468 puntos en un `Canvas` sobre la cámara
+- Composable `FaceMeshOverlay` que renderiza los 478 puntos en un `Canvas` sobre la cámara
 - Transformación de coordenadas normalizada-a-píxeles con compensación de espejo
 
 ---
@@ -538,10 +538,10 @@ La siguiente tabla presenta todas las historias de usuario del proyecto ordenada
 - [ ] `apps/api` y `apps/web` importan los tipos desde `packages/shared-types`
 - [ ] Modificar un campo en `packages/shared-types` genera errores de TypeScript en `apps/api` y `apps/web`
 - [ ] Swagger es consistente con los tipos definidos en el paquete compartido
-- [ ] Una sesión completada sin conexión se guarda en Room con `is_synced = false`
+- [ ] Una sesión completada sin conexión se guarda en Room con `syncStatus = PENDING`
 - [ ] WorkManager registra tarea con constraint de red disponible y la ejecuta al restaurar la conectividad
 - [ ] El backend implementa idempotencia en `POST /sessions`: el mismo `sessionId` no crea duplicado
-- [ ] Tras la sincronización, `is_synced = true` y `synced_at` registra el timestamp
+- [ ] Tras la sincronización, `syncStatus = SYNCED` y `syncedAt` registra el timestamp
 - [ ] WorkManager reintenta con backoff exponencial hasta 3 veces ante errores 5xx
 - [ ] Existe endpoint de historial de sesiones con detalle por ejercicio, documentado en Swagger
 - [ ] El portal muestra la lista de sesiones con fecha, duración y métricas principales

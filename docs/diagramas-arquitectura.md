@@ -22,15 +22,16 @@ graph TD
     end
 
     DB[("PostgreSQL 15\npuerto 5440 (Docker)\nsymma_db")]
-    S3[("Almacenamiento S3-compatible\nFotografías de sesiones\nSnapshot de calibración")]
+    S3[("Almacenamiento S3-compatible\n(MinIO en local)\nSnapshot del mejor intento")]
 
     THERAPIST -->|"HTTPS / Sesión Web\n(Auth.js)"| WEB
     WEB -->|"HTTP REST + JWT\npuerto 4001"| API
     API -->|"Prisma ORM\nSQL"| DB
-    API -->|"Subida de imágenes\nHTTPS"| S3
+    API -->|"Firma URLs de subida\ny lectura"| S3
 
     PATIENT -->|"Interacción directa\nAndroid"| MOBILE
     MOBILE -->|"HTTPS REST + JWT\nSincronización de sesiones"| API
+    MOBILE -->|"PUT snapshot JPEG\n(URL firmada)"| S3
     MOBILE -->|"Cámara frontal\n(procesamiento local)"| MOBILE
 
     WEB -.->|"Visualiza datos clínicos\ndel paciente"| THERAPIST
@@ -216,23 +217,23 @@ sequenceDiagram
 
     PlayerVM-->>Paciente: Todos los ejercicios completados
     Paciente->>SummaryVM: navega a SummaryScreen (routineId, duration)
-    SummaryVM->>RoomDB: Guarda Session + SessionItems (is_synced = false)
+    SummaryVM->>RoomDB: Guarda Session + SessionItems (syncStatus = PENDING, id UUID)
 
     alt Hay conexión a internet
-        SummaryVM->>API: POST /sessions (Session + resultados)
-        API->>PostgreSQL: INSERT session, session_results
+        SummaryVM->>API: POST /sessions (id + Session + resultados)
+        API->>PostgreSQL: INSERT session, session_items
         PostgreSQL-->>API: OK (session.id)
-        API-->>SummaryVM: 201 Created
-        SummaryVM->>RoomDB: Marca sesión como is_synced = true
+        API-->>SummaryVM: 201 Created (200 si el id ya existía)
+        SummaryVM->>RoomDB: Marca sesión como syncStatus = SYNCED
     else Sin conexión
-        SummaryVM->>RoomDB: Sesión queda pendiente (is_synced = false)
+        SummaryVM->>RoomDB: Sesión queda pendiente (syncStatus = PENDING)
         RoomDB-->>SummaryVM: Guardado local confirmado
         SummaryVM-->>Paciente: "Sesión guardada. Se sincronizará cuando haya conexión."
-        Note over WorkManager,RoomDB: WorkManager detecta red disponible<br/>→ lee sesiones pendientes<br/>→ POST /sessions a la API<br/>→ actualiza is_synced = true
+        Note over WorkManager,RoomDB: WorkManager detecta red disponible<br/>→ lee sesiones pendientes<br/>→ POST /sessions a la API (máx. 3 intentos con backoff)<br/>→ actualiza syncStatus = SYNCED
     end
 
-    Terapeuta->>API: GET /patients/:id/sessions (Portal Web)
-    API->>PostgreSQL: SELECT sessions WHERE patient_id = :id
+    Terapeuta->>API: GET /routines/:id/stats y /routines/:id/history (Portal Web)
+    API->>PostgreSQL: SELECT sessions WHERE routine_id = :id
     PostgreSQL-->>API: Historial de sesiones
     API-->>Terapeuta: Dashboard con progreso clínico (analytics)
 ```
@@ -253,13 +254,13 @@ La aplicación adopta un modelo **offline-first** donde la base de datos Room (S
 
 1. El paciente puede realizar sesiones completas sin conexión a internet.
 2. La rutina asignada se descarga previamente y se persiste en Room.
-3. Al finalizar una sesión, los resultados se guardan localmente con `is_synced = false`.
-4. **WorkManager** monitorea la conectividad y ejecuta `SyncSessionsWorker` cuando hay red disponible, enviando las sesiones pendientes a la API en lotes.
+3. Al finalizar una sesión, los resultados se guardan localmente con `syncStatus = PENDING` y un `id` UUID generado en el dispositivo.
+4. **WorkManager** monitorea la conectividad y ejecuta `SyncSessionsWorker` cuando hay red disponible, enviando las sesiones pendientes a la API con backoff exponencial y un máximo de 3 intentos; como cada sesión lleva su `id`, los reenvíos no generan duplicados.
 5. La autenticación offline se resuelve mediante un PIN local cifrado almacenado en Room.
 
 ### 5.3 Visión por Computadora On-Device con MediaPipe
 
-El motor de Computer Vision utiliza **MediaPipe Tasks Vision** (FaceLandmarker) ejecutándose **completamente en el dispositivo Android**, sin transmitir video o imágenes al servidor. Esto tiene dos implicaciones fundamentales:
+El motor de Computer Vision utiliza **MediaPipe Tasks Vision** (FaceLandmarker) ejecutándose **completamente en el dispositivo Android**, sin transmitir video al servidor; la única imagen que sale del dispositivo es el snapshot del mejor intento, que se sube al almacenamiento S3 con una URL firmada. Esto tiene dos implicaciones fundamentales:
 
 - **Privacidad:** No se almacena ningún video. Solo se persiste un snapshot fotográfico del mejor intento por ejercicio.
 - **Latencia cero de red:** El análisis ocurre a 30 fps sobre el stream en vivo de la cámara frontal, extrayendo 52 blendshapes que representan la geometría facial (ej. `mouthSmileLeft`, `browInnerUp`, `eyeBlinkRight`).

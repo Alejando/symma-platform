@@ -4,11 +4,12 @@
 
 | Atributo | Valor |
 |----------|-------|
-| Base URL (desarrollo) | `http://localhost:4001` |
+| Base URL (desarrollo) | `http://localhost:4001/api/v1` |
 | Versión | 1.0.0 |
 | Formato de solicitud | `application/json` |
 | Formato de respuesta | `application/json` |
 | Esquema de autenticación | Bearer JWT (Authorization header) |
+| Idioma de los mensajes de error | Según la cabecera `Accept-Language` (`es` por defecto, `en`) |
 
 ### 1.1 Autenticación
 
@@ -27,6 +28,10 @@ Existen **dos tipos de tokens**, emitidos por flujos de autenticación distintos
 
 Los endpoints de tipo `POST /auth/login` y `POST /auth/patient/login` son públicos (no requieren token).
 
+Ambos tipos de token se firman con el secreto `JWT_SECRET`, pero tienen caducidad independiente: 8 horas para el terapeuta y 7 días para el paciente por defecto (configurables con `JWT_THERAPIST_EXPIRES_IN` y `JWT_PATIENT_EXPIRES_IN`). La validación del token se repite en cada petición y responde 401 si el terapeuta fue desactivado, si el paciente fue archivado, o si su PIN fue revocado o regenerado después de emitir el token.
+
+Las operaciones de escritura sobre el catálogo global de ejercicios requieren además que el terapeuta tenga rol `ADMIN`.
+
 ---
 
 ## 2. Resumen de Endpoints
@@ -42,6 +47,7 @@ Los endpoints de tipo `POST /auth/login` y `POST /auth/patient/login` son públi
 | PATCH | `/patients/:id` | Actualizar datos del paciente | JWT Terapeuta |
 | DELETE | `/patients/:id` | Archivar paciente (soft delete) | JWT Terapeuta |
 | GET | `/patients/:id/routines` | Listar rutinas de un paciente | JWT Terapeuta |
+| GET | `/patients/:id/stats` | Adherencia y actividad del paciente | JWT Terapeuta |
 | POST | `/patients/:id/access-code` | Generar PIN de acceso móvil | JWT Terapeuta |
 | DELETE | `/patients/:id/access-code` | Revocar PIN de acceso móvil | JWT Terapeuta |
 | GET | `/patients/:id/access-code/status` | Verificar si el paciente tiene PIN activo | JWT Terapeuta |
@@ -50,17 +56,20 @@ Los endpoints de tipo `POST /auth/login` y `POST /auth/patient/login` son públi
 | GET | `/routines/:id` | Obtener rutina por ID | JWT Terapeuta |
 | PUT | `/routines/:id` | Actualizar rutina (reemplaza items) | JWT Terapeuta |
 | DELETE | `/routines/:id` | Eliminar o archivar rutina | JWT Terapeuta |
-| POST | `/routines/:id/clone` | Clonar una rutina existente | JWT Terapeuta |
+| POST | `/routines/:id/clone` | Clonar una rutina existente (queda en `DRAFT`) | JWT Terapeuta |
+| POST | `/routines/:id/activate` | Activar una rutina y archivar la activa anterior | JWT Terapeuta |
 | GET | `/exercises` | Listar ejercicios del catálogo | JWT Terapeuta |
-| POST | `/exercises` | Crear ejercicio en el catálogo | JWT Terapeuta |
+| POST | `/exercises` | Crear ejercicio en el catálogo | JWT Terapeuta (`ADMIN`) |
 | GET | `/exercises/:id` | Obtener ejercicio por ID | JWT Terapeuta |
-| PATCH | `/exercises/:id` | Actualizar ejercicio | JWT Terapeuta |
-| DELETE | `/exercises/:id` | Eliminar ejercicio | JWT Terapeuta |
+| PATCH | `/exercises/:id` | Actualizar ejercicio | JWT Terapeuta (`ADMIN`) |
+| DELETE | `/exercises/:id` | Eliminar ejercicio | JWT Terapeuta (`ADMIN`) |
 | GET | `/routines/:id/stats` | KPIs y datos de gráfica de una rutina | JWT Terapeuta |
-| GET | `/routines/:id/history` | Historial de sesiones de una rutina | JWT Terapeuta |
+| GET | `/routines/:id/history` | Historial paginado de sesiones de una rutina | JWT Terapeuta |
 | GET | `/dashboard/stats` | KPIs del dashboard del terapeuta | JWT Terapeuta |
 | GET | `/mobile/routine/active` | Rutina activa del paciente (payload completo) | JWT Paciente |
-| POST | `/sessions` | Registrar sesión completada (sincronización móvil) | JWT Paciente |
+| POST | `/mobile/snapshots/upload-url` | URL firmada para subir el snapshot del mejor intento | JWT Paciente |
+| POST | `/sessions` | Registrar sesión completada (sincronización móvil, idempotente) | JWT Paciente |
+| GET | `/sessions/:id` | Detalle de una sesión por ejercicio | JWT Terapeuta |
 
 ---
 
@@ -156,7 +165,7 @@ Gestiona el acceso de pacientes a la aplicación móvil. El flujo no utiliza con
 
 #### POST /auth/patient/login
 
-**Descripción:** Autentica a un paciente usando un código de acceso (PIN) de 6 dígitos generado previamente por su terapeuta. Retorna un JWT de larga duración específico para el acceso móvil, junto con los datos básicos del paciente.  
+**Descripción:** Autentica a un paciente usando únicamente un código de acceso (PIN) de 6 dígitos generado previamente por su terapeuta; no se envía identificador de paciente. El servidor calcula el HMAC-SHA256 del PIN con el secreto `PIN_HMAC_SECRET` y lo busca entre los pacientes con acceso activo. Retorna un JWT de larga duración específico para el acceso móvil, junto con los datos básicos del paciente. Tras 5 intentos fallidos en 15 minutos desde el mismo cliente, el endpoint responde 429 hasta que expira la ventana.  
 **Autenticación:** Pública  
 **Etiqueta:** Mobile Auth
 
@@ -171,7 +180,9 @@ Gestiona el acceso de pacientes a la aplicación móvil. El flujo no utiliza con
 | Código | Descripción |
 |--------|-------------|
 | 200 | Éxito — retorna `{ accessToken, patient }` |
-| 401 | PIN inválido, expirado o revocado |
+| 400 | El PIN no tiene exactamente 6 dígitos |
+| 401 | PIN inválido o revocado, o paciente archivado |
+| 429 | Demasiados intentos fallidos; reintentar más tarde |
 
 **Ejemplo de Request:**
 ```json
@@ -206,6 +217,7 @@ Gestión completa del catálogo de pacientes de un terapeuta, incluyendo el cicl
 | PATCH | `/patients/:id` | Actualizar datos del paciente |
 | DELETE | `/patients/:id` | Archivar paciente (soft delete) |
 | GET | `/patients/:id/routines` | Listar rutinas del paciente |
+| GET | `/patients/:id/stats` | Adherencia y actividad del paciente |
 | POST | `/patients/:id/access-code` | Generar PIN de acceso móvil |
 | DELETE | `/patients/:id/access-code` | Revocar PIN de acceso móvil |
 | GET | `/patients/:id/access-code/status` | Verificar si el paciente tiene PIN activo |
@@ -276,7 +288,6 @@ Gestión completa del catálogo de pacientes de un terapeuta, incluyendo el cicl
   "clinicalNotes": "Paciente refiere inicio súbito hace 2 semanas. Sin antecedentes previos.",
   "emergencyContactName": "María Mendoza",
   "emergencyContactPhone": "+52 55 8765 4321",
-  "avatarUrl": null,
   "createdAt": "2026-01-15T10:30:00.000Z",
   "updatedAt": "2026-01-15T10:30:00.000Z"
 }
@@ -326,7 +337,6 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
       "status": "ACTIVE",
       "diagnosis": "Parálisis facial periférica grado III",
       "initialParalysisDegree": 3,
-      "avatarUrl": null,
       "createdAt": "2026-01-15T10:30:00.000Z",
       "updatedAt": "2026-01-15T10:30:00.000Z"
     }
@@ -376,7 +386,6 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
   "clinicalNotes": "Paciente refiere inicio súbito hace 2 semanas. Sin antecedentes previos.",
   "emergencyContactName": "María Mendoza",
   "emergencyContactPhone": "+52 55 8765 4321",
-  "avatarUrl": null,
   "createdAt": "2026-01-15T10:30:00.000Z",
   "updatedAt": "2026-01-20T14:22:00.000Z"
 }
@@ -508,9 +517,40 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 ---
 
+#### GET /patients/:id/stats
+
+**Descripción:** Retorna los indicadores de seguimiento del paciente: porcentaje de adherencia a su rutina activa, número total de sesiones completadas (en todas sus rutinas) y fecha de la última sesión. `adherencePercent` es `null` cuando el paciente no tiene rutina `ACTIVE`.  
+**Autenticación:** Bearer JWT (Terapeuta)  
+**Etiqueta:** Patients
+
+**Parámetros de Ruta:**
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `id` | string (UUID) | Identificador único del paciente |
+
+**Respuestas:**
+
+| Código | Descripción |
+|--------|-------------|
+| 200 | Éxito — retorna `{ adherencePercent, sessionsCompleted, lastSessionAt }` |
+| 401 | Token inválido o ausente |
+| 404 | Paciente no encontrado o de otro terapeuta |
+
+**Ejemplo de Response:**
+```json
+{
+  "adherencePercent": 75,
+  "sessionsCompleted": 18,
+  "lastSessionAt": "2026-02-10T18:30:00.000Z"
+}
+```
+
+---
+
 #### POST /patients/:id/access-code
 
-**Descripción:** Genera un nuevo código de acceso (PIN) de 6 dígitos para que el paciente pueda iniciar sesión en la aplicación móvil. Si ya existía un PIN previo, este es reemplazado. El código solo se muestra una vez en esta respuesta.  
+**Descripción:** Genera un nuevo código de acceso (PIN) de 6 dígitos con un generador criptográficamente seguro para que el paciente pueda iniciar sesión en la aplicación móvil. Si ya existía un PIN previo, este es reemplazado y los tokens emitidos con el PIN anterior dejan de ser válidos. El código solo se muestra una vez en esta respuesta; la base de datos guarda únicamente su HMAC-SHA256, que nunca aparece en ninguna respuesta de la API.  
 **Autenticación:** Bearer JWT (Terapeuta)  
 **Etiqueta:** Patients
 
@@ -540,7 +580,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 #### DELETE /patients/:id/access-code
 
-**Descripción:** Revoca el código de acceso móvil del paciente. Después de esta operación, el paciente no podrá iniciar sesión en la aplicación móvil hasta que se genere un nuevo PIN.  
+**Descripción:** Revoca el código de acceso móvil del paciente. Después de esta operación, el paciente no podrá iniciar sesión en la aplicación móvil hasta que se genere un nuevo PIN, y los tokens que ya tenía emitidos responden 401.  
 **Autenticación:** Bearer JWT (Terapeuta)  
 **Etiqueta:** Patients
 
@@ -601,6 +641,7 @@ Gestión de rutinas de rehabilitación. Cada rutina está compuesta por uno o m�
 | PUT | `/routines/:id` | Actualizar rutina (reemplaza los ítems) |
 | DELETE | `/routines/:id` | Eliminar o archivar rutina |
 | POST | `/routines/:id/clone` | Clonar una rutina existente |
+| POST | `/routines/:id/activate` | Activar una rutina |
 
 ---
 
@@ -781,7 +822,7 @@ Gestión de rutinas de rehabilitación. Cada rutina está compuesta por uno o m�
 
 #### PUT /routines/:id
 
-**Descripción:** Actualiza una rutina de forma completa. Si se proporciona el array `items`, los ítems existentes son reemplazados en su totalidad. El servicio aplica un guard de ciclo de vida que puede impedir modificaciones en rutinas con estado `COMPLETED` o `ARCHIVED`.  
+**Descripción:** Actualiza una rutina de forma completa. Si se proporciona el array `items`, los ítems existentes son reemplazados en su totalidad. El servicio aplica un guard de ciclo de vida: si la rutina ya tiene sesiones registradas, sus ítems no pueden reemplazarse y solo pueden cambiarse el nombre, las fechas y las notas (RF-022).  
 **Autenticación:** Bearer JWT (Terapeuta)  
 **Etiqueta:** Routines
 
@@ -806,9 +847,10 @@ Gestión de rutinas de rehabilitación. Cada rutina está compuesta por uno o m�
 | Código | Descripción |
 |--------|-------------|
 | 200 | Éxito — retorna la rutina actualizada |
-| 400 | Datos inválidos o la rutina no puede modificarse en su estado actual |
+| 400 | Datos inválidos (p. ej., `endDate` anterior a `startDate`) |
 | 401 | Token inválido o ausente |
 | 404 | Rutina no encontrada |
+| 409 | Se intentó reemplazar los ítems de una rutina con sesiones registradas |
 
 **Ejemplo de Request:**
 ```json
@@ -844,7 +886,7 @@ Gestión de rutinas de rehabilitación. Cada rutina está compuesta por uno o m�
 
 #### POST /routines/:id/clone
 
-**Descripción:** Crea una copia exacta de una rutina existente (incluyendo todos sus ítems de ejercicios), con estado `DRAFT` y sin sesiones asociadas. Útil para crear variantes de rutinas que han funcionado bien.  
+**Descripción:** Crea una copia exacta de una rutina existente (incluyendo todos sus ítems de ejercicios), con estado `DRAFT` y sin sesiones asociadas. La rutina original no cambia y el paciente sigue recibiendo su rutina `ACTIVE` hasta que el terapeuta active la copia con `POST /routines/:id/activate`. Útil para crear variantes de rutinas que han funcionado bien.  
 **Autenticación:** Bearer JWT (Terapeuta)  
 **Etiqueta:** Routines
 
@@ -881,9 +923,31 @@ Gestión de rutinas de rehabilitación. Cada rutina está compuesta por uno o m�
 
 ---
 
+#### POST /routines/:id/activate
+
+**Descripción:** Pasa la rutina (en estado `DRAFT` o `ARCHIVED`) a estado `ACTIVE` y, en la misma transacción, archiva la otra rutina `ACTIVE` del paciente, si existe. Garantiza que cada paciente tenga como máximo una rutina activa. Si la rutina ya estaba activa, la retorna sin cambios. Retorna la rutina activada.  
+**Autenticación:** Bearer JWT (Terapeuta)  
+**Etiqueta:** Routines
+
+**Parámetros de Ruta:**
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `id` | string (UUID) | Identificador único de la rutina a activar |
+
+**Respuestas:**
+
+| Código | Descripción |
+|--------|-------------|
+| 200 | Éxito — retorna el objeto `RoutineResponse` con `status: "ACTIVE"` |
+| 401 | Token inválido o ausente |
+| 404 | Rutina no encontrada o de un paciente de otro terapeuta |
+
+---
+
 ### 3.5 Ejercicios
 
-Gestión del catálogo de ejercicios de rehabilitación facial. Los ejercicios son recursos compartidos (no vinculados a un terapeuta específico) y sirven como plantillas para armar ítems dentro de las rutinas.
+Gestión del catálogo de ejercicios de rehabilitación facial. Los ejercicios son recursos compartidos (no vinculados a un terapeuta específico) y sirven como plantillas para armar ítems dentro de las rutinas. Cualquier terapeuta puede consultar el catálogo; solo los usuarios con rol `ADMIN` pueden crearlo, modificarlo o eliminarlo (los demás reciben 403).
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
@@ -930,11 +994,6 @@ Gestión del catálogo de ejercicios de rehabilitación facial. Los ejercicios s
       "mobileModule": "SMILE",
       "assetAnimationUrl": "https://cdn.symma.app/animations/smile_isotonic.gif",
       "assetTutorialVideoUrl": "https://cdn.symma.app/videos/smile_isotonic.mp4",
-      "defaultConfig": {
-        "threshold": 0.75,
-        "holdTime": 0,
-        "restTime": 10
-      },
       "createdAt": "2025-11-01T00:00:00.000Z"
     }
   ],
@@ -949,7 +1008,7 @@ Gestión del catálogo de ejercicios de rehabilitación facial. Los ejercicios s
 #### POST /exercises
 
 **Descripción:** Agrega un nuevo ejercicio al catálogo del sistema. El campo `keyName` debe ser único. Si el tipo de ejercicio es `ISOTONIC` o `ISOMETRIC`, se puede asociar un módulo móvil (`mobileModule`) para determinar la estrategia de detección de movimiento en la app.  
-**Autenticación:** Bearer JWT (Terapeuta)  
+**Autenticación:** Bearer JWT (Terapeuta con rol `ADMIN`)  
 **Etiqueta:** Exercises
 
 **Request Body:**
@@ -970,8 +1029,10 @@ Gestión del catálogo de ejercicios de rehabilitación facial. Los ejercicios s
 | Código | Descripción |
 |--------|-------------|
 | 201 | Éxito — retorna el objeto `ExerciseResponse` creado |
-| 400 | Datos inválidos o `keyName` duplicado |
+| 400 | Datos inválidos |
 | 401 | Token inválido o ausente |
+| 403 | El terapeuta no tiene rol `ADMIN` |
+| 409 | `keyName` duplicado |
 
 **Ejemplo de Request:**
 ```json
@@ -999,7 +1060,6 @@ Gestión del catálogo de ejercicios de rehabilitación facial. Los ejercicios s
   "mobileModule": "BROWS",
   "assetAnimationUrl": "https://cdn.symma.app/animations/brow_raise.gif",
   "assetTutorialVideoUrl": "https://cdn.symma.app/videos/brow_raise_tutorial.mp4",
-  "defaultConfig": null,
   "createdAt": "2026-03-01T10:00:00.000Z"
 }
 ```
@@ -1030,8 +1090,8 @@ Gestión del catálogo de ejercicios de rehabilitación facial. Los ejercicios s
 
 #### PATCH /exercises/:id
 
-**Descripción:** Actualiza parcialmente los datos de un ejercicio del catálogo. Todos los campos son opcionales.  
-**Autenticación:** Bearer JWT (Terapeuta)  
+**Descripción:** Actualiza parcialmente los datos de un ejercicio del catálogo. Todos los campos son opcionales. No se permite modificar un ejercicio usado por una rutina `ACTIVE`.  
+**Autenticación:** Bearer JWT (Terapeuta con rol `ADMIN`)  
 **Etiqueta:** Exercises
 
 **Parámetros de Ruta:**
@@ -1060,14 +1120,16 @@ Gestión del catálogo de ejercicios de rehabilitación facial. Los ejercicios s
 | 200 | Éxito — retorna el objeto `ExerciseResponse` actualizado |
 | 400 | Datos inválidos |
 | 401 | Token inválido o ausente |
+| 403 | El terapeuta no tiene rol `ADMIN` |
 | 404 | Ejercicio no encontrado |
+| 409 | El ejercicio está en uso en una rutina activa, o `keyName` duplicado |
 
 ---
 
 #### DELETE /exercises/:id
 
-**Descripción:** Elimina un ejercicio del catálogo. Esta operación puede fallar si el ejercicio está referenciado por rutinas activas.  
-**Autenticación:** Bearer JWT (Terapeuta)  
+**Descripción:** Elimina un ejercicio del catálogo. La operación se rechaza si el ejercicio está referenciado por una rutina `ACTIVE`, o si otras rutinas o sesiones históricas lo referencian.  
+**Autenticación:** Bearer JWT (Terapeuta con rol `ADMIN`)  
 **Etiqueta:** Exercises
 
 **Parámetros de Ruta:**
@@ -1082,13 +1144,17 @@ Gestión del catálogo de ejercicios de rehabilitación facial. Los ejercicios s
 |--------|-------------|
 | 204 | Éxito — sin contenido en la respuesta |
 | 401 | Token inválido o ausente |
+| 403 | El terapeuta no tiene rol `ADMIN` |
 | 404 | Ejercicio no encontrado |
+| 409 | El ejercicio está en uso y no puede eliminarse |
 
 ---
 
 ### 3.6 Analíticas
 
-Endpoints para consultar estadísticas de progreso y el historial de sesiones de una rutina. Los datos son calculados en tiempo real a partir de las sesiones registradas.
+Endpoints para consultar estadísticas de progreso y el historial de sesiones de una rutina. Los datos son calculados en tiempo real a partir de las sesiones registradas. Solo el terapeuta del paciente dueño de la rutina puede consultarlos: sin token responden 401 y con el token de otro terapeuta responden 404.
+
+Se reportan dos métricas clínicas distintas, ambas en escala 0–100: la **precisión del gesto** (`score` / `averageAccuracy`), que mide qué tan cerca estuvo el paciente del umbral calibrado, y la **simetría facial** (`symmetry` / `symmetryScore`), que compara el lado izquierdo con el derecho (100 = perfectamente simétrico).
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
@@ -1099,7 +1165,7 @@ Endpoints para consultar estadísticas de progreso y el historial de sesiones de
 
 #### GET /routines/:id/stats
 
-**Descripción:** Retorna los KPIs agregados de una rutina: total de sesiones completadas, racha actual de días consecutivos y puntuación promedio. Incluye el arreglo `chartData` con la evolución de puntajes por fecha, listo para renderizar en una gráfica de líneas.  
+**Descripción:** Retorna los KPIs agregados de una rutina: total de sesiones completadas, racha actual de días calendario consecutivos (en la zona horaria `ANALYTICS_TIME_ZONE` del servidor, UTC por defecto), precisión promedio y simetría promedio. Incluye el arreglo `chartData`, ordenado de la sesión más antigua a la más reciente, con la evolución de la precisión y de la simetría por fecha, listo para renderizar en una gráfica.  
 **Autenticación:** Bearer JWT (Terapeuta)  
 **Etiqueta:** Analytics
 
@@ -1113,9 +1179,9 @@ Endpoints para consultar estadísticas de progreso y el historial de sesiones de
 
 | Código | Descripción |
 |--------|-------------|
-| 200 | Éxito — retorna `{ summary, chartData }` |
+| 200 | Éxito — retorna `{ summary, averageSymmetry, chartData }` |
 | 401 | Token inválido o ausente |
-| 404 | Rutina no encontrada |
+| 404 | Rutina no encontrada o de un paciente de otro terapeuta |
 
 **Ejemplo de Response:**
 ```json
@@ -1125,24 +1191,25 @@ Endpoints para consultar estadísticas de progreso y el historial de sesiones de
     "currentStreak": 5,
     "avgScore": 74
   },
+  "averageSymmetry": 81,
   "chartData": [
-    { "date": "2026-02-01", "score": 58 },
-    { "date": "2026-02-03", "score": 63 },
-    { "date": "2026-02-05", "score": 70 },
-    { "date": "2026-02-07", "score": 68 },
-    { "date": "2026-02-09", "score": 81 },
-    { "date": "2026-02-10", "score": 85 }
+    { "date": "2026-02-01", "score": 58, "symmetry": 72 },
+    { "date": "2026-02-03", "score": 63, "symmetry": 75 },
+    { "date": "2026-02-05", "score": 70, "symmetry": null },
+    { "date": "2026-02-07", "score": 68, "symmetry": 80 },
+    { "date": "2026-02-09", "score": 81, "symmetry": 86 },
+    { "date": "2026-02-10", "score": 85, "symmetry": 88 }
   ]
 }
 ```
 
-> **Nota:** Los valores de `score` son porcentajes enteros (0–100). Un puntaje de `74` equivale al 74% de eficacia.
+> **Nota:** `score` y `avgScore` son la precisión del gesto y `symmetry` y `averageSymmetry` la simetría facial, todos en porcentajes enteros (0–100). `symmetry` y `averageSymmetry` son `null` cuando ningún ejercicio reportó simetría.
 
 ---
 
 #### GET /routines/:id/history
 
-**Descripción:** Retorna el historial de las últimas 20 sesiones de una rutina, ordenadas de más reciente a más antigua. Cada sesión incluye el detalle de los ejercicios ejecutados con sus métricas individuales.  
+**Descripción:** Retorna el historial paginado de las sesiones de una rutina, ordenadas de más reciente a más antigua. Cada sesión incluye el detalle de los ejercicios ejecutados con sus métricas individuales.  
 **Autenticación:** Bearer JWT (Terapeuta)  
 **Etiqueta:** Analytics
 
@@ -1152,39 +1219,56 @@ Endpoints para consultar estadísticas de progreso y el historial de sesiones de
 |-----------|------|-------------|
 | `id` | string (UUID) | Identificador único de la rutina |
 
+**Parámetros de Query:**
+
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|-----------|-------------|
+| `page` | integer (≥1) | No | Número de página (por defecto: 1) |
+| `limit` | integer (1–100) | No | Resultados por página (por defecto: 20) |
+
 **Respuestas:**
 
 | Código | Descripción |
 |--------|-------------|
-| 200 | Éxito — retorna array de hasta 20 sesiones con sus ítems |
+| 200 | Éxito — retorna objeto paginado con las sesiones y sus ítems |
+| 400 | `page` o `limit` fuera de rango o no numéricos |
 | 401 | Token inválido o ausente |
-| 404 | Rutina no encontrada |
+| 404 | Rutina no encontrada o de un paciente de otro terapeuta |
 
 **Ejemplo de Response:**
 ```json
-[
-  {
-    "id": "sess-uuid-001",
-    "date": "2026-02-10T18:30:00.000Z",
-    "durationSeconds": 720,
-    "score": 85,
-    "isSynced": true,
-    "items": [
-      {
-        "exerciseId": "e1d2c3b4-a5f6-7890-bcde-f01234567890",
-        "exerciseName": "Sonrisa Isotónica",
-        "repsCompleted": 10,
-        "averageAccuracy": 87.5
-      },
-      {
-        "exerciseId": "b9c8d7e6-f5a4-3210-9876-543210fedcba",
-        "exerciseName": "Elevación de Cejas Isométrica",
-        "repsCompleted": 8,
-        "averageAccuracy": 82.0
-      }
-    ]
-  }
-]
+{
+  "data": [
+    {
+      "id": "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b",
+      "date": "2026-02-10T18:30:00.000Z",
+      "durationSeconds": 720,
+      "score": 85,
+      "isSynced": true,
+      "items": [
+        {
+          "exerciseId": "e1d2c3b4-a5f6-7890-bcde-f01234567890",
+          "exerciseName": "Sonrisa Isotónica",
+          "repsCompleted": 10,
+          "averageAccuracy": 87.5,
+          "symmetryScore": 83.2,
+          "averageHoldSeconds": null
+        },
+        {
+          "exerciseId": "b9c8d7e6-f5a4-3210-9876-543210fedcba",
+          "exerciseName": "Elevación de Cejas Isométrica",
+          "repsCompleted": 8,
+          "averageAccuracy": 82.0,
+          "symmetryScore": 79.5,
+          "averageHoldSeconds": 4.6
+        }
+      ]
+    }
+  ],
+  "total": 18,
+  "page": 1,
+  "limit": 20
+}
 ```
 
 ---
@@ -1201,7 +1285,7 @@ Proporciona los indicadores de rendimiento clave (KPIs) consolidados del terapeu
 
 #### GET /dashboard/stats
 
-**Descripción:** Retorna los KPIs principales del dashboard: número de pacientes activos, alertas de cumplimiento y eficacia promedio. Cada métrica incluye su valor actual y la tendencia respecto al período anterior (variación porcentual). También retorna la lista de pacientes en riesgo por inactividad.  
+**Descripción:** Retorna los KPIs principales del dashboard: número de pacientes activos, alertas de cumplimiento y eficacia promedio (precisión del gesto `averageAccuracy` de los últimos 7 días, en porcentaje 0–100). Cada métrica incluye su valor actual y la tendencia respecto al período anterior (variación porcentual). También retorna la lista de pacientes en riesgo por inactividad.  
 **Autenticación:** Bearer JWT (Terapeuta)  
 **Etiqueta:** Dashboard
 
@@ -1233,14 +1317,12 @@ Proporciona los indicadores de rendimiento clave (KPIs) consolidados del terapeu
     {
       "id": "f1e2d3c4-b5a6-7890-cdef-012345678901",
       "name": "Carlos Mendoza",
-      "daysInactive": 8,
-      "avatarUrl": null
+      "daysInactive": 8
     },
     {
       "id": "a0b1c2d3-e4f5-6789-abcd-ef0123456789",
       "name": "Ana García",
-      "daysInactive": 12,
-      "avatarUrl": null
+      "daysInactive": 12
     }
   ]
 }
@@ -1257,12 +1339,13 @@ Endpoints diseñados exclusivamente para la aplicación móvil del paciente. Req
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | GET | `/mobile/routine/active` | Obtener la rutina activa del paciente |
+| POST | `/mobile/snapshots/upload-url` | Obtener una URL firmada para subir el snapshot del mejor intento |
 
 ---
 
 #### GET /mobile/routine/active
 
-**Descripción:** Retorna la rutina activa asignada al paciente autenticado, con todos los datos necesarios para ejecutar la sesión de ejercicios en modo offline. La respuesta incluye la configuración completa de cada ítem y los metadatos del ejercicio (módulo móvil, URLs de assets). Retorna `null` si el paciente no tiene ninguna rutina activa.  
+**Descripción:** Retorna la rutina activa asignada al paciente autenticado, con todos los datos necesarios para ejecutar la sesión de ejercicios en modo offline. La respuesta incluye la configuración completa de cada ítem y los metadatos del ejercicio (módulo móvil, URLs de assets). Solo se entregan rutinas en estado `ACTIVE`: las rutinas `DRAFT` y `ARCHIVED` nunca llegan al dispositivo. Retorna `null` si el paciente no tiene ninguna rutina activa.  
 **Autenticación:** Bearer JWT (Paciente)  
 **Etiqueta:** Mobile Features
 
@@ -1330,6 +1413,49 @@ Endpoints diseñados exclusivamente para la aplicación móvil del paciente. Req
 
 ---
 
+#### POST /mobile/snapshots/upload-url
+
+**Descripción:** Genera una URL firmada de corta duración para que la app suba directamente al almacenamiento compatible con S3 el snapshot JPEG del mejor intento de un ejercicio. La app hace `PUT` de la imagen a `uploadUrl` con el mismo `Content-Type` y luego envía `snapshotKey` en el ítem correspondiente de `POST /sessions`. Un fallo al subir el snapshot nunca debe impedir la sincronización de la sesión.  
+**Autenticación:** Bearer JWT (Paciente)  
+**Etiqueta:** Mobile Features
+
+**Request Body:**
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `sessionId` | string (UUID) | Sí | `id` generado por la app para la sesión (el mismo que se enviará en `POST /sessions`) |
+| `exerciseId` | string (UUID) | Sí | Ejercicio al que corresponde el snapshot |
+| `contentType` | string | Sí | Solo se admite `image/jpeg` |
+
+**Respuestas:**
+
+| Código | Descripción |
+|--------|-------------|
+| 201 | Éxito — retorna `{ uploadUrl, snapshotKey, expiresInSeconds }` |
+| 400 | Datos inválidos o tipo de contenido no admitido |
+| 401 | Token inválido o ausente (JWT de Paciente requerido) |
+| 503 | El almacenamiento S3 no está configurado en el servidor |
+
+**Ejemplo de Request:**
+```json
+{
+  "sessionId": "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b",
+  "exerciseId": "e1d2c3b4-a5f6-7890-bcde-f01234567890",
+  "contentType": "image/jpeg"
+}
+```
+
+**Ejemplo de Response:**
+```json
+{
+  "uploadUrl": "https://storage.example.com/symma-snapshots/snapshots/f1e2...?X-Amz-Signature=...",
+  "snapshotKey": "snapshots/f1e2d3c4-b5a6-7890-cdef-012345678901/6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b/e1d2c3b4-a5f6-7890-bcde-f01234567890.jpg",
+  "expiresInSeconds": 300
+}
+```
+
+---
+
 ### 3.9 Sesiones
 
 Registro de sesiones de ejercicio completadas por el paciente. Este endpoint es utilizado por la aplicación móvil para sincronizar los resultados de ejercicio con el servidor, ya sea en tiempo real o en modo de sincronización diferida (cuando el dispositivo recupera conectividad).
@@ -1337,12 +1463,15 @@ Registro de sesiones de ejercicio completadas por el paciente. Este endpoint es 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | POST | `/sessions` | Registrar sesión completada |
+| GET | `/sessions/:id` | Detalle de una sesión (portal del terapeuta) |
 
 ---
 
 #### POST /sessions
 
-**Descripción:** Registra en el servidor el resultado de una sesión de ejercicios completada por el paciente. Calcula automáticamente la duración (a partir de `startTime` y `endTime`), el puntaje general de la sesión y lo vincula a la rutina especificada. Los campos `isSynced` y `syncedAt` son de uso local en la app móvil y no deben enviarse en este payload.  
+**Descripción:** Registra en el servidor el resultado de una sesión de ejercicios completada por el paciente. Calcula automáticamente la duración (a partir de `startTime` y `endTime`), el puntaje general de la sesión y lo vincula a la rutina especificada, que debe pertenecer al paciente autenticado y estar en estado `ACTIVE`. Los campos `isSynced` y `syncedAt` son de uso local en la app móvil y no deben enviarse en este payload.
+
+El endpoint es idempotente: `id` es un UUID obligatorio generado por la app. Una sesión nueva responde 201; reenviar el mismo `id` por el mismo paciente responde 200 con la sesión existente, sin crear un duplicado, incluso si las peticiones llegan de forma simultánea.  
 **Autenticación:** Bearer JWT (Paciente)  
 **Etiqueta:** Sessions
 
@@ -1350,37 +1479,50 @@ Registro de sesiones de ejercicio completadas por el paciente. Este endpoint es 
 
 | Campo | Tipo | Requerido | Descripción |
 |-------|------|-----------|-------------|
+| `id` | string (UUID) | Sí | Identificador de la sesión generado por la app (clave de idempotencia) |
 | `routineId` | string (UUID) | Sí | ID de la rutina a la que pertenece esta sesión |
 | `startTime` | string (ISO 8601 UTC) | Sí | Timestamp de inicio de la sesión (con sufijo `Z`) |
-| `endTime` | string (ISO 8601 UTC) | Sí | Timestamp de finalización de la sesión (con sufijo `Z`) |
+| `endTime` | string (ISO 8601 UTC) | Sí | Timestamp de finalización de la sesión (con sufijo `Z`); no puede ser anterior a `startTime` |
+| `calibration` | object | No | Calibración usada en la sesión: `{ capturedAt: ISO 8601, values: { [clave]: number } }`; se guarda como JSON |
 | `items` | array | Sí | Lista de resultados por ejercicio (mínimo 1) |
-| `items[].exerciseId` | string (UUID) | Sí | ID del ejercicio ejecutado |
+| `items[].exerciseId` | string (UUID) | Sí | ID de un ejercicio existente (si no existe, 400) |
 | `items[].repsCompleted` | integer (≥0) | Sí | Número de repeticiones completadas |
-| `items[].difficulty` | integer | No | Nivel de dificultad reportado (por defecto: 0) |
-| `items[].averageAccuracy` | number (0–100) | No | Precisión promedio en porcentaje (puntuación de simetría facial) |
+| `items[].averageAccuracy` | number (0–100) | No | Precisión promedio del gesto respecto al umbral calibrado |
+| `items[].symmetryScore` | number (0–100) | No | Simetría facial izquierda/derecha promedio (100 = perfectamente simétrico) |
+| `items[].averageHoldSeconds` | number (≥0) | No | Tiempo promedio de sostenimiento del gesto, en segundos |
+| `items[].snapshotKey` | string | No | Clave retornada por `POST /mobile/snapshots/upload-url` |
 | `items[].seriesData` | any | No | Datos detallados por repetición en formato JSON (para análisis avanzado) |
 
 **Respuestas:**
 
 | Código | Descripción |
 |--------|-------------|
-| 201 | Éxito — retorna el objeto `SessionResponse` con el puntaje calculado |
-| 400 | Datos inválidos o rutina no activa |
+| 201 | Sesión nueva — retorna el objeto `SessionResponse` con el puntaje calculado |
+| 200 | Reenvío del mismo `id` por el mismo paciente — retorna la sesión existente |
+| 400 | Datos inválidos (falta `id`, `endTime` anterior a `startTime`, `items` vacío, métricas fuera de rango, ejercicio inexistente o `snapshotKey` que no corresponde a esta sesión) |
 | 401 | Token inválido o ausente (JWT de Paciente requerido) |
-| 404 | Rutina o ejercicio no encontrado |
+| 403 | La rutina pertenece a otro paciente, o el `id` corresponde a una sesión de otro paciente |
+| 404 | Rutina no encontrada |
+| 409 | La rutina está en estado `DRAFT` o `ARCHIVED` |
 
 **Ejemplo de Request:**
 ```json
 {
+  "id": "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b",
   "routineId": "a3b4c5d6-e7f8-9012-abcd-ef3456789012",
   "startTime": "2026-02-10T18:18:00.000Z",
   "endTime": "2026-02-10T18:30:00.000Z",
+  "calibration": {
+    "capturedAt": "2026-02-10T18:15:00.000Z",
+    "values": { "smileMax": 0.82, "browsMax": 0.64 }
+  },
   "items": [
     {
       "exerciseId": "e1d2c3b4-a5f6-7890-bcde-f01234567890",
       "repsCompleted": 10,
-      "difficulty": 1,
       "averageAccuracy": 87.5,
+      "symmetryScore": 83.2,
+      "snapshotKey": "snapshots/f1e2d3c4-b5a6-7890-cdef-012345678901/6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b/e1d2c3b4-a5f6-7890-bcde-f01234567890.jpg",
       "seriesData": [
         { "rep": 1, "accuracy": 0.82 },
         { "rep": 2, "accuracy": 0.90 },
@@ -1390,8 +1532,9 @@ Registro de sesiones de ejercicio completadas por el paciente. Este endpoint es 
     {
       "exerciseId": "b9c8d7e6-f5a4-3210-9876-543210fedcba",
       "repsCompleted": 8,
-      "difficulty": 1,
-      "averageAccuracy": 82.0
+      "averageAccuracy": 82.0,
+      "symmetryScore": 79.5,
+      "averageHoldSeconds": 4.6
     }
   ]
 }
@@ -1400,32 +1543,98 @@ Registro de sesiones de ejercicio completadas por el paciente. Este endpoint es 
 **Ejemplo de Response:**
 ```json
 {
-  "id": "sess-uuid-001",
+  "id": "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b",
   "routineId": "a3b4c5d6-e7f8-9012-abcd-ef3456789012",
   "date": "2026-02-10T18:18:00.000Z",
   "durationSeconds": 720,
   "score": 85,
+  "calibration": {
+    "capturedAt": "2026-02-10T18:15:00.000Z",
+    "values": { "smileMax": 0.82, "browsMax": 0.64 }
+  },
+  "isSynced": true,
   "createdAt": "2026-02-10T18:30:05.000Z",
   "items": [
     {
-      "id": "item-sess-uuid-001",
-      "sessionId": "sess-uuid-001",
+      "id": "0a1b2c3d-4e5f-4061-8293-a4b5c6d7e8f9",
+      "sessionId": "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b",
       "exerciseId": "e1d2c3b4-a5f6-7890-bcde-f01234567890",
       "repsCompleted": 10,
-      "difficulty": 1,
       "averageAccuracy": 87.5,
-      "seriesData": null
+      "symmetryScore": 83.2,
+      "averageHoldSeconds": null,
+      "seriesData": [
+        { "rep": 1, "accuracy": 0.82 },
+        { "rep": 2, "accuracy": 0.90 },
+        { "rep": 3, "accuracy": 0.88 }
+      ]
     },
     {
-      "id": "item-sess-uuid-002",
-      "sessionId": "sess-uuid-001",
+      "id": "1b2c3d4e-5f60-4172-93a4-b5c6d7e8f90a",
+      "sessionId": "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b",
       "exerciseId": "b9c8d7e6-f5a4-3210-9876-543210fedcba",
       "repsCompleted": 8,
-      "difficulty": 1,
       "averageAccuracy": 82.0,
+      "symmetryScore": 79.5,
+      "averageHoldSeconds": 4.6,
       "seriesData": null
     }
   ]
+}
+```
+
+---
+
+#### GET /sessions/:id
+
+**Descripción:** Retorna el detalle de una sesión con el rendimiento por ejercicio: repeticiones, precisión del gesto, simetría facial, tiempo de hold promedio y, si existe, el snapshot del mejor intento como URL firmada de lectura de corta duración (`snapshotUrl`; nunca se expone la clave interna). Incluye los identificadores de la sesión anterior y siguiente de la misma rutina para navegar entre sesiones.  
+**Autenticación:** Bearer JWT (Terapeuta)  
+**Etiqueta:** Sessions
+
+**Parámetros de Ruta:**
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `id` | string (UUID) | Identificador único de la sesión |
+
+**Respuestas:**
+
+| Código | Descripción |
+|--------|-------------|
+| 200 | Éxito — retorna el objeto `SessionDetailResponse` |
+| 401 | Token inválido o ausente |
+| 403 | La sesión pertenece a un paciente de otro terapeuta |
+| 404 | Sesión no encontrada |
+
+**Ejemplo de Response:**
+```json
+{
+  "id": "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b",
+  "routineId": "a3b4c5d6-e7f8-9012-abcd-ef3456789012",
+  "date": "2026-02-10T18:18:00.000Z",
+  "durationSeconds": 720,
+  "score": 85,
+  "isSynced": true,
+  "createdAt": "2026-02-10T18:30:05.000Z",
+  "calibration": null,
+  "items": [
+    {
+      "id": "0a1b2c3d-4e5f-4061-8293-a4b5c6d7e8f9",
+      "sessionId": "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b",
+      "exerciseId": "e1d2c3b4-a5f6-7890-bcde-f01234567890",
+      "exerciseName": "Sonrisa Isotónica",
+      "repsCompleted": 10,
+      "averageAccuracy": 87.5,
+      "symmetryScore": 83.2,
+      "averageHoldSeconds": null,
+      "seriesData": null,
+      "snapshotUrl": "https://storage.example.com/symma-snapshots/snapshots/...?X-Amz-Signature=..."
+    }
+  ],
+  "navigation": {
+    "previousSessionId": "5e0b1a2c-3d4e-4f50-9a6b-8c9d0e1f2a3b",
+    "nextSessionId": null
+  }
 }
 ```
 
@@ -1437,10 +1646,9 @@ Registro de sesiones de ejercicio completadas por el paciente. Este endpoint es 
 
 | Valor | Descripción |
 |-------|-------------|
-| `DRAFT` | Rutina en borrador, no asignada al paciente |
-| `ACTIVE` | Rutina en curso, accesible desde la app móvil |
-| `COMPLETED` | Rutina finalizada (fecha de fin alcanzada) |
-| `ARCHIVED` | Rutina archivada (borrado lógico) |
+| `DRAFT` | Rutina en borrador (p. ej., un clon); no se entrega a la app móvil hasta que el terapeuta la activa |
+| `ACTIVE` | Rutina en curso, accesible desde la app móvil; como máximo una por paciente |
+| `ARCHIVED` | Rutina archivada (borrado lógico o reemplazada al activar otra) |
 
 ### PatientStatus
 
@@ -1494,17 +1702,20 @@ Define el módulo de visión por computadora que se activa en la app móvil para
 
 | Código HTTP | Nombre | Cuándo ocurre |
 |-------------|--------|----------------|
-| 400 | Bad Request | El cuerpo de la solicitud contiene datos inválidos, faltantes o con formato incorrecto. Los errores de validación retornan un array con los campos afectados. |
+| 400 | Bad Request | El cuerpo o los parámetros de la solicitud contienen datos inválidos, faltantes o con formato incorrecto (incluidos `page` y `limit` fuera de rango). Los errores de validación retornan un array con los campos afectados. |
 | 401 | Unauthorized | No se proporcionó el token JWT, el token es inválido, ha expirado, o se usó un token de Paciente en un endpoint de Terapeuta (o viceversa). |
-| 403 | Forbidden | El usuario autenticado no tiene permisos para acceder al recurso solicitado (p. ej., un terapeuta intentando acceder a pacientes de otro terapeuta). |
+| 403 | Forbidden | El usuario autenticado no tiene permisos para la operación (p. ej., un terapeuta sin rol `ADMIN` modificando el catálogo, o un paciente registrando una sesión en una rutina ajena). |
 | 404 | Not Found | El recurso solicitado no existe en la base de datos (paciente, rutina, ejercicio, etc.). |
-| 409 | Conflict | Se intentó crear un recurso con un campo único duplicado (p. ej., `keyName` en ejercicios o correo electrónico ya registrado). |
-| 422 | Unprocessable Entity | La solicitud tiene formato válido pero no puede procesarse según las reglas de negocio (p. ej., modificar una rutina `ARCHIVED`). |
+| 409 | Conflict | La operación entra en conflicto con el estado actual: campo único duplicado (p. ej., `keyName`), referencia a un registro inexistente o en uso (p. ej., ejercicio usado en una rutina activa), o rutina en un estado que no admite la operación. |
+| 429 | Too Many Requests | Se superó el límite de intentos fallidos de `POST /auth/patient/login`. |
 | 500 | Internal Server Error | Error inesperado del servidor. Si ocurre de forma persistente, debe reportarse al equipo de desarrollo. |
+| 503 | Service Unavailable | El almacenamiento S3 no está configurado y no se pueden emitir URLs de snapshot. |
+
+Los errores de Prisma se traducen a códigos HTTP: violación de unicidad (`P2002`) → 409, violación de clave foránea (`P2003`) → 409 y registro inexistente (`P2025`) → 404.
 
 ### Formato de Error
 
-Todos los errores siguen una estructura consistente:
+Todos los errores siguen una estructura consistente. El campo `message` se traduce según la cabecera `Accept-Language` de la petición (`es` por defecto, `en`):
 
 ```json
 {
@@ -1522,7 +1733,7 @@ Para errores de negocio con un solo mensaje:
 ```json
 {
   "statusCode": 404,
-  "message": "Routine with ID a3b4c5d6-e7f8-9012-abcd-ef3456789012 not found",
+  "message": "Rutina no encontrada",
   "error": "Not Found"
 }
 ```
@@ -1533,7 +1744,7 @@ Para errores de negocio con un solo mensaje:
 
 ### Paginación
 
-Los endpoints que retornan listas paginadas (`GET /patients`, `GET /routines`, `GET /exercises`) utilizan el siguiente esquema de respuesta:
+Los endpoints que retornan listas paginadas (`GET /patients`, `GET /routines`, `GET /exercises`, `GET /routines/:id/history`) aceptan `page` (entero ≥ 1, por defecto 1) y `limit` (entero de 1 a 100, por defecto 20); un valor fuera de rango o no numérico responde 400. Todos utilizan el siguiente esquema de respuesta:
 
 ```json
 {
@@ -1554,7 +1765,7 @@ La aplicación móvil está diseñada con arquitectura offline-first:
 
 1. Al iniciar sesión, `GET /mobile/routine/active` descarga el payload completo de la rutina.
 2. El paciente ejecuta las sesiones sin necesidad de conexión.
-3. Al recuperar conectividad, la app llama a `POST /sessions` para sincronizar los resultados.
+3. Al recuperar conectividad, la app sube los snapshots (`POST /mobile/snapshots/upload-url` + `PUT`) y llama a `POST /sessions` con el `id` UUID de la sesión, por lo que los reintentos nunca duplican registros.
 4. Los campos `isSynced` y `syncedAt` son exclusivamente locales de la app SQLite y no forman parte del contrato de API.
 
 ### Escala House-Brackmann

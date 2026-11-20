@@ -35,60 +35,81 @@ Abreviaturas de rutas:
 | SYM-018 | El ángulo de la cabeza se mide en absoluto respecto a la cámara, no contra la pose inicial. |
 | SYM-028 | El JWT de la API deja de ser accesible desde JS del cliente: las llamadas pasan por el servidor de Next. |
 
+## Fase 2 (2026-11-19, sin commitear)
+
+Trabajo hecho sobre las decisiones de arriba. Verificado: API 131 unitarias y 117 e2e; web 107 tests; móvil 280 tests; portal probado en vivo contra la API real en una base aparte.
+
+Lo que mantiene tickets en `En progreso`:
+
+| Ticket | Qué falta |
+|---|---|
+| SYM-008 | Probar la simetría con rostros reales. RF-052 describe una barra en vivo coloreada por simetría; la barra muestra progreso del gesto y la simetría aparece en el resumen. |
+| SYM-020 | RF-053 documenta 5 pasos; las rutinas con módulos de ojos agregan 1 o 2 pasos más. Decidir si se documentan 7 pasos. |
+| SYM-025, SYM-036, SYM-037 | Comprobación en dispositivo (idiomas, vibración y tonos, medición de fps). |
+| SYM-034 | Parte móvil: tests de `TokenManager`, `syncRoutine()` en `HomeViewModelTest`, errores de MediaPipe, k6 y tests instrumentados. |
+| SYM-039 | Decidir si el backend expondrá `engageThreshold`/`releaseThreshold`. |
+| SYM-041 | Probar en dispositivo la migración a SQLCipher y el desbloqueo biométrico. |
+| SYM-042 | Probar la subida real del snapshot contra MinIO/S3 desde el dispositivo. |
+| SYM-044 | Revisión legal del aviso de privacidad; el tema de Android sigue usando `#0D9488`. |
+| SYM-047 | Puntos sin decisión: RF-039/RNF-029 (módulos Gradle), "Server Components por defecto", foto de perfil de RF-011, RNF-033 (el limitador de intentos vive en memoria). |
+| SYM-048 | El workflow no se ha corrido en GitHub; `packages/i18n` no tiene configuración de eslint y el paso de lint fallará. |
+
+Pasos manuales en la base de desarrollo: agregar `PIN_HMAC_SECRET` a `apps/api/.env`, correr `prisma migrate deploy` y `pnpm migrate:access-codes` (detalle en `apps/api/README.md`).
+
 ## Índice
 
 | ID | Título | Área | Prioridad | Estado |
 |---|---|---|---|---|
-| SYM-001 | Proteger los endpoints de analítica | API | P0 | Pendiente |
-| SYM-002 | Validar propiedad de la rutina en `POST /sessions` | API | P0 | Pendiente |
-| SYM-003 | Login de paciente con identificador y límite de intentos | API + Móvil | P0 | Pendiente |
-| SYM-004 | Dejar de exponer el hash del PIN y endurecer su generación | API | P0 | Pendiente |
-| SYM-005 | Revocar acceso de verdad (PIN revocado, paciente archivado, terapeuta inactivo) | API | P0 | Pendiente |
-| SYM-006 | Quitar secretos por defecto y completar `.env.example` | API + Infra | P0 | Pendiente |
+| SYM-001 | Proteger los endpoints de analítica | API | P0 | Hecho |
+| SYM-002 | Validar propiedad de la rutina en `POST /sessions` | API | P0 | Hecho |
+| SYM-003 | Login de paciente con identificador y límite de intentos | API + Móvil | P0 | Hecho |
+| SYM-004 | Dejar de exponer el hash del PIN y endurecer su generación | API | P0 | Hecho |
+| SYM-005 | Revocar acceso de verdad (PIN revocado, paciente archivado, terapeuta inactivo) | API | P0 | Hecho |
+| SYM-006 | Quitar secretos por defecto y completar `.env.example` | API + Infra | P0 | Hecho |
 | SYM-007 | Móvil: quitar logs con PIN/JWT, tráfico en claro y backup de datos clínicos | Móvil | P0 | Hecho |
-| SYM-008 | Resolver la métrica de simetría facial (Decisión) | Móvil + Tesis | P0 | Pendiente |
+| SYM-008 | Resolver la métrica de simetría facial (Decisión) | Móvil + Tesis | P0 | En progreso |
 | SYM-009 | EYES_INVERSE se cumple con los ojos en reposo | Móvil | P0 | Hecho |
 | SYM-010 | Gráfica de evolución en orden cronológico invertido | Web + API | P0 | Hecho |
 | SYM-011 | Quitar datos clínicos fijos en el portal | Web | P0 | Hecho |
-| SYM-012 | Unificar la escala de `averageAccuracy` y el KPI de eficacia | API + Móvil | P0 | Pendiente |
-| SYM-013 | Backoff exponencial y máximo de 3 intentos en la sincronización | Móvil | P1 | En progreso |
+| SYM-012 | Unificar la escala de `averageAccuracy` y el KPI de eficacia | API + Móvil | P0 | Hecho |
+| SYM-013 | Backoff exponencial y máximo de 3 intentos en la sincronización | Móvil | P1 | Hecho |
 | SYM-014 | Sesiones atascadas en ERROR y 5xx sin reintento | Móvil | P1 | Hecho |
 | SYM-015 | Quitar la migración destructiva de Room | Móvil | P1 | Hecho |
 | SYM-016 | Home: no borrar la caché ante errores y mostrarla de inmediato | Móvil | P1 | Hecho |
-| SYM-017 | Idempotencia robusta en `POST /sessions` | API | P1 | Pendiente |
-| SYM-018 | Guardia de rotación de cabeza en calibración | Móvil | P1 | En progreso |
+| SYM-017 | Idempotencia robusta en `POST /sessions` | API | P1 | Hecho |
+| SYM-018 | Guardia de rotación de cabeza en calibración | Móvil | P1 | Hecho |
 | SYM-019 | La calibración dinámica sobrescribe el baseline con valores por defecto | Móvil | P1 | Hecho |
-| SYM-020 | Ventana de 3 s vs. 90 muestras en calibración (Decisión) | Móvil + Tesis | P1 | Pendiente |
-| SYM-021 | Persistencia de la calibración: cifrar y enviar al backend (Decisión) | Móvil + API | P1 | Pendiente |
+| SYM-020 | Ventana de 3 s vs. 90 muestras en calibración (Decisión) | Móvil + Tesis | P1 | En progreso |
+| SYM-021 | Persistencia de la calibración: cifrar y enviar al backend (Decisión) | Móvil + API | P1 | Hecho |
 | SYM-022 | Reparar `CalibrationViewModelTest` (los tests no compilan) | Móvil | P1 | Hecho |
 | SYM-023 | Web: selector de idioma y catálogo en inglés completo | Web + i18n | P1 | Hecho |
-| SYM-024 | API: mensajes de error traducidos según `Accept-Language` | API + i18n | P1 | Pendiente |
+| SYM-024 | API: mensajes de error traducidos según `Accept-Language` | API + i18n | P1 | Hecho |
 | SYM-025 | Android: textos en recursos y soporte de inglés | Móvil | P1 | En progreso |
 | SYM-026 | Reparar tests, typecheck y lint del portal web | Web | P1 | Hecho |
 | SYM-027 | Mostrar al usuario los errores que hoy se tragan | Web | P1 | Hecho |
-| SYM-028 | Manejo consistente de sesión expirada (401/403) | Web | P1 | En progreso |
-| SYM-029 | Paginación de pacientes, ejercicios e historial de sesiones | Web + API | P1 | En progreso |
-| SYM-030 | Restringir edición y borrado de ejercicios en uso | API + Web | P1 | En progreso |
-| SYM-031 | Agregaciones de analítica en la base de datos | API | P1 | Pendiente |
-| SYM-032 | El clon de rutina queda ACTIVE | API | P1 | Pendiente |
-| SYM-033 | El contenedor de la API no arranca con Docker Compose | Infra | P1 | Pendiente |
-| SYM-034 | Escribir los tests que los RNF citan como evidencia | API + Móvil | P1 | Pendiente |
-| SYM-035 | Mapear errores de Prisma a respuestas HTTP correctas | API | P2 | Pendiente |
+| SYM-028 | Manejo consistente de sesión expirada (401/403) | Web | P1 | Hecho |
+| SYM-029 | Paginación de pacientes, ejercicios e historial de sesiones | Web + API | P1 | Hecho |
+| SYM-030 | Restringir edición y borrado de ejercicios en uso | API + Web | P1 | Hecho |
+| SYM-031 | Agregaciones de analítica en la base de datos | API | P1 | Hecho |
+| SYM-032 | El clon de rutina queda ACTIVE | API | P1 | Hecho |
+| SYM-033 | El contenedor de la API no arranca con Docker Compose | Infra | P1 | Hecho |
+| SYM-034 | Escribir los tests que los RNF citan como evidencia | API + Móvil | P1 | En progreso |
+| SYM-035 | Mapear errores de Prisma a respuestas HTTP correctas | API | P2 | Hecho |
 | SYM-036 | Retroalimentación háptica y sonora que no funciona | Móvil | P2 | En progreso |
 | SYM-037 | Rendimiento del pipeline de visión y medición de fps | Móvil | P2 | En progreso |
 | SYM-038 | Carrera de datos entre el hilo de MediaPipe y el Player | Móvil | P2 | Hecho |
 | SYM-039 | Parámetros de la rutina que se pierden en Room | Móvil | P2 | En progreso |
 | SYM-040 | Pantalla de resumen sin métricas por ejercicio | Móvil | P2 | Hecho |
-| SYM-041 | SQLCipher y autenticación offline (Decisión) | Móvil + Tesis | P2 | Pendiente |
-| SYM-042 | Almacenamiento S3 y snapshot del mejor intento (Decisión) | API + Móvil + Tesis | P2 | Pendiente |
+| SYM-041 | SQLCipher y autenticación offline (Decisión) | Móvil + Tesis | P2 | En progreso |
+| SYM-042 | Almacenamiento S3 y snapshot del mejor intento (Decisión) | API + Móvil + Tesis | P2 | En progreso |
 | SYM-043 | Dependencias que rompen Clean Architecture en Android | Móvil | P2 | Pendiente |
 | SYM-044 | Web: aviso de privacidad, contraste, `browserslist` y Zod | Web | P2 | En progreso |
-| SYM-045 | Aplicar el rol ADMIN en el catálogo global | API | P2 | Pendiente |
+| SYM-045 | Aplicar el rol ADMIN en el catálogo global | API | P2 | Hecho |
 | SYM-046 | Login móvil: distinguir error de red de PIN inválido | Móvil | P2 | Hecho |
-| SYM-047 | Alinear la documentación consigo misma y con el código | Tesis | P2 | Pendiente |
-| SYM-048 | Pipeline de CI | Infra | P2 | Pendiente |
+| SYM-047 | Alinear la documentación consigo misma y con el código | Tesis | P2 | En progreso |
+| SYM-048 | Pipeline de CI | Infra | P2 | En progreso |
 | SYM-049 | Panel de depuración visible en calibración | Móvil | P3 | Hecho |
-| SYM-050 | Limpieza de código muerto y controles sin función | Web + Repo | P3 | En progreso |
+| SYM-050 | Limpieza de código muerto y controles sin función | Web + Repo | P3 | Hecho |
 | SYM-051 | Teclas del PIN deformadas en la tercera columna | Móvil | P1 | Hecho |
 | SYM-052 | Tema claro por defecto y colores del tema coherentes | Móvil | P2 | Hecho |
 
