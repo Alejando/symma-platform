@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { usePatient } from "@/components/patients/patient-context";
 import { PatientAccessCard } from "@/components/patients/patient-access-card";
+import { PatientQuickStats } from "@/components/patients/patient-quick-stats";
 import { formatPhoneNumber } from "@/lib/utils";
 import { EnumLabel } from "@/components/ui/enum-label";
 import { useDateFormatter } from "@/hooks/use-date-formatter";
@@ -46,6 +47,10 @@ export default function PatientOverviewPage() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-5xl mx-auto">
+      <div className="md:col-span-2">
+        <PatientQuickStats patientId={patient.id} />
+      </div>
+
       {/* Personal Information */}
       <InfoCard title={t('patients.personalInfo')}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">

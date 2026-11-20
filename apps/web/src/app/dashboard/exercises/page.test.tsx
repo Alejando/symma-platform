@@ -7,10 +7,11 @@ import ExercisesPage from './page';
 const mockGetExercises = vi.fn();
 const mockDeleteExercise = vi.fn();
 const mockUpdateExercise = vi.fn();
+let mockRole = 'ADMIN';
 
 vi.mock('next-auth/react', () => ({
-  useSession: () => ({ data: { user: { accessToken: 'token' } } }),
   signOut: vi.fn(),
+  useSession: () => ({ data: { user: { id: 'therapist-1', name: 'Ana', email: 'ana@clinic.test', role: mockRole } } }),
 }));
 
 vi.mock('@/lib/api', () => ({
@@ -38,6 +39,7 @@ const conflictMessage = 'El ejercicio forma parte de una rutina activa';
 describe('ExercisesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRole = 'ADMIN';
     vi.stubGlobal('confirm', () => true);
     mockGetExercises.mockResolvedValue({ data: [exerciseInUse], total: 1, page: 1, limit: 20 });
   });
@@ -63,5 +65,31 @@ describe('ExercisesPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(conflictMessage);
     expect(screen.getByText('Editar ejercicio')).toBeInTheDocument();
+  });
+
+  it('shows the translated reason when the API refuses the change with a 403', async () => {
+    const forbiddenMessage = 'Solo un administrador puede modificar el catálogo global';
+    mockDeleteExercise.mockRejectedValue(new ApiError(403, forbiddenMessage));
+
+    renderWithIntl(<ExercisesPage />);
+    const row = (await screen.findAllByText('Estiramiento de sonrisa'))[0].closest('tr')!;
+    fireEvent.click(within(row).getByTitle('Eliminar'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(forbiddenMessage);
+  });
+
+  it('shows the catalog read-only to therapists who are not administrators', async () => {
+    mockRole = 'THERAPIST';
+
+    renderWithIntl(<ExercisesPage />);
+
+    expect((await screen.findAllByText('Estiramiento de sonrisa')).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText('El catálogo de ejercicios es global: solo un administrador puede crear, editar o eliminar ejercicios.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Agregar ejercicio/ })).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Editar')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Eliminar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Eliminar/ })).not.toBeInTheDocument();
   });
 });

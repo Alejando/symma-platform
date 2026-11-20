@@ -116,7 +116,7 @@
     "whatsHappening": "Esto es lo que está pasando con tus pacientes hoy.",
     "activePatients": "Pacientes activos",
     "complianceAlerts": "Alertas de cumplimiento",
-    "avgEfficacy": "Puntuación de eficacia promedio",
+    "avgEfficacy": "Precisión promedio del gesto",
     "actionRequired": "Acción requerida",
     "allClear": "Todo en orden",
     "quickActions": "Acciones rápidas",
@@ -161,7 +161,8 @@
     "all": "Todos",
     "keyNamePlaceholder": "clave_unica_del_ejercicio",
     "namePlaceholder": "Ej., Estiramiento de sonrisa",
-    "addExerciseNamed": "Agregar {name}"
+    "addExerciseNamed": "Agregar {name}",
+    "readOnlyNotice": "El catálogo de ejercicios es global: solo un administrador puede crear, editar o eliminar ejercicios."
   },
   "routines": {
     "title": "Rutinas",
@@ -174,7 +175,9 @@
     "addExercisesFromCatalog": "Agrega ejercicios del catálogo de la izquierda",
     "routineHasSessions": "La rutina tiene sesiones",
     "exercisesLocked": "Los ejercicios están bloqueados para preservar datos históricos. Clona esta rutina para hacer cambios.",
-    "removeExercise": "Quitar ejercicio"
+    "removeExercise": "Quitar ejercicio",
+    "draftNotice": "Esta rutina es un borrador: el paciente no la recibe hasta que la actives desde la lista de rutinas.",
+    "replacesActiveNotice": "Al guardarla, el paciente la recibe de inmediato y su rutina activa actual pasa al historial."
   },
   "gender": {
     "male": "Masculino",
@@ -196,7 +199,13 @@
     "gradeValue": "Grado {value}",
     "noNotesAvailable": "Sin notas disponibles.",
     "noEmergencyContact": "Sin contacto de emergencia registrado.",
-    "phone": "Teléfono"
+    "phone": "Teléfono",
+    "quickStats": "Estadísticas rápidas",
+    "adherence": "Adherencia a la rutina activa",
+    "noActiveRoutine": "Sin rutina activa",
+    "sessionsCompleted": "Sesiones completadas",
+    "lastSession": "Última sesión",
+    "noSessionsYet": "Aún no hay sesiones"
   },
   "mobileAccess": {
     "title": "Acceso móvil",
@@ -228,7 +237,15 @@
     "duration": "Duración",
     "present": "Presente",
     "more": "+{count} más",
-    "confirmDeleteRoutine": "¿Estás seguro de que deseas eliminar \"{name}\"?"
+    "confirmDeleteRoutine": "¿Estás seguro de que deseas eliminar \"{name}\"?",
+    "drafts": "Borradores",
+    "draftExplanation": "El paciente no recibe esta rutina hasta que la actives.",
+    "activate": "Activar",
+    "activateTitle": "¿Activar «{name}»?",
+    "activateReplacesActive": "La rutina activa «{active}» se archivará y dejará de mostrarse al paciente. Desde ahora el paciente recibirá «{name}» en su app.",
+    "activateFirst": "El paciente empezará a recibir «{name}» en su app.",
+    "confirmActivateAndArchive": "Activar y archivar la actual",
+    "confirmActivate": "Activar rutina"
   },
   "patientLayout": {
     "loading": "Cargando...",
@@ -244,13 +261,13 @@
     "prescribedExercises": "Ejercicios prescritos",
     "sessionHistory": "Historial de sesiones",
     "date": "Fecha",
-    "score": "Puntuación",
+    "score": "Precisión del gesto",
     "viewDetails": "Ver detalles",
     "min": "{minutes} min",
     "reps": "{count} Reps",
     "totalSessions": "Sesiones totales",
     "lifetimeSessions": "Sesiones completadas en total",
-    "averageAccuracy": "Precisión promedio",
+    "averageAccuracy": "Precisión promedio del gesto",
     "overallPerformance": "Puntuación de rendimiento general",
     "currentStreak": "Racha actual",
     "days": "{count} Días",
@@ -264,9 +281,15 @@
     "metricValue": {
       "score": "{value}%",
       "reps": "{value} reps",
-      "time": "{value} min"
+      "time": "{value} min",
+      "symmetry": "{value}%"
     },
-    "showingLatestSessions": "Mostrando las {shown} sesiones más recientes de {total}"
+    "symmetry": "Simetría facial",
+    "averageSymmetry": "Simetría facial promedio",
+    "leftRightComparison": "Comparación entre lado izquierdo y derecho",
+    "noSymmetryYet": "Aún no hay mediciones de simetría",
+    "symmetryHint": "Compara el movimiento del lado izquierdo con el del derecho: 100 % significa movimiento idéntico en ambos lados.",
+    "noDataForMetric": "No hay datos registrados para esta métrica."
   },
   "sessionDetail": {
     "title": "Detalle de sesión",
@@ -278,12 +301,24 @@
     "exerciseBreakdown": "Desglose de ejercicios",
     "noExerciseData": "Sin datos de ejercicios registrados",
     "exercise": "Ejercicio",
-    "accuracy": "Precisión",
+    "accuracy": "Precisión del gesto",
     "viewRepSeries": "Ver serie de repeticiones",
     "previousSession": "Sesión anterior",
     "nextSession": "Siguiente sesión",
     "unableToLoad": "No se pudo cargar la sesión",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "symmetry": "Simetría facial",
+    "averageHold": "Sostenimiento promedio",
+    "holdSeconds": "{value} s",
+    "bestAttempts": "Mejor intento por ejercicio",
+    "bestAttemptAlt": "Captura del mejor intento en {exercise}",
+    "noSnapshot": "Sin captura del mejor intento",
+    "snapshotUnavailable": "No se pudo cargar la captura; recarga la página para obtener un enlace nuevo.",
+    "calibration": "Calibración enviada con la sesión",
+    "calibrationCapturedAt": "Capturada el {date}",
+    "noCalibration": "Esta sesión no incluye datos de calibración.",
+    "calibrationParameter": "Parámetro",
+    "calibrationValue": "Valor"
   },
   "language": {
     "label": "Idioma",

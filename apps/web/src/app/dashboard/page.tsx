@@ -1,5 +1,5 @@
 import { auth } from '@/auth';
-import { getDashboardStats } from '@/lib/api';
+import { getDashboardStatsForCurrentUser } from '@/lib/server/api';
 import { AuthenticationError, describeApiError } from '@/lib/errors';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import type { DashboardStatsResponse } from '@symma/shared-types';
@@ -14,9 +14,9 @@ type DashboardStatsResult =
   | { status: 'sessionExpired' }
   | { status: 'failed'; error: unknown };
 
-async function loadDashboardStats(accessToken: string): Promise<DashboardStatsResult> {
+async function loadDashboardStats(): Promise<DashboardStatsResult> {
   try {
-    return { status: 'loaded', stats: await getDashboardStats(accessToken) };
+    return { status: 'loaded', stats: await getDashboardStatsForCurrentUser() };
   } catch (error) {
     if (error instanceof AuthenticationError) return { status: 'sessionExpired' };
     return { status: 'failed', error };
@@ -44,9 +44,7 @@ export default async function DashboardPage() {
     return t('dashboard.goodEvening', { name: firstName });
   };
 
-  const result = session?.user?.accessToken
-    ? await loadDashboardStats(session.user.accessToken)
-    : ({ status: 'sessionExpired' } as const);
+  const result = await loadDashboardStats();
 
   if (result.status === 'sessionExpired') {
     return <SessionExpired />;

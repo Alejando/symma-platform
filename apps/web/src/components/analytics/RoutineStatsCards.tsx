@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, Percent, Flame } from "lucide-react";
+import { Activity, Percent, Flame, FlipHorizontal2 } from "lucide-react";
+import { usePercentFormatter } from "@/hooks/use-percent-formatter";
 
 interface RoutineStats {
   totalSessions: number;
@@ -10,12 +11,14 @@ interface RoutineStats {
 
 interface RoutineStatsCardsProps {
   stats: RoutineStats;
+  averageSymmetry: number | null;
 }
 
-export function RoutineStatsCards({ stats }: RoutineStatsCardsProps) {
+export function RoutineStatsCards({ stats, averageSymmetry }: RoutineStatsCardsProps) {
   const t = useTranslations('common');
+  const formatPercent = usePercentFormatter();
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{t('analytics.totalSessions')}</CardTitle>
@@ -34,9 +37,25 @@ export function RoutineStatsCards({ stats }: RoutineStatsCardsProps) {
           <Percent className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.avgScore}%</div>
+          <div className="text-2xl font-bold">{formatPercent(stats.avgScore)}</div>
           <p className="text-xs text-muted-foreground">
             {t('analytics.overallPerformance')}
+          </p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">{t('analytics.averageSymmetry')}</CardTitle>
+          <FlipHorizontal2 className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {averageSymmetry === null ? (
+            <div className="text-sm font-medium text-muted-foreground">{t('analytics.noSymmetryYet')}</div>
+          ) : (
+            <div className="text-2xl font-bold">{formatPercent(averageSymmetry)}</div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            {t('analytics.leftRightComparison')}
           </p>
         </CardContent>
       </Card>

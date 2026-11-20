@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import {
   generatePatientAccessCode,
@@ -17,7 +16,6 @@ interface PatientAccessCardProps {
 }
 
 export function PatientAccessCard({ patientId }: PatientAccessCardProps) {
-  const { data: session } = useSession();
   const t = useTranslations('common');
   const handleApiError = useApiErrorHandler();
   const [error, setError] = useState<string | null>(null);
@@ -30,9 +28,8 @@ export function PatientAccessCard({ patientId }: PatientAccessCardProps) {
 
   useEffect(() => {
     async function checkStatus() {
-      if (!session?.user?.accessToken) return;
       try {
-        const status = await getPatientAccessCodeStatus(session.user.accessToken, patientId);
+        const status = await getPatientAccessCodeStatus(patientId);
         setHasCode(status.hasAccessCode);
       } catch (statusError) {
         setError(handleApiError(statusError));
@@ -41,14 +38,13 @@ export function PatientAccessCard({ patientId }: PatientAccessCardProps) {
       }
     }
     checkStatus();
-  }, [session?.user?.accessToken, patientId, handleApiError]);
+  }, [patientId, handleApiError]);
 
   const handleGenerate = async () => {
-    if (!session?.user?.accessToken) return;
     setGenerating(true);
     setError(null);
     try {
-      const result = await generatePatientAccessCode(session.user.accessToken, patientId);
+      const result = await generatePatientAccessCode(patientId);
       setGeneratedPin(result.accessCode);
       setShowPinModal(true);
       setHasCode(true);
@@ -60,13 +56,12 @@ export function PatientAccessCard({ patientId }: PatientAccessCardProps) {
   };
 
   const handleRevoke = async () => {
-    if (!session?.user?.accessToken) return;
     if (!confirm(t('mobileAccess.confirmRevoke'))) return;
 
     setRevoking(true);
     setError(null);
     try {
-      await revokePatientAccessCode(session.user.accessToken, patientId);
+      await revokePatientAccessCode(patientId);
       setHasCode(false);
     } catch (revokeError) {
       setError(handleApiError(revokeError));

@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { SessionDetailResponse } from "@symma/shared-types";
 import { getSessionDetail } from "@/lib/api";
+import { usePercentFormatter } from "@/hooks/use-percent-formatter";
 import { useApiErrorHandler } from "@/hooks/use-api-error-handler";
 import { useDateFormatter } from "@/hooks/use-date-formatter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { BestAttemptGallery } from "@/components/sessions/best-attempt-gallery";
+import { SessionCalibrationCard } from "@/components/sessions/session-calibration-card";
 
 function scoreBadgeClass(score: number): string {
   if (score >= 70) {
@@ -46,8 +48,11 @@ function extractRepSeries(seriesData: unknown): number[] {
 export default function SessionDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { data: authSession } = useSession();
   const t = useTranslations('common');
+  const formatPercent = usePercentFormatter();
+  const format = useFormatter();
+  const formatDecimal = (value: number) =>
+    format.number(value, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
   const sessionId = params.sessionId as string;
   const patientId = params.id as string;
@@ -61,15 +66,11 @@ export default function SessionDetailPage() {
 
   useEffect(() => {
     async function fetchDetail() {
-      if (!authSession?.user?.accessToken) {
-        return;
-      }
-
       setLoading(true);
       setError(null);
 
       try {
-        const detail = await getSessionDetail(authSession.user.accessToken, sessionId);
+        const detail = await getSessionDetail(sessionId);
         setSessionDetail(detail);
       } catch (fetchError) {
         setError(handleApiError(fetchError));
@@ -78,10 +79,8 @@ export default function SessionDetailPage() {
       }
     }
 
-    if (sessionId) {
-      fetchDetail();
-    }
-  }, [authSession, sessionId, handleApiError]);
+    fetchDetail();
+  }, [sessionId, handleApiError]);
 
   if (loading) {
     return (
@@ -137,7 +136,7 @@ export default function SessionDetailPage() {
         <CardContent className="flex flex-wrap items-center gap-3 text-sm">
           <Badge variant="outline">{formatDate.longDate(sessionDetail.date)}</Badge>
           <Badge variant="outline">{t('analytics.min', { minutes: Math.floor(sessionDetail.durationSeconds / 60) })}</Badge>
-          <Badge className={scoreBadgeClass(sessionDetail.score)}>{sessionDetail.score}%</Badge>
+          <Badge className={scoreBadgeClass(sessionDetail.score)}>{formatPercent(sessionDetail.score)}</Badge>
           <Badge variant="outline">{sessionDetail.isSynced ? t('sessionDetail.synced') : t('sessionDetail.pendingSync')}</Badge>
         </CardContent>
       </Card>
@@ -156,6 +155,8 @@ export default function SessionDetailPage() {
                   <TableHead>{t('sessionDetail.exercise')}</TableHead>
                   <TableHead>{t('labels.reps')}</TableHead>
                   <TableHead>{t('sessionDetail.accuracy')}</TableHead>
+                  <TableHead>{t('sessionDetail.symmetry')}</TableHead>
+                  <TableHead>{t('sessionDetail.averageHold')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -168,12 +169,20 @@ export default function SessionDetailPage() {
                         <TableCell>{item.exerciseName}</TableCell>
                         <TableCell>{item.repsCompleted}</TableCell>
                         <TableCell>
-                          {item.averageAccuracy === null ? t('labels.notAvailable') : `${item.averageAccuracy.toFixed(1)}%`}
+                          {item.averageAccuracy === null ? t('labels.notAvailable') : formatPercent(item.averageAccuracy, 1)}
+                        </TableCell>
+                        <TableCell>
+                          {item.symmetryScore === null ? t('labels.notAvailable') : formatPercent(item.symmetryScore, 1)}
+                        </TableCell>
+                        <TableCell>
+                          {item.averageHoldSeconds === null
+                            ? t('labels.notAvailable')
+                            : t('sessionDetail.holdSeconds', { value: formatDecimal(item.averageHoldSeconds) })}
                         </TableCell>
                       </TableRow>
                       {repSeries.length > 0 ? (
                         <TableRow>
-                          <TableCell colSpan={3}>
+                          <TableCell colSpan={5}>
                             <details>
                               <summary className="cursor-pointer text-xs text-muted-foreground">
                                 {t('sessionDetail.viewRepSeries')}
@@ -188,7 +197,7 @@ export default function SessionDetailPage() {
                                   >
                                     <XAxis dataKey="rep" hide />
                                     <YAxis hide domain={[0, 100]} />
-                                    <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+                                    <Tooltip formatter={(value: number) => formatPercent(value, 1)} />
                                     <Bar dataKey="value" fill="#0D9488" radius={[2, 2, 0, 0]} />
                                   </BarChart>
                                 </ResponsiveContainer>
@@ -205,6 +214,10 @@ export default function SessionDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {sessionDetail.items.length > 0 && <BestAttemptGallery items={sessionDetail.items} />}
+
+      <SessionCalibrationCard calibration={sessionDetail.calibration} />
 
       <div className="flex items-center justify-between">
         <Button disabled={!previousHref} onClick={() => previousHref && router.push(previousHref)} variant="outline">

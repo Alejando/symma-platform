@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 
-import { isTokenExpired } from '@/lib/auth-utils';
+import { storeApiCredentials, toClientSession } from '@/lib/auth-session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
 
@@ -34,7 +34,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           const data = await response.json();
 
-          // Fetch user profile with the token
           const profileResponse = await fetch(`${API_URL}/api/v1/auth/profile`, {
             headers: {
               Authorization: `Bearer ${data.accessToken}`,
@@ -64,30 +63,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: '/login',
   },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.accessToken = user.accessToken;
-        token.role = user.role;
-        token.id = user.id;
-      }
-
-      if (token.accessToken && isTokenExpired(token.accessToken)) {
-        token.error = 'TokenExpired';
-      }
-
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.accessToken = token.accessToken as string;
-        session.user.role = token.role as string;
-      }
-      if (token.error) {
-        session.error = token.error;
-      }
-      return session;
-    },
+    jwt: ({ token, user }) => storeApiCredentials(token, user),
+    session: ({ session, token }) => toClientSession(session, token),
   },
   session: {
     strategy: 'jwt',

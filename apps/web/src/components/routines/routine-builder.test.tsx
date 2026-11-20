@@ -88,4 +88,30 @@ describe('RoutineBuilder', () => {
     expect(screen.getByDisplayValue('10')).toBeInTheDocument(); // reps
 
   });
+
+  it('warns that saving a new routine replaces the active one instead of calling it a draft', () => {
+    renderWithIntl(
+      <RoutineBuilder patients={[mockPatient]} items={[]} onItemsChange={vi.fn()} onSubmit={vi.fn()} loading={false} />,
+    );
+
+    expect(
+      screen.getByText('Al guardarla, el paciente la recibe de inmediato y su rutina activa actual pasa al historial.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Borrador')).not.toBeInTheDocument();
+  });
+
+  it('does not show the replacement warning while editing', () => {
+    renderWithIntl(
+      <RoutineBuilder
+        patients={[mockPatient]}
+        items={[]}
+        onItemsChange={vi.fn()}
+        onSubmit={vi.fn()}
+        loading={false}
+        mode="edit"
+      />,
+    );
+
+    expect(screen.queryByText(/su rutina activa actual pasa al historial/)).not.toBeInTheDocument();
+  });
 });

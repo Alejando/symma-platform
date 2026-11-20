@@ -1,7 +1,6 @@
 'use client';
 
 import { use, useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ExerciseCatalog } from '@/components/routines/exercise-catalog';
 import { RoutineBuilder, type BuilderItem } from '@/components/routines/routine-builder';
@@ -16,7 +15,6 @@ export default function NewPatientRoutinePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { data: session } = useSession();
   const router = useRouter();
 
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -29,11 +27,10 @@ export default function NewPatientRoutinePage({
 
   useEffect(() => {
     async function fetchData() {
-      if (!session?.user?.accessToken) return;
       try {
         const [fetchedExercises, fetchedPatient] = await Promise.all([
-          getAllExercises(session.user.accessToken),
-          getPatient(session.user.accessToken, id),
+          getAllExercises(),
+          getPatient(id),
         ]);
         setExercises(fetchedExercises);
         setPatient(fetchedPatient);
@@ -44,7 +41,7 @@ export default function NewPatientRoutinePage({
       }
     }
     fetchData();
-  }, [session?.user?.accessToken, id, handleApiError]);
+  }, [id, handleApiError]);
 
 
 
@@ -65,12 +62,11 @@ export default function NewPatientRoutinePage({
   };
 
   const handleSubmit = async (data: CreateRoutineDto | { name?: string }) => {
-    if (!session?.user?.accessToken) return;
     const createData = data as CreateRoutineDto;
     setSaving(true);
     setError(null);
     try {
-      await createRoutine(session.user.accessToken, {
+      await createRoutine({
         ...createData,
         patientId: id,
       });

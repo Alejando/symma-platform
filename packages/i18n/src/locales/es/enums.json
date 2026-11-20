@@ -26,7 +26,8 @@
   },
   "RoutineStatus": {
     "ACTIVE": "Activa",
-    "ARCHIVED": "Archivada"
+    "ARCHIVED": "Archivada",
+    "DRAFT": "Borrador"
   },
   "MobileModule": {
     "EYES": "Ojos",

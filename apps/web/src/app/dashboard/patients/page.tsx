@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { PatientDialog, PatientTable } from '@/components/patients';
@@ -15,7 +14,6 @@ import { Pagination } from '@/components/ui/pagination';
 const PAGE_SIZE = 20;
 
 export default function PatientsPage() {
-  const { data: session } = useSession();
   const t = useTranslations('common');
   const handleApiError = useApiErrorHandler();
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -31,11 +29,10 @@ export default function PatientsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchPatients = useCallback(async () => {
-    if (!session?.user?.accessToken) return;
     setLoading(true);
     setLoadError(null);
     try {
-      const result = await getPatients(session.user.accessToken, {
+      const result = await getPatients({
         page,
         limit: PAGE_SIZE,
         search: search || undefined,
@@ -51,7 +48,7 @@ export default function PatientsPage() {
     } finally {
       setLoading(false);
     }
-  }, [session?.user?.accessToken, search, page, handleApiError]);
+  }, [search, page, handleApiError]);
 
   useEffect(() => {
     fetchPatients();
@@ -73,9 +70,9 @@ export default function PatientsPage() {
   };
 
   const confirmDelete = async () => {
-    if (!deleteConfirm || !session?.user?.accessToken) return;
+    if (!deleteConfirm) return;
     try {
-      await deletePatient(session.user.accessToken, deleteConfirm.id);
+      await deletePatient(deleteConfirm.id);
       setDeleteConfirm(null);
       fetchPatients();
     } catch (error) {
@@ -84,12 +81,10 @@ export default function PatientsPage() {
   };
 
   const handleSubmit = async (data: CreatePatientDto | UpdatePatientDto) => {
-    if (!session?.user?.accessToken) return;
-
     if (selectedPatient) {
-      await updatePatient(session.user.accessToken, selectedPatient.id, data);
+      await updatePatient(selectedPatient.id, data);
     } else {
-      await createPatient(session.user.accessToken, data as CreatePatientDto);
+      await createPatient(data as CreatePatientDto);
     }
     fetchPatients();
   };

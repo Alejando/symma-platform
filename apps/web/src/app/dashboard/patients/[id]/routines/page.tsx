@@ -3,13 +3,13 @@
 import { use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
-import { getPatientRoutines, cloneRoutine, deleteRoutine } from '@/lib/api';
+import { getPatientRoutines, cloneRoutine, deleteRoutine, activateRoutine } from '@/lib/api';
 import type { Routine } from '@symma/shared-types';
 import { Button } from '@/components/ui/button';
 import { EnumLabel } from '@/components/ui/enum-label';
 import { ErrorAlert } from '@/components/ui/error-alert';
+import { ActivateRoutineDialog } from '@/components/routines/activate-routine-dialog';
 import { useApiErrorHandler } from '@/hooks/use-api-error-handler';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 
@@ -19,38 +19,36 @@ export default function PatientRoutinesPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { data: session } = useSession();
   const router = useRouter();
   const t = useTranslations('common');
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [draftToActivate, setDraftToActivate] = useState<Routine | null>(null);
+  const [activationError, setActivationError] = useState<string | null>(null);
   const handleApiError = useApiErrorHandler();
   const formatDate = useDateFormatter();
-  const accessToken = session?.user?.accessToken;
 
   const loadRoutines = useCallback(async () => {
-    if (!accessToken) return;
     try {
-      setRoutines(await getPatientRoutines(accessToken, id));
+      setRoutines(await getPatientRoutines(id));
     } catch (loadError) {
       setError(handleApiError(loadError));
     } finally {
       setLoading(false);
     }
-  }, [accessToken, id, handleApiError]);
+  }, [id, handleApiError]);
 
   useEffect(() => {
     loadRoutines();
   }, [loadRoutines]);
 
   const handleClone = async (routineId: string) => {
-    if (!session?.user?.accessToken) return;
     setActionLoading(routineId);
     setError(null);
     try {
-      const cloned = await cloneRoutine(session.user.accessToken, routineId);
+      const cloned = await cloneRoutine(routineId);
       router.push(`/dashboard/patients/${id}/routines/${cloned.id}/edit`);
     } catch (cloneError) {
       setError(handleApiError(cloneError));
@@ -60,16 +58,35 @@ export default function PatientRoutinesPage({
   };
 
   const handleDelete = async (routineId: string, routineName: string) => {
-    if (!session?.user?.accessToken) return;
     if (!confirm(t('routineDetail.confirmDeleteRoutine', { name: routineName }))) return;
 
     setActionLoading(routineId);
     setError(null);
     try {
-      await deleteRoutine(session.user.accessToken, routineId);
+      await deleteRoutine(routineId);
       await loadRoutines();
     } catch (deleteError) {
       setError(handleApiError(deleteError));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const openActivation = (draft: Routine) => {
+    setActivationError(null);
+    setDraftToActivate(draft);
+  };
+
+  const confirmActivation = async () => {
+    if (!draftToActivate) return;
+    setActionLoading(draftToActivate.id);
+    setActivationError(null);
+    try {
+      await activateRoutine(draftToActivate.id);
+      setDraftToActivate(null);
+      await loadRoutines();
+    } catch (activateError) {
+      setActivationError(handleApiError(activateError));
     } finally {
       setActionLoading(null);
     }
@@ -83,8 +100,12 @@ export default function PatientRoutinesPage({
     );
   }
 
+  const currentActiveRoutine = routines.find((r) => r.status === 'ACTIVE') ?? null;
+  const draftRoutines = routines.filter((r) => r.status === 'DRAFT');
   const activeRoutines = routines.filter((r) => r.status === 'ACTIVE' && (!r.endDate || new Date(r.endDate) > new Date()));
-  const historyRoutines = routines.filter((r) => r.status === 'ARCHIVED' || (r.endDate && new Date(r.endDate) <= new Date()));
+  const historyRoutines = routines.filter(
+    (r) => r.status === 'ARCHIVED' || (r.status === 'ACTIVE' && r.endDate && new Date(r.endDate) <= new Date()),
+  );
 
   return (
     <div className="space-y-6 md:space-y-8 max-w-5xl mx-auto">
@@ -104,7 +125,7 @@ export default function PatientRoutinesPage({
                   <div className="min-w-0">
                     <h3 className="text-lg md:text-xl font-bold text-[#0d1b1a] mb-1 truncate">{routine.name}</h3>
                     <p className="text-sm text-gray-500">
-                      {t('routineDetail.started')} {formatDate.mediumDate(routine.startDate)}
+                      {t('routineDetail.started')} {formatDate.calendarDate(routine.startDate)}
                     </p>
                   </div>
                   <div className="flex sm:flex-col items-center sm:items-end gap-2">
@@ -186,6 +207,71 @@ export default function PatientRoutinesPage({
         )}
       </section>
 
+      {draftRoutines.length > 0 && (
+        <section>
+          <h2 className="text-base md:text-lg font-semibold text-[#0d1b1a] mb-3 md:mb-4">{t('routineDetail.drafts')}</h2>
+          <div className="grid gap-4">
+            {draftRoutines.map((routine) => (
+              <div
+                key={routine.id}
+                className="bg-white border border-dashed border-amber-300 rounded-xl p-4 md:p-6 shadow-sm"
+              >
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h3 className="text-lg font-bold text-[#0d1b1a] truncate">{routine.name}</h3>
+                      <span className="bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide">
+                        <EnumLabel enumName="RoutineStatus" value={routine.status} />
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600">{t('routineDetail.draftExplanation')}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <Link
+                      href={`/dashboard/patients/${id}/routines/${routine.id}/edit`}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">edit</span>
+                      {t('buttons.edit')}
+                    </Link>
+                    <Button
+                      size="sm"
+                      onClick={() => openActivation(routine)}
+                      disabled={actionLoading === routine.id}
+                      className="bg-brand hover:bg-brand-hover text-white text-sm font-semibold"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">play_circle</span>
+                      {t('routineDetail.activate')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(routine.id, routine.name)}
+                      disabled={actionLoading === routine.id}
+                      className="text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                      <span className="hidden sm:inline">{t('buttons.delete')}</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {draftToActivate && (
+        <ActivateRoutineDialog
+          draft={draftToActivate}
+          currentActive={currentActiveRoutine}
+          pending={actionLoading === draftToActivate.id}
+          error={activationError}
+          onConfirm={confirmActivation}
+          onCancel={() => setDraftToActivate(null)}
+        />
+      )}
+
       {/* History Section */}
       {historyRoutines.length > 0 && (
         <section>
@@ -222,8 +308,8 @@ export default function PatientRoutinesPage({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500">
-                        {formatDate.mediumDate(routine.startDate)} -{' '}
-                        {routine.endDate ? formatDate.mediumDate(routine.endDate) : t('routineDetail.present')}
+                        {formatDate.calendarDate(routine.startDate)} -{' '}
+                        {routine.endDate ? formatDate.calendarDate(routine.endDate) : t('routineDetail.present')}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -267,7 +353,7 @@ export default function PatientRoutinesPage({
                       {routine.name}
                     </Link>
                     <p className="text-xs text-gray-500 mt-1">
-                      {formatDate.mediumDate(routine.startDate)} - {routine.endDate ? formatDate.mediumDate(routine.endDate) : t('routineDetail.present')}
+                      {formatDate.calendarDate(routine.startDate)} - {routine.endDate ? formatDate.calendarDate(routine.endDate) : t('routineDetail.present')}
                     </p>
                   </div>
                   <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 shrink-0">

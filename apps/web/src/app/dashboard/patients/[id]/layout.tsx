@@ -3,9 +3,9 @@
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { getPatient, updatePatient } from '@/lib/api';
+import { ageInYears } from '@/lib/patient-age';
 import { useApiErrorHandler } from '@/hooks/use-api-error-handler';
 import type { Patient, PatientStatus, UpdatePatientDto, CreatePatientDto } from '@symma/shared-types';
 import { PatientDialog } from '@/components/patients';
@@ -24,17 +24,6 @@ function getInitials(firstName: string, lastName: string) {
   return `${firstName[0]}${lastName[0]}`.toUpperCase();
 }
 
-function calculateAge(dateOfBirth: string) {
-  const today = new Date();
-  const birthDate = new Date(dateOfBirth);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
-}
-
 export default function PatientLayout({
   children,
   params,
@@ -43,7 +32,6 @@ export default function PatientLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { data: session } = useSession();
   const t = useTranslations('common');
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,8 +44,8 @@ export default function PatientLayout({
   };
 
   const handleEditSubmit = async (data: CreatePatientDto | UpdatePatientDto) => {
-    if (!session?.user?.accessToken || !patient) return;
-    const updatedPatient = await updatePatient(session.user.accessToken, patient.id, data as UpdatePatientDto);
+    if (!patient) return;
+    const updatedPatient = await updatePatient(patient.id, data as UpdatePatientDto);
     setPatient(updatedPatient);
     setIsEditDialogOpen(false);
   };
@@ -66,19 +54,16 @@ export default function PatientLayout({
 
   useEffect(() => {
     async function loadPatient() {
-      if (session?.user?.accessToken) {
-        try {
-          const data = await getPatient(session.user.accessToken, id);
-          setPatient(data);
-        } catch (error) {
-          setLoadError(handleApiError(error));
-        } finally {
-          setLoading(false);
-        }
+      try {
+        setPatient(await getPatient(id));
+      } catch (error) {
+        setLoadError(handleApiError(error));
+      } finally {
+        setLoading(false);
       }
     }
     loadPatient();
-  }, [session, id, handleApiError]);
+  }, [id, handleApiError]);
 
   if (loading) {
     return <div className="p-8">{t('patientLayout.loading')}</div>;
@@ -119,7 +104,7 @@ export default function PatientLayout({
               <div className="flex items-center gap-3 md:gap-4 text-sm text-gray-500 flex-wrap">
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-base md:text-lg">calendar_today</span>
-                  <span>{patient.dateOfBirth ? t('patientLayout.yrs', { age: calculateAge(patient.dateOfBirth) }) : t('labels.notAvailable')}</span>
+                  <span>{patient.dateOfBirth ? t('patientLayout.yrs', { age: ageInYears(patient.dateOfBirth) }) : t('labels.notAvailable')}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-base md:text-lg">wc</span>

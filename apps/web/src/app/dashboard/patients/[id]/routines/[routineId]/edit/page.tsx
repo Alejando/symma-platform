@@ -1,8 +1,8 @@
 'use client';
 
 import { use, useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ExerciseCatalog } from '@/components/routines/exercise-catalog';
 import { RoutineBuilder, type BuilderItem } from '@/components/routines/routine-builder';
 import type { Exercise, Patient, Routine, UpdateRoutineDto } from '@symma/shared-types';
@@ -16,8 +16,8 @@ export default function EditRoutinePage({
   params: Promise<{ id: string; routineId: string }>;
 }) {
   const { id: patientId, routineId } = use(params);
-  const { data: session } = useSession();
   const router = useRouter();
+  const t = useTranslations('common');
 
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -32,12 +32,11 @@ export default function EditRoutinePage({
 
   useEffect(() => {
     async function fetchData() {
-      if (!session?.user?.accessToken) return;
       try {
         const [fetchedExercises, fetchedPatient, fetchedRoutine] = await Promise.all([
-          getAllExercises(session.user.accessToken),
-          getPatient(session.user.accessToken, patientId),
-          getRoutine(session.user.accessToken, routineId),
+          getAllExercises(),
+          getPatient(patientId),
+          getRoutine(routineId),
         ]);
         setExercises(fetchedExercises);
         setPatient(fetchedPatient);
@@ -66,7 +65,7 @@ export default function EditRoutinePage({
       }
     }
     fetchData();
-  }, [session?.user?.accessToken, patientId, routineId, handleApiError]);
+  }, [patientId, routineId, handleApiError]);
 
   const handleAddExercise = (exercise: Exercise) => {
     if (isLocked) return;
@@ -86,11 +85,10 @@ export default function EditRoutinePage({
   };
 
   const handleSubmit = async (data: UpdateRoutineDto) => {
-    if (!session?.user?.accessToken) return;
     setSaving(true);
     setError(null);
     try {
-      await updateRoutine(session.user.accessToken, routineId, data);
+      await updateRoutine(routineId, data);
       router.push(`/dashboard/patients/${patientId}/routines`);
     } catch (saveError) {
       setError(handleApiError(saveError));
@@ -112,6 +110,11 @@ export default function EditRoutinePage({
   return (
     <div className="flex flex-col gap-4">
       <ErrorAlert message={error} />
+      {routine?.status === 'DRAFT' && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {t('routines.draftNotice')}
+        </p>
+      )}
       <div className="flex bg-white h-[calc(100vh-140px)] border border-[#e7f3f2] rounded-xl overflow-hidden">
         {/* Exercise Catalog Sidebar - hidden when locked */}
         {!isLocked && (

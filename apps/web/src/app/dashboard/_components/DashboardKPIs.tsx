@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useTranslations } from 'next-intl';
+import { usePercentFormatter } from '@/hooks/use-percent-formatter';
 
 interface DashboardMetrics {
   activePatients: { value: number; trend: number };
@@ -11,6 +12,7 @@ interface DashboardMetrics {
 
 export function DashboardKPIs({ metrics }: { metrics: DashboardMetrics }) {
   const t = useTranslations('common');
+  const formatPercent = usePercentFormatter();
   const hasAlerts = metrics.complianceAlerts.value > 0;
 
   return (
@@ -61,7 +63,7 @@ export function DashboardKPIs({ metrics }: { metrics: DashboardMetrics }) {
         <div className="flex justify-between items-start z-10">
           <div>
             <p className="text-sm font-medium text-gray-500">{t('dashboard.avgEfficacy')}</p>
-            <h3 className="text-3xl font-bold text-[#0d1b1a] mt-2">{metrics.avgEfficacy.value}%</h3>
+            <h3 className="text-3xl font-bold text-[#0d1b1a] mt-2">{formatPercent(metrics.avgEfficacy.value)}</h3>
           </div>
           <span className="bg-brand/10 text-brand text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
             <span className="material-symbols-outlined text-sm">show_chart</span> {metrics.avgEfficacy.trend > 0 ? '+' : ''}{metrics.avgEfficacy.trend}%

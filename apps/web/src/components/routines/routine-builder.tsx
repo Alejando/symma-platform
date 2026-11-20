@@ -143,7 +143,7 @@ export function RoutineBuilder({
         <div className="flex flex-col gap-2 w-full">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${mode === 'edit' ? 'bg-blue-100 text-blue-700' : 'bg-brand/10 text-brand'}`}>
-              {mode === 'edit' ? (isLocked ? t('routines.locked') : t('buttons.edit')) : t('routines.draft')}
+              {mode === 'edit' ? (isLocked ? t('routines.locked') : t('buttons.edit')) : t('routines.newRoutine')}
             </span>
             <div className="flex items-center gap-2">
               <span className="text-xs md:text-sm text-slate-500">{t('labels.patient')}:</span>
@@ -189,6 +189,11 @@ export function RoutineBuilder({
               />
             </div>
           </div>
+          {mode === 'create' && (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+              {t('routines.replacesActiveNotice')}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2 md:gap-3 justify-between md:justify-end">
           <span className="text-xs md:text-sm text-slate-500 hidden sm:inline">

@@ -6,25 +6,17 @@ import RoutineAnalyticsPage from "./page";
 const mockGetRoutine = vi.fn();
 const mockGetRoutineStats = vi.fn();
 const mockGetRoutineHistory = vi.fn();
+const mockGetAllRoutineHistory = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "patient-1", routineId: "routine-1" }),
-}));
-
-vi.mock("next-auth/react", () => ({
-  useSession: () => ({
-    data: {
-      user: {
-        accessToken: "token",
-      },
-    },
-  }),
 }));
 
 vi.mock("@/lib/api", () => ({
   getRoutine: (...args: unknown[]) => mockGetRoutine(...args),
   getRoutineStats: (...args: unknown[]) => mockGetRoutineStats(...args),
   getRoutineHistory: (...args: unknown[]) => mockGetRoutineHistory(...args),
+  getAllRoutineHistory: (...args: unknown[]) => mockGetAllRoutineHistory(...args),
 }));
 
 vi.mock("@/components/analytics/RoutineStatsCards", () => ({
@@ -76,16 +68,22 @@ describe("RoutineAnalyticsPage", () => {
       chartData: [],
     });
 
-    mockGetRoutineHistory.mockResolvedValue([
-      {
-        id: "session-123",
-        date: "2026-02-22T10:00:00.000Z",
-        durationSeconds: 900,
-        score: 85,
-        isSynced: true,
-        items: [],
-      },
-    ]);
+    mockGetRoutineHistory.mockResolvedValue({
+      data: [
+        {
+          id: "session-123",
+          date: "2026-02-22T10:00:00.000Z",
+          durationSeconds: 900,
+          score: 85,
+          isSynced: true,
+          items: [],
+        },
+      ],
+      total: 1,
+      page: 1,
+      limit: 20,
+    });
+    mockGetAllRoutineHistory.mockResolvedValue([]);
   });
 
   it("builds absolute session detail links including patient and routine ids", async () => {

@@ -116,7 +116,7 @@
     "whatsHappening": "Here is what is happening with your patients today.",
     "activePatients": "Active patients",
     "complianceAlerts": "Compliance alerts",
-    "avgEfficacy": "Average efficacy score",
+    "avgEfficacy": "Average gesture accuracy",
     "actionRequired": "Action required",
     "allClear": "All clear",
     "quickActions": "Quick actions",
@@ -161,7 +161,8 @@
     "all": "All",
     "keyNamePlaceholder": "exercise_unique_key",
     "namePlaceholder": "E.g., Smile stretch",
-    "addExerciseNamed": "Add {name}"
+    "addExerciseNamed": "Add {name}",
+    "readOnlyNotice": "The exercise catalog is global: only an administrator can create, edit or delete exercises."
   },
   "routines": {
     "title": "Routines",
@@ -174,7 +175,9 @@
     "addExercisesFromCatalog": "Add exercises from the catalog on the left",
     "routineHasSessions": "This routine has sessions",
     "exercisesLocked": "Exercises are locked to preserve historical data. Clone this routine to make changes.",
-    "removeExercise": "Remove exercise"
+    "removeExercise": "Remove exercise",
+    "draftNotice": "This routine is a draft: the patient does not receive it until you activate it from the routine list.",
+    "replacesActiveNotice": "Once saved, the patient receives it immediately and their current active routine moves to history."
   },
   "gender": {
     "male": "Male",
@@ -196,7 +199,13 @@
     "gradeValue": "Grade {value}",
     "noNotesAvailable": "No notes available.",
     "noEmergencyContact": "No emergency contact on file.",
-    "phone": "Phone"
+    "phone": "Phone",
+    "quickStats": "Quick stats",
+    "adherence": "Adherence to the active routine",
+    "noActiveRoutine": "No active routine",
+    "sessionsCompleted": "Sessions completed",
+    "lastSession": "Last session",
+    "noSessionsYet": "No sessions yet"
   },
   "mobileAccess": {
     "title": "Mobile access",
@@ -228,7 +237,15 @@
     "duration": "Duration",
     "present": "Present",
     "more": "+{count} more",
-    "confirmDeleteRoutine": "Are you sure you want to delete \"{name}\"?"
+    "confirmDeleteRoutine": "Are you sure you want to delete \"{name}\"?",
+    "drafts": "Drafts",
+    "draftExplanation": "The patient does not receive this routine until you activate it.",
+    "activate": "Activate",
+    "activateTitle": "Activate \"{name}\"?",
+    "activateReplacesActive": "The active routine \"{active}\" will be archived and the patient will no longer see it. From now on the patient will receive \"{name}\" in the app.",
+    "activateFirst": "The patient will start receiving \"{name}\" in the app.",
+    "confirmActivateAndArchive": "Activate and archive current",
+    "confirmActivate": "Activate routine"
   },
   "patientLayout": {
     "loading": "Loading...",
@@ -244,13 +261,13 @@
     "prescribedExercises": "Prescribed exercises",
     "sessionHistory": "Session history",
     "date": "Date",
-    "score": "Score",
+    "score": "Gesture accuracy",
     "viewDetails": "View details",
     "min": "{minutes} min",
     "reps": "{count} Reps",
     "totalSessions": "Total sessions",
     "lifetimeSessions": "Sessions completed overall",
-    "averageAccuracy": "Average accuracy",
+    "averageAccuracy": "Average gesture accuracy",
     "overallPerformance": "Overall performance score",
     "currentStreak": "Current streak",
     "days": "{count} Days",
@@ -264,9 +281,15 @@
     "metricValue": {
       "score": "{value}%",
       "reps": "{value} reps",
-      "time": "{value} min"
+      "time": "{value} min",
+      "symmetry": "{value}%"
     },
-    "showingLatestSessions": "Showing the {shown} most recent of {total} sessions"
+    "symmetry": "Facial symmetry",
+    "averageSymmetry": "Average facial symmetry",
+    "leftRightComparison": "Left versus right side comparison",
+    "noSymmetryYet": "No symmetry measurements yet",
+    "symmetryHint": "Compares the movement of the left and right side: 100% means identical movement on both sides.",
+    "noDataForMetric": "No data recorded for this metric."
   },
   "sessionDetail": {
     "title": "Session detail",
@@ -278,12 +301,24 @@
     "exerciseBreakdown": "Exercise breakdown",
     "noExerciseData": "No exercise data recorded",
     "exercise": "Exercise",
-    "accuracy": "Accuracy",
+    "accuracy": "Gesture accuracy",
     "viewRepSeries": "View rep series",
     "previousSession": "Previous session",
     "nextSession": "Next session",
     "unableToLoad": "Unable to load session",
-    "retry": "Retry"
+    "retry": "Retry",
+    "symmetry": "Facial symmetry",
+    "averageHold": "Average hold",
+    "holdSeconds": "{value} s",
+    "bestAttempts": "Best attempt per exercise",
+    "bestAttemptAlt": "Snapshot of the best attempt at {exercise}",
+    "noSnapshot": "No snapshot of the best attempt",
+    "snapshotUnavailable": "The snapshot could not be loaded; reload the page to get a new link.",
+    "calibration": "Calibration sent with the session",
+    "calibrationCapturedAt": "Captured on {date}",
+    "noCalibration": "This session includes no calibration data.",
+    "calibrationParameter": "Parameter",
+    "calibrationValue": "Value"
   },
   "language": {
     "label": "Language",

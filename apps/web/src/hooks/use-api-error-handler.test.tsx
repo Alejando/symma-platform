@@ -35,7 +35,7 @@ describe('useApiErrorHandler', () => {
   it('keeps the session and reports missing permission on 403', () => {
     const { result } = renderHook(() => useApiErrorHandler(), { wrapper });
 
-    expect(result.current(new ApiError(403, 'Forbidden resource'))).toBe(esMessages.errors.auth.forbidden);
+    expect(result.current(new ApiError(403, ''))).toBe(esMessages.errors.auth.forbidden);
     expect(mockSignOut).not.toHaveBeenCalled();
   });
 });
