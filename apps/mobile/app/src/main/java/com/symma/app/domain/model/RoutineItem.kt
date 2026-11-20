@@ -24,18 +24,26 @@ data class RoutineItem(
             val engage = engageThreshold ?: REP_ENGAGE_THRESHOLD
             val release = releaseThreshold ?: REP_RELEASE_THRESHOLD
             val safeRelease = release.coerceAtMost(engage - 0.01f)
+            val exerciseType = exerciseType()
             return ExerciseConfig(
-                exerciseType = if (holdTimeSeconds > 0) ExerciseType.ISOMETRIC else ExerciseType.ISOTONIC,
+                exerciseType = exerciseType,
                 sets = targetSets.coerceAtLeast(1),
                 reps = targetRepetitions.coerceAtLeast(1),
                 restSeconds = restBetweenSetsSeconds ?: 5,
-                holdSeconds = holdTimeSeconds.coerceAtLeast(0),
+                holdSeconds = holdTimeSeconds.coerceAtLeast(minimumHoldSeconds(exerciseType)),
                 strictMode = strictMode,
                 allowSkip = true,
                 engageThreshold = engage,
                 releaseThreshold = safeRelease
             )
         }
+
+    private fun exerciseType(): ExerciseType =
+        ExerciseType.values().firstOrNull { it.name.equals(exercise.type, ignoreCase = true) }
+            ?: if (holdTimeSeconds > 0) ExerciseType.ISOMETRIC else ExerciseType.ISOTONIC
+
+    /** A zero-second isometric hold would count every frame as a completed rep. */
+    private fun minimumHoldSeconds(type: ExerciseType) = if (type == ExerciseType.ISOMETRIC) 1 else 0
 
     /**
      * Maps exercise mobileModule to MobileModule enum for strategy selection.

@@ -48,9 +48,7 @@ describe('ExercisesController', () => {
     it('should return an array of exercises', async () => {
       const result = [{ id: exerciseId, ...createDto }];
       mockExercisesService.findAll.mockResolvedValue(result);
-      expect(await controller.findAll(undefined, undefined, undefined)).toBe(
-        result,
-      );
+      expect(await controller.findAll({})).toBe(result);
     });
   });
 
@@ -75,9 +73,8 @@ describe('ExercisesController', () => {
 
   describe('remove', () => {
     it('should remove an exercise', async () => {
-      const result = { id: exerciseId, ...createDto };
-      mockExercisesService.remove.mockResolvedValue(result);
-      expect(await controller.remove(exerciseId)).toBe(result);
+      mockExercisesService.remove.mockResolvedValue(undefined);
+      await controller.remove(exerciseId);
       expect(service.remove).toHaveBeenCalledWith(exerciseId);
     });
   });

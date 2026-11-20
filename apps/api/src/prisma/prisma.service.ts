@@ -1,11 +1,19 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
+
+const prismaClientOptions = {
+  omit: { patient: { accessCodeHash: true } },
+} satisfies Prisma.PrismaClientOptions;
 
 @Injectable()
 export class PrismaService
-  extends PrismaClient
+  extends PrismaClient<typeof prismaClientOptions>
   implements OnModuleInit, OnModuleDestroy
 {
+  constructor() {
+    super(prismaClientOptions);
+  }
+
   async onModuleInit(): Promise<void> {
     await this.$connect();
   }

@@ -47,6 +47,10 @@ import type {
   RoutineChartPoint,
   RoutineStatsResponse,
   RoutineHistoryResponse,
+  PatientStatsResponse,
+  // Snapshots
+  SnapshotUploadUrlRequest,
+  SnapshotUploadUrlResponse,
   // Dashboard
   DashboardMetric,
   AtRiskPatientResponse,
@@ -71,7 +75,7 @@ describe('@symma/shared-types barrel exports', () => {
     const role: Role = 'THERAPIST';
     const exerciseType: ExerciseType = 'ISOTONIC';
     const category: ExerciseCategory = 'CORE';
-    const routineStatus: RoutineStatus = 'ACTIVE';
+    const routineStatus: RoutineStatus = 'DRAFT';
     const mobileModule: MobileModule = 'SMILE';
 
     expect(gender).toBe('MALE');
@@ -79,7 +83,7 @@ describe('@symma/shared-types barrel exports', () => {
     expect(role).toBe('THERAPIST');
     expect(exerciseType).toBe('ISOTONIC');
     expect(category).toBe('CORE');
-    expect(routineStatus).toBe('ACTIVE');
+    expect(routineStatus).toBe('DRAFT');
     expect(mobileModule).toBe('SMILE');
   });
 
@@ -196,16 +200,33 @@ describe('@symma/shared-types barrel exports', () => {
       exerciseId: 'e1',
       repsCompleted: 8,
       averageAccuracy: 85,
+      symmetryScore: 92,
+      averageHoldSeconds: 2.5,
+      snapshotKey: 'snapshots/s1/e1.jpg',
     };
     const createReq: CreateSessionRequest = {
+      id: '7f1c2b8e-0a4d-4f6e-9b1a-2c3d4e5f6a7b',
       routineId: 'r1',
       startTime: '2024-01-01T10:00:00Z',
       endTime: '2024-01-01T10:30:00Z',
       items: [itemReq],
     };
 
+    const uploadReq: SnapshotUploadUrlRequest = {
+      sessionId: createReq.id,
+      exerciseId: 'e1',
+      contentType: 'image/jpeg',
+    };
+    const uploadRes: SnapshotUploadUrlResponse = {
+      uploadUrl: 'https://bucket.example.com/put',
+      snapshotKey: 'snapshots/s1/e1.jpg',
+      expiresInSeconds: 300,
+    };
+
     expect(itemReq.repsCompleted).toBe(8);
     expect(createReq.routineId).toBe('r1');
+    expect(uploadReq.contentType).toBe('image/jpeg');
+    expect(uploadRes.expiresInSeconds).toBe(300);
   });
 
   it('exports mobile contracts', () => {
@@ -245,16 +266,23 @@ describe('@symma/shared-types barrel exports', () => {
   });
 
   it('exports analytics contracts', () => {
-    const chartPoint: RoutineChartPoint = { date: '2024-01-01', score: 85 };
+    const chartPoint: RoutineChartPoint = { date: '2024-01-01', score: 85, symmetry: null };
     const stats: RoutineStatsResponse = {
       summary: { totalSessions: 10, currentStreak: 5, avgScore: 80 },
+      averageSymmetry: null,
       chartData: [chartPoint],
     };
-    const history: RoutineHistoryResponse = [];
+    const history: RoutineHistoryResponse = { data: [], total: 0, page: 1, limit: 20 };
+    const patientStats: PatientStatsResponse = {
+      adherencePercent: 50,
+      sessionsCompleted: 3,
+      lastSessionAt: '2024-01-01T10:00:00Z',
+    };
 
     expect(chartPoint.score).toBe(85);
     expect(stats.summary.currentStreak).toBe(5);
-    expect(history).toHaveLength(0);
+    expect(history.data).toHaveLength(0);
+    expect(patientStats.sessionsCompleted).toBe(3);
   });
 
   it('exports dashboard contracts', () => {

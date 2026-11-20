@@ -4,6 +4,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import com.symma.app.domain.model.ExerciseCategory
 import com.symma.app.domain.model.ExerciseType
@@ -21,7 +22,7 @@ fun EnumText(
     style: TextStyle = TextStyle.Default
 ) {
     Text(
-        text = role.toDisplayName(),
+        text = stringResource(role.displayNameRes()),
         modifier = modifier,
         color = color,
         style = style
@@ -36,7 +37,7 @@ fun EnumText(
     style: TextStyle = TextStyle.Default
 ) {
     Text(
-        text = gender.toDisplayName(),
+        text = stringResource(gender.displayNameRes()),
         modifier = modifier,
         color = color,
         style = style
@@ -51,7 +52,7 @@ fun EnumText(
     style: TextStyle = TextStyle.Default
 ) {
     Text(
-        text = status.toDisplayName(),
+        text = stringResource(status.displayNameRes()),
         modifier = modifier,
         color = color,
         style = style
@@ -66,7 +67,7 @@ fun EnumText(
     style: TextStyle = TextStyle.Default
 ) {
     Text(
-        text = type.toDisplayName(),
+        text = stringResource(type.displayNameRes()),
         modifier = modifier,
         color = color,
         style = style
@@ -81,7 +82,7 @@ fun EnumText(
     style: TextStyle = TextStyle.Default
 ) {
     Text(
-        text = category.toDisplayName(),
+        text = stringResource(category.displayNameRes()),
         modifier = modifier,
         color = color,
         style = style
@@ -96,7 +97,7 @@ fun EnumText(
     style: TextStyle = TextStyle.Default
 ) {
     Text(
-        text = status.toDisplayName(),
+        text = stringResource(status.displayNameRes()),
         modifier = modifier,
         color = color,
         style = style
@@ -111,7 +112,7 @@ fun EnumText(
     style: TextStyle = TextStyle.Default
 ) {
     Text(
-        text = module.toDisplayName(),
+        text = stringResource(module.displayNameRes()),
         modifier = modifier,
         color = color,
         style = style

@@ -16,7 +16,7 @@ export function RiskList({ patients }: { patients: AtRiskPatient[] }) {
   if (patients.length === 0) {
     return (
       <div className="bg-white rounded-xl border border-[#e7f3f2] shadow-sm p-6 flex flex-col items-center justify-center text-center py-12">
-        <div className="h-12 w-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-3">
+        <div className="h-12 w-12 bg-green-50 text-green-700 rounded-full flex items-center justify-center mb-3">
           <span className="material-symbols-outlined">celebration</span>
         </div>
         <h3 className="text-[#0d1b1a] font-bold text-lg">{t('dashboard.allCompliant')}</h3>
@@ -49,7 +49,7 @@ export function RiskList({ patients }: { patients: AtRiskPatient[] }) {
                 {patient.name.split(' ').map((n) => n.charAt(0)).join('').slice(0, 2).toUpperCase()}
               </div>
               <div>
-                <p className="font-semibold text-[#0d1b1a] group-hover:text-[#0d9488] transition-colors">{patient.name}</p>
+                <p className="font-semibold text-[#0d1b1a] group-hover:text-brand transition-colors">{patient.name}</p>
                 <p className="text-xs text-gray-500">{t('dashboard.activeRoutine')}</p>
               </div>
             </div>
@@ -57,9 +57,9 @@ export function RiskList({ patients }: { patients: AtRiskPatient[] }) {
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-sm font-bold text-[#E11D48]">{t('dashboard.daysInactive', { count: patient.daysInactive })}</p>
-                <p className="text-xs text-gray-400">{t('dashboard.inactive')}</p>
+                <p className="text-xs text-gray-500">{t('dashboard.inactive')}</p>
               </div>
-              <span className="material-symbols-outlined text-gray-300 group-hover:text-[#0d9488]">chevron_right</span>
+              <span className="material-symbols-outlined text-gray-300 group-hover:text-brand">chevron_right</span>
             </div>
           </Link>
         ))}

@@ -1,23 +1,23 @@
 import { Module } from '@nestjs/common';
-import { I18nModule, AcceptLanguageResolver, QueryResolver, HeaderResolver } from 'nestjs-i18n';
-import * as fs from 'fs';
+import {
+  AcceptLanguageResolver,
+  HeaderResolver,
+  I18nModule,
+  QueryResolver,
+} from 'nestjs-i18n';
 import * as path from 'path';
 import { TranslationService } from './i18n.service';
+import { DEFAULT_LANGUAGE } from '../common/i18n/request-language';
+
+const sharedLocalesDirectory = path.dirname(
+  path.dirname(require.resolve('@symma/i18n/src/locales/es/errors.json')),
+);
 
 @Module({
   imports: [
     I18nModule.forRoot({
-      fallbackLanguage: 'es',
-      loaderOptions: {
-        path: (() => {
-          const compiledPath = path.join(__dirname, 'locales');
-          if (fs.existsSync(compiledPath)) {
-            return compiledPath;
-          }
-          return path.join(process.cwd(), 'src/i18n/locales');
-        })(),
-        watch: true,
-      },
+      fallbackLanguage: DEFAULT_LANGUAGE,
+      loaderOptions: { path: sharedLocalesDirectory, watch: false },
       resolvers: [
         { use: QueryResolver, options: ['lang'] },
         AcceptLanguageResolver,

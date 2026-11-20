@@ -4,12 +4,15 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.symma.app.core.di.SymmaDatabase
+import com.symma.app.data.local.entity.ExerciseEntity
 import com.symma.app.data.local.entity.SessionEntity
 import com.symma.app.data.local.entity.SessionItemEntity
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -96,9 +99,100 @@ class SessionDaoTest {
     }
 
     @Test
+    fun `insertSessionWithItems stores nothing when an item cannot be stored`() = runBlocking {
+        val session = createSessionEntity("session-1", "PENDING")
+        val orphanItem = createSessionItemEntity("item-1", "missing-session", "exercise-1")
+
+        val failure = runCatching { sessionDao.insertSessionWithItems(session, listOf(orphanItem)) }
+
+        assertTrue(failure.isFailure)
+        assertEquals(0, sessionDao.getPendingSessions().size)
+    }
+
+    @Test
+    fun `insertSessionWithItems stores the session and its items together`() = runBlocking {
+        val session = createSessionEntity("session-1", "PENDING")
+        val item = createSessionItemEntity("item-1", "session-1", "exercise-1")
+
+        sessionDao.insertSessionWithItems(session, listOf(item))
+
+        assertEquals(1, sessionDao.getPendingSessions().size)
+        assertEquals(1, sessionDao.getItemsForSession("session-1").size)
+    }
+
+    @Test
+    fun `requeueFailedSessions returns ERROR sessions to PENDING and leaves SYNCED alone`() = runBlocking {
+        sessionDao.insertSession(createSessionEntity("session-error", "ERROR"))
+        sessionDao.insertSession(createSessionEntity("session-synced", "SYNCED"))
+
+        val requeued = sessionDao.requeueFailedSessions()
+
+        assertEquals(1, requeued)
+        assertEquals(listOf("session-error"), sessionDao.getPendingSessions().map { it.id })
+    }
+
+    @Test
+    fun `observeItemsWithExerciseName joins the cached exercise name in insertion order`() = runBlocking {
+        database.routineDao().insertExercises(
+            listOf(ExerciseEntity("exercise-2", "Brow Raise", "brows", null, "ISOTONIC", "CORE", "BROWS", null, null))
+        )
+        sessionDao.insertSessionWithItems(
+            createSessionEntity("session-1", "PENDING"),
+            listOf(
+                createSessionItemEntity("item-b", "session-1", "exercise-2"),
+                createSessionItemEntity("item-a", "session-1", "exercise-unknown")
+            )
+        )
+
+        val rows = sessionDao.observeItemsWithExerciseName("session-1").first()
+
+        assertEquals(listOf("exercise-2", "exercise-unknown"), rows.map { it.exerciseId })
+        assertEquals("Brow Raise", rows[0].exerciseName)
+        assertNull(rows[1].exerciseName)
+        assertEquals(10, rows[0].repsCompleted)
+    }
+
+    @Test
     fun `getItemsForSession returns empty list for non-existent session`() = runBlocking {
         val items = sessionDao.getItemsForSession("non-existent")
         assertEquals(0, items.size)
+    }
+
+    @Test
+    fun `snapshot references follow the upload of each image`() = runBlocking {
+        sessionDao.insertSessionWithItems(
+            createSessionEntity("session-1", "PENDING"),
+            listOf(
+                createSessionItemEntity("item-1", "session-1", "exercise-1").copy(snapshotReference = "a.jpg.enc"),
+                createSessionItemEntity("item-2", "session-1", "exercise-2").copy(snapshotReference = "b.jpg.enc"),
+                createSessionItemEntity("item-3", "session-1", "exercise-3")
+            )
+        )
+
+        sessionDao.markSnapshotUploaded("item-1", "sessions/session-1/exercise-1.jpg")
+
+        val items = sessionDao.getItemsForSession("session-1").associateBy { it.id }
+        assertEquals("sessions/session-1/exercise-1.jpg", items.getValue("item-1").snapshotKey)
+        assertNull(items.getValue("item-1").snapshotReference)
+        assertEquals(listOf("b.jpg.enc"), sessionDao.getSnapshotReferences())
+
+        sessionDao.clearSnapshotReferences("session-1")
+
+        assertTrue(sessionDao.getSnapshotReferences().isEmpty())
+        assertEquals("sessions/session-1/exercise-1.jpg", sessionDao.getItemsForSession("session-1").first { it.id == "item-1" }.snapshotKey)
+    }
+
+    @Test
+    fun `results observed by the summary include symmetry and hold`() = runBlocking {
+        sessionDao.insertSessionWithItems(
+            createSessionEntity("session-1", "PENDING"),
+            listOf(createSessionItemEntity("item-1", "session-1", "exercise-1").copy(symmetryScore = 88f, averageHoldSeconds = 2.5f))
+        )
+
+        val row = sessionDao.observeItemsWithExerciseName("session-1").first().single()
+
+        assertEquals(88f, row.symmetryScore)
+        assertEquals(2.5f, row.averageHoldSeconds)
     }
 
     private fun createSessionEntity(id: String, syncStatus: String): SessionEntity {

@@ -7,6 +7,7 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import com.google.mediapipe.framework.image.BitmapExtractor
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.core.BaseOptions
@@ -21,6 +22,8 @@ class FaceLandmarkerHelper(
 ) : ImageAnalysis.Analyzer {
 
     private var faceLandmarker: FaceLandmarker? = null
+    private val performanceMonitor = VisionPerformanceMonitor()
+    private var lastPerformanceLogMs = 0L
 
     init {
         setupFaceLandmarker()
@@ -41,6 +44,7 @@ class FaceLandmarkerHelper(
             .setNumFaces(MAX_NUM_FACES)
             .setRunningMode(RunningMode.LIVE_STREAM)
             .setOutputFaceBlendshapes(true)
+            .setOutputFacialTransformationMatrixes(true)
             .setResultListener(this::returnLivestreamResult)
             .setErrorListener(this::returnLivestreamError)
 
@@ -101,19 +105,42 @@ class FaceLandmarkerHelper(
         faceLandmarker?.detectAsync(mpImage, frameTime)
     }
 
+    fun close() {
+        faceLandmarker?.close()
+        faceLandmarker = null
+    }
+
     private fun returnLivestreamResult(
         result: FaceLandmarkerResult,
         input: MPImage
     ) {
         val finishTimeMs = SystemClock.uptimeMillis()
         val inferenceTime = finishTimeMs - result.timestampMs()
+        val performance = performanceMonitor.record(finishTimeMs, inferenceTime)
+        logPerformancePeriodically(finishTimeMs, performance)
 
         faceLandmarkerHelperListener?.onResults(
             ResultBundle(
                 result,
                 inferenceTime,
                 input.height,
-                input.width
+                input.width,
+                performance,
+                frame = runCatching { BitmapExtractor.extract(input) }.getOrNull()
+            )
+        )
+    }
+
+    private fun logPerformancePeriodically(nowMs: Long, performance: VisionPerformanceSnapshot) {
+        if (nowMs - lastPerformanceLogMs < PERFORMANCE_LOG_INTERVAL_MS) return
+        lastPerformanceLogMs = nowMs
+        Log.i(
+            PERFORMANCE_TAG,
+            "fps=%.1f inferenceAvgMs=%.1f inferenceP95Ms=%d samples=%d".format(
+                performance.framesPerSecond,
+                performance.averageInferenceMs,
+                performance.p95InferenceMs,
+                performance.sampleCount
             )
         )
     }
@@ -126,6 +153,8 @@ class FaceLandmarkerHelper(
 
     companion object {
         const val TAG = "FaceLandmarkerHelper"
+        const val PERFORMANCE_TAG = "VisionPerformance"
+        private const val PERFORMANCE_LOG_INTERVAL_MS = 5_000L
         private const val MP_FACE_LANDMARKER_TASK = "face_landmarker.task"
 
         const val DELEGATE_CPU = 0
@@ -148,6 +177,9 @@ class FaceLandmarkerHelper(
         val inferenceTime: Long,
         val inputImageHeight: Int,
         val inputImageWidth: Int,
+        val performance: VisionPerformanceSnapshot? = null,
+        /** The analyzed, mirrored frame; MediaPipe never recycles it, so it stays valid while referenced. */
+        val frame: Bitmap? = null
     )
 
     interface LandmarkerListener {

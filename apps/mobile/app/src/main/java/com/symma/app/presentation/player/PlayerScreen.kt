@@ -1,8 +1,5 @@
 package com.symma.app.presentation.player
 
-import android.media.AudioManager
-import android.media.ToneGenerator
-import android.util.Log
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
@@ -21,18 +18,19 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.symma.app.presentation.components.camera.CameraPreview
 import com.symma.app.presentation.components.camera.CameraPermissionWrapper
 import com.symma.app.presentation.components.camera.FaceMeshOverlay
-import kotlinx.coroutines.flow.collectLatest
+import com.symma.app.presentation.components.feedback.FeedbackCue
+import com.symma.app.presentation.components.feedback.rememberFeedbackPlayer
 
 @Composable
 fun PlayerScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToSummary: (routineId: String, duration: Long) -> Unit,
+    onNavigateToSummary: (routineId: String, duration: Long, sessionId: String) -> Unit,
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val faceResult by viewModel.faceResult.collectAsState()
-    val symmetryScore by viewModel.symmetryScore.collectAsState()
+    val gestureProgress by viewModel.gestureProgress.collectAsState()
     
     // FaceMesh visibility toggles
     var isMeshVisible by remember { mutableStateOf(true) }
@@ -48,18 +46,16 @@ fun PlayerScreen(
         }
     }
     
-    // 2. Handle PlayerEvents for audio feedback
-    LaunchedEffect(Unit) {
-        viewModel.events.collectLatest { event ->
-            playPlayerEventSound(event)
-        }
+    val feedbackPlayer = rememberFeedbackPlayer()
+    LaunchedEffect(feedbackPlayer) {
+        viewModel.events.collect { event -> feedbackPlayer.play(event.feedbackCue()) }
     }
 
     // 3. Handle Navigation on Completion
     LaunchedEffect(uiState) {
         val state = uiState
         if (state is PlayerUiState.Completed) {
-            onNavigateToSummary(state.routineId, state.totalTimeSeconds)
+            onNavigateToSummary(state.routineId, state.totalTimeSeconds, state.sessionId)
         }
     }
 
@@ -84,7 +80,7 @@ fun PlayerScreen(
             // Layer 2: UI Overlay
             PlayerOverlay(
                 state = uiState,
-                symmetryScore = symmetryScore,
+                gestureProgress = gestureProgress,
                 isMeshVisible = isMeshVisible,
                 showMeshPoints = showMeshPoints,
                 onToggleMesh = { isMeshVisible = !isMeshVisible },
@@ -98,23 +94,8 @@ fun PlayerScreen(
     }
 }
 
-private const val PLAYER_SCREEN_TAG = "PlayerScreen"
-
-/**
- * Plays a lightweight tone for the given [PlayerEvent].
- * Uses [ToneGenerator] with STREAM_MUSIC. Gracefully no-ops if audio is unavailable.
- */
-private fun playPlayerEventSound(event: PlayerEvent) {
-    try {
-        val (toneType, durationMs) = when (event) {
-            PlayerEvent.PlayTick -> ToneGenerator.TONE_PROP_BEEP to 80
-            PlayerEvent.PlayDing -> ToneGenerator.TONE_PROP_ACK to 200
-            PlayerEvent.PlaySuccess -> ToneGenerator.TONE_CDMA_CONFIRM to 400
-        }
-        val toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, ToneGenerator.MAX_VOLUME)
-        toneGen.startTone(toneType, durationMs)
-        toneGen.release()
-    } catch (e: Exception) {
-        Log.w(PLAYER_SCREEN_TAG, "Audio playback unavailable for event $event: ${e.message}")
-    }
+internal fun PlayerEvent.feedbackCue(): FeedbackCue = when (this) {
+    PlayerEvent.PlayTick -> FeedbackCue.COUNTDOWN_TICK
+    PlayerEvent.PlayDing -> FeedbackCue.REP_COMPLETED
+    PlayerEvent.PlaySuccess -> FeedbackCue.SESSION_COMPLETED
 }

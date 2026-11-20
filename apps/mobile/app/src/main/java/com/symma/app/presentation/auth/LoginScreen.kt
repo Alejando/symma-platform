@@ -44,8 +44,10 @@ fun LoginScreen(
         }
     }
 
-    LaunchedEffect(key1 = state.error) {
-        state.error?.let {
+    val errorMessage = state.errorMessageRes?.let { stringResource(it) }
+
+    LaunchedEffect(key1 = errorMessage) {
+        errorMessage?.let {
             snackbarHostState.showSnackbar(it)
         }
     }

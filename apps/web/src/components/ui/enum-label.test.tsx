@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { EnumLabel } from './enum-label';
 import { NextIntlClientProvider } from 'next-intl';
 
-// Mock useTranslations
 const mockTranslations = {
   Role: {
     ADMIN: 'Administrador',

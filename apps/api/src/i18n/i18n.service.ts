@@ -15,11 +15,12 @@ export class TranslationService {
 
   translateEnum(enumName: string, value: string) {
     const translated = this.i18n.translate(`enums.${enumName}.${value}`);
-    // nestjs-i18n returns the key if not found, we can just return it
-    // But if we want to mimic the exact behavior of returning the value if not found:
-    if (typeof translated === 'string' && translated === `enums.${enumName}.${value}`) {
+    if (
+      typeof translated === 'string' &&
+      translated === `enums.${enumName}.${value}`
+    ) {
       return value;
     }
-    return translated as string;
+    return translated;
   }
 }

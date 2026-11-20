@@ -11,6 +11,6 @@ export type ExerciseType = 'ISOTONIC' | 'ISOMETRIC' | 'MANUAL' | 'RELAXATION';
 
 export type ExerciseCategory = 'WARMUP' | 'CORE' | 'COOLDOWN';
 
-export type RoutineStatus = 'ACTIVE' | 'ARCHIVED';
+export type RoutineStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
 
 export type MobileModule = 'EYES' | 'EYES_INVERSE' | 'BROWS' | 'JAW' | 'SMILE' | 'KISS';

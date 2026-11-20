@@ -1,1 +1,23 @@
-{}
+{
+  "required": "This field is required",
+  "email": "Must be a valid email",
+  "invalidEmail": "Invalid email format",
+  "minLength": "Must be at least {min} characters",
+  "maxLength": "Must be at most {max} characters",
+  "min": "Value must be greater than or equal to {min}",
+  "max": "Value must be less than or equal to {max}",
+  "matches": "The format is not valid",
+  "password": "Password must contain at least 8 characters, one uppercase letter, one lowercase letter and one number",
+  "passwordsMatch": "Passwords do not match",
+  "date": "Must be a valid date",
+  "futureDate": "Date must be in the future",
+  "pastDate": "Date must be in the past",
+  "firstNameRequired": "First name is required",
+  "lastNameRequired": "Last name is required",
+  "emailRequired": "Email is required",
+  "dateOfBirthRequired": "Date of birth is required",
+  "phoneDigits": "Phone number must have 10 digits",
+  "keyNameRequired": "Key name is required",
+  "nameRequired": "Name is required",
+  "url": "Must be a valid URL (http or https)"
+}

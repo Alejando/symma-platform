@@ -9,6 +9,9 @@ import { JwtStrategy } from './jwt.strategy';
 import { PatientAuthService } from './patient-auth.service';
 import { MobileAuthController } from './mobile-auth.controller';
 import { PatientJwtStrategy } from './strategies/patient-jwt.strategy';
+import { AccessCodeHasher } from './access-code-hasher.service';
+import { LoginAttemptLimiter } from './login-attempt-limiter.service';
+import { RolesGuard } from './roles.guard';
 
 @Module({
   imports: [
@@ -16,14 +19,21 @@ import { PatientJwtStrategy } from './strategies/patient-jwt.strategy';
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get('JWT_SECRET') || 'super-secret',
-        signOptions: { expiresIn: '7d' }, // Longer expiry for mobile
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.getOrThrow<string>('JWT_SECRET'),
       }),
     }),
   ],
   controllers: [AuthController, MobileAuthController],
-  providers: [AuthService, JwtStrategy, PatientAuthService, PatientJwtStrategy],
-  exports: [AuthService, PatientAuthService],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    PatientAuthService,
+    PatientJwtStrategy,
+    AccessCodeHasher,
+    LoginAttemptLimiter,
+    RolesGuard,
+  ],
+  exports: [AuthService, PatientAuthService, AccessCodeHasher, RolesGuard],
 })
 export class AuthModule {}

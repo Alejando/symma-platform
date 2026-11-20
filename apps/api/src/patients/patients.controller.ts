@@ -9,6 +9,8 @@ import {
   UseGuards,
   Request,
   Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { PatientsService } from './patients.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
@@ -16,6 +18,8 @@ import { UpdatePatientDto } from './dto/update-patient.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../auth/types';
 import { RoutinesService } from '../routines/routines.service';
+import type { AccessCodeStatusResponse } from '@symma/shared-types';
+import { SearchablePaginationQueryDto } from '../common/pagination/pagination-query.dto';
 
 @Controller('patients')
 @UseGuards(JwtAuthGuard)
@@ -36,15 +40,9 @@ export class PatientsController {
   @Get()
   findAll(
     @Request() req: AuthenticatedRequest,
-    @Query('search') search?: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query() query: SearchablePaginationQueryDto,
   ) {
-    return this.patientsService.findAll(req.user.userId, {
-      search,
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? Math.min(parseInt(limit, 10), 100) : undefined,
-    });
+    return this.patientsService.findAll(req.user.userId, query);
   }
 
   @Get(':id')
@@ -70,13 +68,10 @@ export class PatientsController {
   }
 
   @Delete(':id')
-  remove(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
-    return this.patientsService.remove(req.user.userId, id);
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
+    await this.patientsService.remove(req.user.userId, id);
   }
-
-  // ============================================
-  // Access Code Management (Mobile PIN)
-  // ============================================
 
   @Post(':id/access-code')
   generateAccessCode(
@@ -87,6 +82,7 @@ export class PatientsController {
   }
 
   @Delete(':id/access-code')
+  @HttpCode(HttpStatus.NO_CONTENT)
   revokeAccessCode(
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
@@ -98,7 +94,7 @@ export class PatientsController {
   async hasAccessCode(
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
-  ) {
+  ): Promise<AccessCodeStatusResponse> {
     const hasCode = await this.patientsService.hasAccessCode(
       req.user.userId,
       id,

@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ExerciseCatalog } from '@/components/routines/exercise-catalog';
 import { RoutineBuilder, type BuilderItem } from '@/components/routines/routine-builder';
 import type { Exercise, Patient, Routine, UpdateRoutineDto } from '@symma/shared-types';
-import { MobileModule, ExerciseType } from '@symma/shared-types';
-import { getExercises, getPatient, getRoutine, updateRoutine } from '@/lib/api';
-
-import { use } from 'react';
+import { getAllExercises, getPatient, getRoutine, updateRoutine } from '@/lib/api';
+import { ErrorAlert } from '@/components/ui/error-alert';
+import { useApiErrorHandler } from '@/hooks/use-api-error-handler';
 
 export default function EditRoutinePage({
   params,
@@ -17,8 +16,8 @@ export default function EditRoutinePage({
   params: Promise<{ id: string; routineId: string }>;
 }) {
   const { id: patientId, routineId } = use(params);
-  const { data: session } = useSession();
   const router = useRouter();
+  const t = useTranslations('common');
 
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -26,25 +25,24 @@ export default function EditRoutinePage({
   const [items, setItems] = useState<BuilderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const handleApiError = useApiErrorHandler();
 
-  // Determine if routine is locked (has sessions)
   const isLocked = (routine?.sessionsCount ?? 0) > 0;
 
   useEffect(() => {
     async function fetchData() {
-      if (!session?.user?.accessToken) return;
       try {
         const [fetchedExercises, fetchedPatient, fetchedRoutine] = await Promise.all([
-          getExercises(session.user.accessToken),
-          getPatient(session.user.accessToken, patientId),
-          getRoutine(session.user.accessToken, routineId),
+          getAllExercises(),
+          getPatient(patientId),
+          getRoutine(routineId),
         ]);
         setExercises(fetchedExercises);
         setPatient(fetchedPatient);
         setRoutine(fetchedRoutine);
 
 
-        // Convert routine items to builder items
         if (fetchedRoutine.items) {
           const builderItems: BuilderItem[] = fetchedRoutine.items.map((item) => ({
             id: item.id,
@@ -60,23 +58,23 @@ export default function EditRoutinePage({
           }));
           setItems(builderItems);
         }
-      } catch (error) {
-        console.error('Failed to fetch data:', error);
+      } catch (fetchError) {
+        setError(handleApiError(fetchError));
       } finally {
         setLoading(false);
       }
     }
     fetchData();
-  }, [session?.user?.accessToken, patientId, routineId]);
+  }, [patientId, routineId, handleApiError]);
 
   const handleAddExercise = (exercise: Exercise) => {
-    if (isLocked) return; // Block adding exercises if locked
+    if (isLocked) return;
     const newItem: BuilderItem = {
       id: crypto.randomUUID(),
       exercise,
       sets: 3,
       repsPerSet: 10,
-      targetHoldSeconds: 5, // Keep existing fallback logic
+      targetHoldSeconds: 5,
       restBetweenSets: 60,
       difficultyLevel: 1.0,
       strictMode: false,
@@ -87,13 +85,13 @@ export default function EditRoutinePage({
   };
 
   const handleSubmit = async (data: UpdateRoutineDto) => {
-    if (!session?.user?.accessToken) return;
     setSaving(true);
+    setError(null);
     try {
-      await updateRoutine(session.user.accessToken, routineId, data);
+      await updateRoutine(routineId, data);
       router.push(`/dashboard/patients/${patientId}/routines`);
-    } catch (error) {
-      console.error('Failed to update routine:', error);
+    } catch (saveError) {
+      setError(handleApiError(saveError));
     } finally {
       setSaving(false);
     }
@@ -102,7 +100,7 @@ export default function EditRoutinePage({
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0d9488]"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -110,29 +108,37 @@ export default function EditRoutinePage({
   const patientsList = patient ? [patient] : [];
 
   return (
-    <div className="flex bg-white h-[calc(100vh-140px)] border border-[#e7f3f2] rounded-xl overflow-hidden">
-      {/* Exercise Catalog Sidebar - hidden when locked */}
-      {!isLocked && (
-        <ExerciseCatalog
-          exercises={exercises}
-          onAddExercise={handleAddExercise}
-        />
+    <div className="flex flex-col gap-4">
+      <ErrorAlert message={error} />
+      {routine?.status === 'DRAFT' && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {t('routines.draftNotice')}
+        </p>
       )}
+      <div className="flex bg-white h-[calc(100vh-140px)] border border-[#e7f3f2] rounded-xl overflow-hidden">
+        {/* Exercise Catalog Sidebar - hidden when locked */}
+        {!isLocked && (
+          <ExerciseCatalog
+            exercises={exercises}
+            onAddExercise={handleAddExercise}
+          />
+        )}
 
-      {/* Main Builder Area */}
-      <div className="flex-1 min-w-0">
-        <RoutineBuilder
-          patients={patientsList}
-          preSelectedPatientId={patientId}
-          items={items}
-          onItemsChange={setItems}
-          onSubmit={handleSubmit}
-          loading={saving}
-          onCancel={() => router.push(`/dashboard/patients/${patientId}/routines`)}
-          mode="edit"
-          initialData={routine || undefined}
-          isLocked={isLocked}
-        />
+        {/* Main Builder Area */}
+        <div className="flex-1 min-w-0">
+          <RoutineBuilder
+            patients={patientsList}
+            preSelectedPatientId={patientId}
+            items={items}
+            onItemsChange={setItems}
+            onSubmit={handleSubmit}
+            loading={saving}
+            onCancel={() => router.push(`/dashboard/patients/${patientId}/routines`)}
+            mode="edit"
+            initialData={routine || undefined}
+            isLocked={isLocked}
+          />
+        </div>
       </div>
     </div>
   );

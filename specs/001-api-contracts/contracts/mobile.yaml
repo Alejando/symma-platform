@@ -1,7 +1,8 @@
 openapi: 3.0.3
 info:
   title: Symma API — Mobile Contracts
-  version: 1.0.0
+  version: 1.1.0
+  description: Every endpoint requires a patient JWT.
 
 paths:
   /mobile/routine/active:
@@ -13,15 +14,65 @@ paths:
         - bearerAuth: []
       responses:
         '200':
-          description: Returns full routine with exercises, or null if none active
+          description: >
+            The patient's only ACTIVE routine with its exercises. The body is empty when the patient
+            has no ACTIVE routine; DRAFT and ARCHIVED routines are never returned.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ActiveRoutineResponse'
-        '204':
-          description: No active routine found
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+
+  /mobile/snapshots/upload-url:
+    post:
+      tags: [Mobile]
+      operationId: createSnapshotUploadUrl
+      summary: Presigned URL to upload the best-attempt snapshot of an exercise
+      description: >
+        PUT the JPEG to uploadUrl with header Content-Type image/jpeg, then send snapshotKey in the
+        session item. A failed snapshot must never block session sync.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnapshotUploadUrlRequest'
+      responses:
+        '201':
+          description: Upload URL issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapshotUploadUrlResponse'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          description: The session id belongs to another patient
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/ApiError'
+        '404':
+          description: Unknown exercise
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/ApiError'
+        '503':
+          $ref: './common.yaml#/components/responses/ServiceUnavailable'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     ActiveRoutineExerciseResponse:
       type: object
@@ -103,3 +154,32 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ActiveRoutineItemResponse'
+
+    SnapshotUploadUrlRequest:
+      type: object
+      required: [sessionId, exerciseId, contentType]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+          description: Client-generated id of the session being recorded
+        exerciseId:
+          type: string
+          format: uuid
+        contentType:
+          type: string
+          enum: [image/jpeg]
+
+    SnapshotUploadUrlResponse:
+      type: object
+      required: [uploadUrl, snapshotKey, expiresInSeconds]
+      properties:
+        uploadUrl:
+          type: string
+          format: uri
+        snapshotKey:
+          type: string
+          description: snapshots/{patientId}/{sessionId}/{exerciseId}.jpg
+        expiresInSeconds:
+          type: integer
+          example: 300

@@ -1,165 +1,162 @@
+import { randomUUID } from 'crypto';
+import type { Exercise, Routine } from '@prisma/client';
 import {
-  ForbiddenException,
-  INestApplication,
-  NotFoundException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
-import { Test, TestingModule } from '@nestjs/testing';
-import request from 'supertest';
-import type { App } from 'supertest/types';
-import { AnalyticsController } from '../src/analytics/analytics.controller';
-import { JwtStrategy } from '../src/auth/jwt.strategy';
-import { PrismaService } from '../src/prisma/prisma.service';
-import { SessionsController } from '../src/sessions/sessions.controller';
-import { SessionsService } from '../src/sessions/sessions.service';
+  bearer,
+  Fixtures,
+  PatientCredentials,
+  TherapistFixture,
+} from './support/fixtures';
+import { createTestApp, TestApp } from './support/test-app';
 
-describe('Sessions & Analytics (e2e)', () => {
-  let app: INestApplication<App>;
-  const jwtService = new JwtService({ secret: 'test-secret' });
+describe('Sessions (e2e)', () => {
+  let testApp: TestApp;
+  let fixtures: Fixtures;
+  let owner: TherapistFixture;
+  let otherTherapist: TherapistFixture;
+  let exercise: Exercise;
+  let routine: Routine;
+  let foreignRoutine: Routine;
+  let patient: PatientCredentials;
+  let foreignPatient: PatientCredentials;
 
-  const createAuthToken = () =>
-    jwtService.sign({
-      sub: 'therapist-1',
-      email: 'therapist@example.com',
-      role: 'THERAPIST',
-    });
-
-  const sessionsServiceMock = {
-    create: jest.fn(),
-    findOne: jest.fn(),
-  };
-
-  const prismaMock = {
-    routine: {
-      findUnique: jest.fn(),
-    },
-    session: {
-      findMany: jest.fn(),
-    },
-  };
-
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [PassportModule],
-      controllers: [SessionsController, AnalyticsController],
-      providers: [
-        {
-          provide: SessionsService,
-          useValue: sessionsServiceMock,
-        },
-        {
-          provide: PrismaService,
-          useValue: prismaMock,
-        },
-        JwtStrategy,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: (key: string) =>
-              key === 'JWT_SECRET' ? 'test-secret' : undefined,
-          },
-        },
-      ],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
+  const sessionBody = (routineId: string, id: string = randomUUID()) => ({
+    id,
+    routineId,
+    startTime: '2026-03-01T10:00:00.000Z',
+    endTime: '2026-03-01T10:15:00.000Z',
+    items: [
+      { exerciseId: exercise.id, repsCompleted: 10, averageAccuracy: 80 },
+    ],
   });
 
-  afterEach(async () => {
-    jest.clearAllMocks();
-    await app.close();
-  });
+  beforeAll(async () => {
+    testApp = await createTestApp();
+    fixtures = new Fixtures(testApp);
+    owner = await fixtures.therapist();
+    otherTherapist = await fixtures.therapist();
+    exercise = await fixtures.exercise();
 
-  it('GET /sessions/:id returns 200 for valid therapist access', async () => {
-    sessionsServiceMock.findOne.mockResolvedValue({
-      id: 'session-1',
-      routineId: 'routine-1',
-      date: '2026-02-22T10:00:00.000Z',
-      durationSeconds: 900,
-      score: 85,
-      isSynced: true,
-      createdAt: '2026-02-22T10:15:00.000Z',
-      items: [
-        {
-          id: 'item-1',
-          sessionId: 'session-1',
-          exerciseId: 'exercise-1',
-          exerciseName: 'Smile Stretch',
-          repsCompleted: 10,
-          difficulty: 1,
-          averageAccuracy: 88.5,
-          seriesData: { reps: [82, 85, 90] },
-        },
-      ],
-      navigation: {
-        previousSessionId: null,
-        nextSessionId: null,
-      },
-    });
+    const ownPatient = await fixtures.patient(owner.therapist.id);
+    routine = await fixtures.routine(ownPatient.id, [exercise.id]);
+    patient = await fixtures.patientCredentials(owner.token, ownPatient.id);
 
-    const response = await request(app.getHttpServer())
-      .get('/sessions/session-1')
-      .set('Authorization', `Bearer ${createAuthToken()}`)
-      .expect(200);
-
-    expect(response.body).toMatchObject({
-      id: 'session-1',
-      items: [{ exerciseName: 'Smile Stretch' }],
-    });
-  });
-
-  it('GET /sessions/:id returns 401 when auth token is missing', async () => {
-    await request(app.getHttpServer()).get('/sessions/session-1').expect(401);
-  });
-
-  it('GET /sessions/:id returns 404 for missing session', async () => {
-    sessionsServiceMock.findOne.mockRejectedValue(
-      new NotFoundException('Session not found'),
+    const otherPatient = await fixtures.patient(owner.therapist.id);
+    foreignRoutine = await fixtures.routine(otherPatient.id, [exercise.id]);
+    foreignPatient = await fixtures.patientCredentials(
+      owner.token,
+      otherPatient.id,
     );
-
-    await request(app.getHttpServer())
-      .get('/sessions/missing')
-      .set('Authorization', `Bearer ${createAuthToken()}`)
-      .expect(404);
   });
 
-  it('GET /sessions/:id returns 403 for unauthorized therapist', async () => {
-    sessionsServiceMock.findOne.mockRejectedValue(
-      new ForbiddenException('Forbidden'),
-    );
-
-    await request(app.getHttpServer())
-      .get('/sessions/foreign')
-      .set('Authorization', `Bearer ${createAuthToken()}`)
-      .expect(403);
+  afterAll(async () => {
+    await fixtures.cleanup();
+    await testApp.app.close();
   });
 
-  it('GET /routines/:id/history returns enriched items array', async () => {
-    prismaMock.routine.findUnique.mockResolvedValue({ id: 'routine-1' });
-    prismaMock.session.findMany.mockResolvedValue([
-      {
-        id: 'session-1',
-        date: new Date('2026-02-22T10:00:00.000Z'),
-        durationSeconds: 900,
-        score: 0.85,
-        isSynced: true,
-        items: [{ exerciseId: 'exercise-1', averageAccuracy: 88.5 }],
-      },
-    ]);
+  describe('POST /sessions ownership', () => {
+    it('answers 403 when the routine belongs to another patient', async () => {
+      await fixtures.http
+        .post('/api/v1/sessions')
+        .set(...bearer(patient.token))
+        .send(sessionBody(foreignRoutine.id))
+        .expect(403);
 
-    const response = await request(app.getHttpServer())
-      .get('/routines/routine-1/history')
-      .expect(200);
-
-    expect(response.body).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          items: [{ exerciseId: 'exercise-1', averageAccuracy: 88.5 }],
+      expect(
+        await testApp.prisma.session.count({
+          where: { routineId: foreignRoutine.id },
         }),
-      ]),
-    );
+      ).toBe(0);
+    });
+
+    it("answers 403 when replaying another patient's session id", async () => {
+      const foreignSessionId = randomUUID();
+      await fixtures.http
+        .post('/api/v1/sessions')
+        .set(...bearer(foreignPatient.token))
+        .send(sessionBody(foreignRoutine.id, foreignSessionId))
+        .expect(201);
+
+      const response = await fixtures.http
+        .post('/api/v1/sessions')
+        .set(...bearer(patient.token))
+        .send(sessionBody(routine.id, foreignSessionId))
+        .expect(403);
+
+      expect(JSON.stringify(response.body)).not.toContain(foreignRoutine.id);
+    });
+
+    it('answers 201 for a session on the patient own routine', async () => {
+      await fixtures.http
+        .post('/api/v1/sessions')
+        .set(...bearer(patient.token))
+        .send(sessionBody(routine.id))
+        .expect(201);
+    });
+
+    it('answers 409 for an archived routine', async () => {
+      const archived = await fixtures.routine(
+        routine.patientId,
+        [exercise.id],
+        {
+          status: 'ARCHIVED',
+        },
+      );
+      await fixtures.http
+        .post('/api/v1/sessions')
+        .set(...bearer(patient.token))
+        .send(sessionBody(archived.id))
+        .expect(409);
+    });
+
+    it('answers 401 with a therapist token', async () => {
+      await fixtures.http
+        .post('/api/v1/sessions')
+        .set(...bearer(owner.token))
+        .send(sessionBody(routine.id))
+        .expect(401);
+    });
+  });
+
+  describe('GET /sessions/:id', () => {
+    let sessionId: string;
+
+    beforeAll(async () => {
+      sessionId = randomUUID();
+      await fixtures.http
+        .post('/api/v1/sessions')
+        .set(...bearer(patient.token))
+        .send(sessionBody(routine.id, sessionId))
+        .expect(201);
+    });
+
+    it('answers 200 with items to the owning therapist', async () => {
+      const response = await fixtures.http
+        .get(`/api/v1/sessions/${sessionId}`)
+        .set(...bearer(owner.token))
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        id: sessionId,
+        items: [{ exerciseName: exercise.name, repsCompleted: 10 }],
+      });
+    });
+
+    it('answers 401 without a token', async () => {
+      await fixtures.http.get(`/api/v1/sessions/${sessionId}`).expect(401);
+    });
+
+    it('answers 404 for an unknown session', async () => {
+      await fixtures.http
+        .get(`/api/v1/sessions/${randomUUID()}`)
+        .set(...bearer(owner.token))
+        .expect(404);
+    });
+
+    it("answers 403 with another therapist's token", async () => {
+      await fixtures.http
+        .get(`/api/v1/sessions/${sessionId}`)
+        .set(...bearer(otherTherapist.token))
+        .expect(403);
+    });
   });
 });

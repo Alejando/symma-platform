@@ -32,19 +32,21 @@ describe('TranslationService', () => {
   it('should call i18n.translate with the correct key and args', () => {
     const key = 'common.hello';
     const args = { name: 'World' };
-    
+
     const result = service.translate(key, args);
-    
+
     expect(i18nService.translate).toHaveBeenCalledWith(key, { args });
     expect(result).toBe('translated text');
   });
 
   it('should prepend errors. prefix for translateError', () => {
     const key = 'server.internalError';
-    
+
     const result = service.translateError(key);
-    
-    expect(i18nService.translate).toHaveBeenCalledWith(`errors.${key}`, { args: undefined });
+
+    expect(i18nService.translate).toHaveBeenCalledWith(`errors.${key}`, {
+      args: undefined,
+    });
     expect(result).toBe('translated text');
   });
 

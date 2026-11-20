@@ -61,3 +61,6 @@ export interface RoutineResponse {
   items?: RoutineItemResponse[];
   sessionsCount?: number;        // int, computed
 }
+
+/** POST /routines/:id/activate — the activated routine; the patient's previous ACTIVE routine is archived. */
+export type ActivateRoutineResponse = RoutineResponse;

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { createHmac } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -164,20 +165,20 @@ async function main(): Promise<void> {
   });
 
   const sessions1: { date: string; score: number; dur: number }[] = [
-    { date: '2026-01-16', score: 0.42, dur: 900 },
-    { date: '2026-01-18', score: 0.45, dur: 930 },
-    { date: '2026-01-20', score: 0.48, dur: 960 },
-    { date: '2026-01-22', score: 0.51, dur: 990 },
-    { date: '2026-01-25', score: 0.55, dur: 1020 },
-    { date: '2026-01-27', score: 0.57, dur: 1050 },
-    { date: '2026-01-29', score: 0.60, dur: 1080 },
-    { date: '2026-02-01', score: 0.63, dur: 1110 },
-    { date: '2026-02-03', score: 0.66, dur: 1140 },
-    { date: '2026-02-05', score: 0.68, dur: 1170 },
-    { date: '2026-02-08', score: 0.71, dur: 1200 },
-    { date: '2026-02-10', score: 0.73, dur: 1230 },
-    { date: '2026-02-12', score: 0.76, dur: 1260 },
-    { date: '2026-02-15', score: 0.79, dur: 1290 },
+    { date: '2026-01-16', score: 42, dur: 900 },
+    { date: '2026-01-18', score: 45, dur: 930 },
+    { date: '2026-01-20', score: 48, dur: 960 },
+    { date: '2026-01-22', score: 51, dur: 990 },
+    { date: '2026-01-25', score: 55, dur: 1020 },
+    { date: '2026-01-27', score: 57, dur: 1050 },
+    { date: '2026-01-29', score: 60, dur: 1080 },
+    { date: '2026-02-01', score: 63, dur: 1110 },
+    { date: '2026-02-03', score: 66, dur: 1140 },
+    { date: '2026-02-05', score: 68, dur: 1170 },
+    { date: '2026-02-08', score: 71, dur: 1200 },
+    { date: '2026-02-10', score: 73, dur: 1230 },
+    { date: '2026-02-12', score: 76, dur: 1260 },
+    { date: '2026-02-15', score: 79, dur: 1290 },
   ];
 
   for (const s of sessions1) {
@@ -191,11 +192,11 @@ async function main(): Promise<void> {
         isSynced: true,
         items: {
           create: [
-            { exerciseId: exEyes.id,  repsCompleted: 8,  averageAccuracy: Math.max(0, acc - 0.05) },
+            { exerciseId: exEyes.id,  repsCompleted: 8,  averageAccuracy: Math.max(0, acc - 5) },
             { exerciseId: exBrows.id, repsCompleted: 10, averageAccuracy: acc },
-            { exerciseId: exSmile.id, repsCompleted: 10, averageAccuracy: Math.min(1, acc + 0.02) },
-            { exerciseId: exKiss.id,  repsCompleted: 8,  averageAccuracy: Math.max(0, acc - 0.03) },
-            { exerciseId: exJaw.id,   repsCompleted: 5,  averageAccuracy: Math.min(1, acc + 0.05) },
+            { exerciseId: exSmile.id, repsCompleted: 10, averageAccuracy: Math.min(100, acc + 2) },
+            { exerciseId: exKiss.id,  repsCompleted: 8,  averageAccuracy: Math.max(0, acc - 3) },
+            { exerciseId: exJaw.id,   repsCompleted: 5,  averageAccuracy: Math.min(100, acc + 5) },
           ],
         },
       },
@@ -239,9 +240,9 @@ async function main(): Promise<void> {
   });
 
   const sessions2: { date: string; score: number; dur: number }[] = [
-    { date: '2026-02-03', score: 0.18, dur: 600 },
-    { date: '2026-02-10', score: 0.22, dur: 620 },
-    { date: '2026-02-20', score: 0.25, dur: 640 },
+    { date: '2026-02-03', score: 18, dur: 600 },
+    { date: '2026-02-10', score: 22, dur: 620 },
+    { date: '2026-02-20', score: 25, dur: 640 },
   ];
 
   for (const s of sessions2) {
@@ -255,9 +256,9 @@ async function main(): Promise<void> {
         isSynced: true,
         items: {
           create: [
-            { exerciseId: exEyes.id,  repsCompleted: 5, averageAccuracy: Math.max(0, acc - 0.02) },
+            { exerciseId: exEyes.id,  repsCompleted: 5, averageAccuracy: Math.max(0, acc - 2) },
             { exerciseId: exBrows.id, repsCompleted: 4, averageAccuracy: acc },
-            { exerciseId: exSmile.id, repsCompleted: 3, averageAccuracy: Math.min(1, acc + 0.03) },
+            { exerciseId: exSmile.id, repsCompleted: 3, averageAccuracy: Math.min(100, acc + 3) },
           ],
         },
       },
@@ -304,24 +305,24 @@ async function main(): Promise<void> {
   });
 
   const sessions3: { date: string; score: number; dur: number }[] = [
-    { date: '2025-12-02', score: 0.35, dur: 1200 },
-    { date: '2025-12-04', score: 0.40, dur: 1220 },
-    { date: '2025-12-06', score: 0.44, dur: 1240 },
-    { date: '2025-12-08', score: 0.48, dur: 1260 },
-    { date: '2025-12-10', score: 0.53, dur: 1280 },
-    { date: '2025-12-12', score: 0.57, dur: 1300 },
-    { date: '2025-12-14', score: 0.61, dur: 1320 },
-    { date: '2025-12-16', score: 0.64, dur: 1340 },
-    { date: '2025-12-18', score: 0.67, dur: 1360 },
-    { date: '2025-12-20', score: 0.70, dur: 1380 },
-    { date: '2025-12-22', score: 0.72, dur: 1400 },
-    { date: '2025-12-25', score: 0.75, dur: 1420 },
-    { date: '2025-12-27', score: 0.77, dur: 1440 },
-    { date: '2025-12-29', score: 0.79, dur: 1460 },
-    { date: '2026-01-02', score: 0.81, dur: 1480 },
-    { date: '2026-01-05', score: 0.83, dur: 1500 },
-    { date: '2026-01-08', score: 0.85, dur: 1520 },
-    { date: '2026-01-11', score: 0.87, dur: 1540 },
+    { date: '2025-12-02', score: 35, dur: 1200 },
+    { date: '2025-12-04', score: 40, dur: 1220 },
+    { date: '2025-12-06', score: 44, dur: 1240 },
+    { date: '2025-12-08', score: 48, dur: 1260 },
+    { date: '2025-12-10', score: 53, dur: 1280 },
+    { date: '2025-12-12', score: 57, dur: 1300 },
+    { date: '2025-12-14', score: 61, dur: 1320 },
+    { date: '2025-12-16', score: 64, dur: 1340 },
+    { date: '2025-12-18', score: 67, dur: 1360 },
+    { date: '2025-12-20', score: 70, dur: 1380 },
+    { date: '2025-12-22', score: 72, dur: 1400 },
+    { date: '2025-12-25', score: 75, dur: 1420 },
+    { date: '2025-12-27', score: 77, dur: 1440 },
+    { date: '2025-12-29', score: 79, dur: 1460 },
+    { date: '2026-01-02', score: 81, dur: 1480 },
+    { date: '2026-01-05', score: 83, dur: 1500 },
+    { date: '2026-01-08', score: 85, dur: 1520 },
+    { date: '2026-01-11', score: 87, dur: 1540 },
   ];
 
   for (const s of sessions3) {
@@ -335,12 +336,12 @@ async function main(): Promise<void> {
         isSynced: true,
         items: {
           create: [
-            { exerciseId: exEyesInverse.id, repsCompleted: 12, averageAccuracy: Math.max(0, acc - 0.04) },
-            { exerciseId: exEyes.id,        repsCompleted: 12, averageAccuracy: Math.max(0, acc - 0.02) },
+            { exerciseId: exEyesInverse.id, repsCompleted: 12, averageAccuracy: Math.max(0, acc - 4) },
+            { exerciseId: exEyes.id,        repsCompleted: 12, averageAccuracy: Math.max(0, acc - 2) },
             { exerciseId: exBrows.id,       repsCompleted: 12, averageAccuracy: acc },
-            { exerciseId: exSmile.id,       repsCompleted: 12, averageAccuracy: Math.min(1, acc + 0.02) },
+            { exerciseId: exSmile.id,       repsCompleted: 12, averageAccuracy: Math.min(100, acc + 2) },
             { exerciseId: exKiss.id,        repsCompleted: 10, averageAccuracy: acc },
-            { exerciseId: exJaw.id,         repsCompleted: 8,  averageAccuracy: Math.min(1, acc + 0.04) },
+            { exerciseId: exJaw.id,         repsCompleted: 8,  averageAccuracy: Math.min(100, acc + 4) },
           ],
         },
       },
@@ -387,12 +388,12 @@ async function main(): Promise<void> {
       routineId: routine4.id,
       date: new Date('2026-01-12'),
       durationSeconds: 480,
-      score: 0.35,
+      score: 35,
       isSynced: true,
       items: {
         create: [
-          { exerciseId: exSmile.id, repsCompleted: 6, averageAccuracy: 0.33 },
-          { exerciseId: exBrows.id, repsCompleted: 5, averageAccuracy: 0.37 },
+          { exerciseId: exSmile.id, repsCompleted: 6, averageAccuracy: 33 },
+          { exerciseId: exBrows.id, repsCompleted: 5, averageAccuracy: 37 },
         ],
       },
     },
@@ -403,19 +404,23 @@ async function main(): Promise<void> {
       routineId: routine4.id,
       date: new Date('2026-01-15'),
       durationSeconds: 510,
-      score: 0.38,
+      score: 38,
       isSynced: true,
       items: {
         create: [
-          { exerciseId: exSmile.id, repsCompleted: 7, averageAccuracy: 0.36 },
-          { exerciseId: exBrows.id, repsCompleted: 6, averageAccuracy: 0.40 },
+          { exerciseId: exSmile.id, repsCompleted: 7, averageAccuracy: 36 },
+          { exerciseId: exBrows.id, repsCompleted: 6, averageAccuracy: 40 },
         ],
       },
     },
   });
 
   // --- Patient 5: Paciente demo para app móvil (código de acceso: 123456)
-  const accessCodeHash = await bcrypt.hash('123456', 10);
+  const pinHmacSecret = process.env.PIN_HMAC_SECRET;
+  if (!pinHmacSecret) {
+    throw new Error('PIN_HMAC_SECRET must match the API to seed the demo access code');
+  }
+  const accessCodeHash = createHmac('sha256', pinHmacSecret).update('123456').digest('hex');
   await prisma.patient.create({
     data: {
       therapistId: therapist.id,

@@ -3,13 +3,19 @@
     "unauthorized": "No autorizado",
     "forbidden": "No tienes permisos para realizar esta acción",
     "tokenExpired": "Tu sesión ha expirado, por favor inicia sesión nuevamente",
-    "invalidCredentials": "Credenciales inválidas"
+    "invalidCredentials": "Credenciales inválidas",
+    "invalidAccessCode": "Código de acceso inválido",
+    "tooManyAttempts": "Demasiados intentos fallidos. Intenta de nuevo en 15 minutos.",
+    "userNotFound": "Usuario no encontrado"
   },
   "server": {
     "internalError": "Error interno del servidor",
     "badRequest": "Solicitud incorrecta",
     "notFound": "Recurso no encontrado",
-    "timeout": "Tiempo de espera agotado"
+    "timeout": "Tiempo de espera agotado",
+    "conflict": "La operación entra en conflicto con el estado actual del recurso",
+    "tooManyRequests": "Demasiadas solicitudes, intenta más tarde",
+    "unavailable": "Servicio no disponible temporalmente"
   },
   "database": {
     "uniqueConstraint": "Este registro ya existe",
@@ -18,5 +24,51 @@
   "network": {
     "offline": "No hay conexión a internet",
     "syncFailed": "Error al sincronizar datos"
+  },
+  "generic": "Ha ocurrido un error. Por favor intenta de nuevo.",
+  "patients": {
+    "notFound": "Paciente no encontrado",
+    "accessCodeExhausted": "No se pudo generar un código de acceso único, intenta de nuevo"
+  },
+  "routines": {
+    "notFound": "Rutina no encontrada",
+    "invalidDateRange": "La fecha de inicio debe ser anterior a la fecha de fin",
+    "itemsLocked": "No se pueden cambiar los ejercicios de una rutina con sesiones registradas; clónala para hacer cambios"
+  },
+  "exercises": {
+    "notFound": "Ejercicio no encontrado",
+    "inUse": "El ejercicio se usa en {routines} rutina(s) activa(s) y no se puede modificar ni eliminar"
+  },
+  "sessions": {
+    "notFound": "Sesión no encontrada",
+    "forbidden": "No tienes acceso a esta sesión",
+    "routineForbidden": "La rutina no pertenece a este paciente",
+    "routineNotActive": "La rutina no está activa; solo se pueden registrar sesiones en la rutina activa",
+    "unknownExercise": "La sesión incluye un ejercicio que no existe",
+    "invalidSnapshotKey": "La captura no corresponde a esta sesión"
+  },
+  "storage": {
+    "unavailable": "El almacenamiento de imágenes no está configurado"
+  },
+  "validation": {
+    "required": "El campo {property} es obligatorio",
+    "string": "{property} debe ser texto",
+    "integer": "{property} debe ser un número entero",
+    "number": "{property} debe ser un número",
+    "outOfRange": "{property} está fuera del rango permitido",
+    "uuid": "{property} debe ser un UUID válido",
+    "date": "{property} debe ser una fecha válida (ISO 8601)",
+    "email": "{property} debe ser un correo electrónico válido",
+    "oneOf": "{property} no es un valor permitido",
+    "url": "{property} debe ser una URL válida",
+    "format": "{property} no tiene el formato correcto",
+    "length": "{property} no tiene la longitud permitida",
+    "boolean": "{property} debe ser verdadero o falso",
+    "array": "{property} debe ser una lista",
+    "minItems": "{property} no tiene suficientes elementos",
+    "object": "{property} debe ser un objeto",
+    "numberMap": "{property} debe asociar nombres a números",
+    "notBefore": "{property} no puede ser anterior a la hora de inicio",
+    "invalid": "{property} no es válido"
   }
 }

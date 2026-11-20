@@ -46,10 +46,12 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
+import java.time.LocalTime
+import androidx.compose.ui.platform.LocalConfiguration
 
 @Composable
 fun HomeScreen(
-    onNavigateToSession: () -> Unit = {},
+    onNavigateToSession: (String) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -73,11 +75,11 @@ fun HomeScreen(
                 is HomeUiState.Loading -> LoadingCard()
                 is HomeUiState.Content -> RoutineCard(
                     routine = state.routine,
-                    onStartSession = onNavigateToSession
+                    onStartSession = { onNavigateToSession(state.routine.id) }
                 )
                 is HomeUiState.Empty -> EmptyCard(onRetry = viewModel::refreshRoutine)
                 is HomeUiState.Error -> ErrorCard(
-                    message = state.message,
+                    message = stringResource(R.string.home_sync_error_desc),
                     onRetry = viewModel::refreshRoutine
                 )
             }
@@ -97,12 +99,13 @@ fun HomeScreen(
 @Composable
 private fun HomeHeader() {
     val today = LocalDate.now()
-    val greeting = when (today.atStartOfDay().hour) {
+    val locale = LocalConfiguration.current.locales[0]
+    val greeting = when (LocalTime.now().hour) {
         in 0..11 -> stringResource(R.string.home_greeting_morning)
         in 12..17 -> stringResource(R.string.home_greeting_afternoon)
         else -> stringResource(R.string.home_greeting_evening)
     }
-    val dateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale("es", "ES"))
+    val dateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", locale)
 
     Column {
         Text(
@@ -112,7 +115,7 @@ private fun HomeHeader() {
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
-            text = today.format(dateFormatter).replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("es", "ES")) else it.toString() },
+            text = today.format(dateFormatter).replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() },
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

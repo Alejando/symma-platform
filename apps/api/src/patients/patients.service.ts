@@ -1,26 +1,41 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import type {
+  AccessCodeResponse,
   PaginatedResponse,
   PatientResponse,
-  PatientStatus,
 } from '@symma/shared-types';
-import * as crypto from 'crypto';
+import { AccessCodeHasher } from '../auth/access-code-hasher.service';
+import { generateAccessCode } from '../auth/access-code';
+import { type PublicPatient, toPatientResponse } from './patient-response';
+
+const MAX_ACCESS_CODE_GENERATION_ATTEMPTS = 20;
 
 @Injectable()
 export class PatientsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accessCodeHasher: AccessCodeHasher,
+  ) {}
 
-  async create(therapistId: string, createPatientDto: CreatePatientDto) {
-    return this.prisma.patient.create({
+  async create(
+    therapistId: string,
+    createPatientDto: CreatePatientDto,
+  ): Promise<PatientResponse> {
+    const patient = await this.prisma.patient.create({
       data: {
         ...createPatientDto,
         dateOfBirth: new Date(createPatientDto.dateOfBirth),
         therapistId,
       },
     });
+    return toPatientResponse(patient);
   }
 
   async findAll(
@@ -53,169 +68,118 @@ export class PatientsService {
     ]);
 
     return {
-      data: data.map((p) => this.toPatientResponse(p)),
+      data: data.map((p) => toPatientResponse(p)),
       total,
       page,
       limit,
     };
   }
 
-  private toPatientResponse(patient: {
-    id: string;
-    therapistId: string;
-    firstName: string;
-    lastName: string;
-    dateOfBirth: Date | null;
-    gender: string | null;
-    phoneNumber: string | null;
-    email: string | null;
-    status: string;
-    diagnosis: string | null;
-    initialParalysisDegree: number | null;
-    clinicalNotes: string | null;
-    emergencyContactName: string | null;
-    emergencyContactPhone: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }): PatientResponse {
-    return {
-      id: patient.id,
-      therapistId: patient.therapistId,
-      firstName: patient.firstName,
-      lastName: patient.lastName,
-      dateOfBirth: patient.dateOfBirth?.toISOString().split('T')[0] ?? null,
-      gender: patient.gender as PatientResponse['gender'],
-      phoneNumber: patient.phoneNumber,
-      email: patient.email,
-      status: patient.status as PatientResponse['status'],
-      diagnosis: patient.diagnosis,
-      initialParalysisDegree: patient.initialParalysisDegree,
-      clinicalNotes: patient.clinicalNotes,
-      emergencyContactName: patient.emergencyContactName,
-      emergencyContactPhone: patient.emergencyContactPhone,
-      createdAt: patient.createdAt.toISOString(),
-      updatedAt: patient.updatedAt.toISOString(),
-    };
-  }
-
-  async findOne(therapistId: string, id: string) {
-    const patient = await this.prisma.patient.findFirst({
-      where: {
-        id,
-        therapistId,
-      },
-    });
-
-    if (!patient) {
-      throw new NotFoundException('Patient not found');
-    }
-
-    return patient;
+  async findOne(therapistId: string, id: string): Promise<PatientResponse> {
+    return toPatientResponse(await this.findOwnedPatient(therapistId, id));
   }
 
   async update(
     therapistId: string,
     id: string,
     updatePatientDto: UpdatePatientDto,
-  ) {
-    // First verify ownership
-    await this.findOne(therapistId, id);
+  ): Promise<PatientResponse> {
+    await this.findOwnedPatient(therapistId, id);
 
-    // Handle date conversion if present
-    const data: Record<string, unknown> = { ...updatePatientDto };
-    if ('dateOfBirth' in updatePatientDto && updatePatientDto.dateOfBirth) {
-      data.dateOfBirth = new Date(updatePatientDto.dateOfBirth);
-    }
-
-    return this.prisma.patient.update({
+    const { dateOfBirth, ...fields } = updatePatientDto;
+    const patient = await this.prisma.patient.update({
       where: { id },
-      data,
+      data: {
+        ...fields,
+        ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
+      },
     });
+    return toPatientResponse(patient);
   }
 
-  async remove(therapistId: string, id: string) {
-    // First verify ownership
-    await this.findOne(therapistId, id);
+  async remove(therapistId: string, id: string): Promise<PatientResponse> {
+    await this.findOwnedPatient(therapistId, id);
 
-    // Soft delete - set status to ARCHIVED
-    return this.prisma.patient.update({
+    const patient = await this.prisma.patient.update({
       where: { id },
-      data: { status: 'ARCHIVED' as PatientStatus },
+      data: { status: 'ARCHIVED' },
     });
+    return toPatientResponse(patient);
   }
 
-  /**
-   * Generate a 6-digit access PIN for patient mobile login.
-   * Uses SHA-256 for deterministic lookup + Bcrypt for legacy support.
-   */
+  /** The plain PIN is returned only here, once; only its HMAC is stored. */
   async generateAccessCode(
     therapistId: string,
     patientId: string,
-  ): Promise<{ accessCode: string }> {
-    // Verify ownership
-    await this.findOne(therapistId, patientId);
+  ): Promise<AccessCodeResponse> {
+    await this.findOwnedPatient(therapistId, patientId);
 
-    let accessCode = '';
-    let accessCodeHash = '';
-    let isUnique = false;
-
-    // Retry loop to ensure uniqueness
-    while (!isUnique) {
-      accessCode = Math.floor(100000 + Math.random() * 900000).toString();
-      accessCodeHash = crypto
-        .createHash('sha256')
-        .update(accessCode)
-        .digest('hex');
-
-      // Check for collision
-      const existing = await this.prisma.patient.findUnique({
+    for (
+      let attempt = 0;
+      attempt < MAX_ACCESS_CODE_GENERATION_ATTEMPTS;
+      attempt++
+    ) {
+      const accessCode = generateAccessCode();
+      const accessCodeHash = this.accessCodeHasher.hash(accessCode);
+      const collision = await this.prisma.patient.findUnique({
         where: { accessCodeHash },
+        select: { id: true },
       });
 
-      if (!existing) {
-        isUnique = true;
+      if (!collision) {
+        await this.prisma.patient.update({
+          where: { id: patientId },
+          data: { accessCodeHash },
+        });
+        return { accessCode, patientId };
       }
     }
 
-    // Update patient with access code hash
-    await this.prisma.patient.update({
-      where: { id: patientId },
-      data: {
-        accessCodeHash,
-      },
-    });
-
-    // Return raw PIN (shown only once to therapist)
-    return { accessCode };
+    throw new ServiceUnavailableException(
+      'errors.patients.accessCodeExhausted',
+    );
   }
 
-  /**
-   * Revoke patient's mobile access by removing the PIN hash.
-   */
   async revokeAccessCode(
     therapistId: string,
     patientId: string,
   ): Promise<void> {
-    // Verify ownership
-    await this.findOne(therapistId, patientId);
+    await this.findOwnedPatient(therapistId, patientId);
 
-    // Remove BOTH access code hashes
     await this.prisma.patient.update({
       where: { id: patientId },
-      data: {
-        accessCodeHash: null,
-      },
+      data: { accessCodeHash: null },
     });
   }
 
-  /**
-   * Check if patient has an active access code.
-   */
   async hasAccessCode(
     therapistId: string,
     patientId: string,
   ): Promise<boolean> {
-    const patient = await this.findOne(therapistId, patientId);
-    return !!patient.accessCodeHash; // Check the new field
+    const patient = await this.prisma.patient.findFirst({
+      where: { id: patientId, therapistId },
+      select: { accessCodeHash: true },
+    });
+
+    if (!patient) {
+      throw new NotFoundException('errors.patients.notFound');
+    }
+
+    return patient.accessCodeHash !== null;
+  }
+
+  private async findOwnedPatient(
+    therapistId: string,
+    id: string,
+  ): Promise<PublicPatient> {
+    const patient = await this.prisma.patient.findFirst({
+      where: { id, therapistId },
+    });
+
+    if (!patient) {
+      throw new NotFoundException('errors.patients.notFound');
+    }
+
+    return patient;
   }
 }

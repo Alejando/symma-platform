@@ -9,6 +9,7 @@ import com.symma.app.domain.model.Routine
 import com.symma.app.domain.repository.RoutineRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,39 +25,35 @@ class RoutineRepositoryImpl @Inject constructor(
 
     override suspend fun refreshRoutine(): Result<Unit> {
         return try {
-            Log.d(TAG, "Fetching routine from API...")
             val response = apiService.getActiveRoutine()
-            
-            // Handle empty response or null body (no active routine)
-            if (!response.isSuccessful || response.body() == null) {
-                Log.d(TAG, "No active routine found for patient (status: ${response.code()}), clearing local data")
-                routineDao.deleteAllRoutineItems()
-                routineDao.deleteAllExercises()
-                routineDao.deleteAllRoutines()
+            if (!response.isSuccessful) {
+                Log.w(TAG, "Routine refresh failed with status ${response.code()}, keeping cached routine")
+                return Result.failure(HttpException(response))
+            }
+
+            val routineDto = response.body()
+            if (routineDto == null) {
+                Log.d(TAG, "Server confirmed there is no active routine, clearing cached routine")
+                clearCachedRoutine()
                 return Result.success(Unit)
             }
-            
-            val routineDto = response.body()!!
-            Log.d(TAG, "Received routine: ${routineDto.name} with ${routineDto.items.size} items")
 
-            // Map DTO to entities
-            val routineEntity = routineDto.toEntity()
-            val exerciseEntities = routineDto.items.map { it.exercise.toEntity() }
-            val routineItemEntities = routineDto.items.map { it.toEntity(routineDto.id) }
-
-            // Atomically replace all data
             routineDao.replaceRoutineWithItems(
-                routine = routineEntity,
-                exercises = exerciseEntities,
-                items = routineItemEntities
+                routine = routineDto.toEntity(),
+                exercises = routineDto.items.map { it.exercise.toEntity() },
+                items = routineDto.items.map { it.toEntity(routineDto.id) }
             )
-
-            Log.d(TAG, "Routine synced successfully to local database")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to sync routine: ${e.message}", e)
             Result.failure(e)
         }
+    }
+
+    private suspend fun clearCachedRoutine() {
+        routineDao.deleteAllRoutineItems()
+        routineDao.deleteAllExercises()
+        routineDao.deleteAllRoutines()
     }
 
     override fun getRoutineFlow(): Flow<Routine?> {

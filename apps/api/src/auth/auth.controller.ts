@@ -36,7 +36,7 @@ export class AuthController {
     const profile = await this.authService.getProfile(req.user.userId);
 
     if (!profile) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('errors.auth.userNotFound');
     }
 
     return profile;

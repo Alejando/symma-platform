@@ -1,14 +1,17 @@
 openapi: 3.0.3
 info:
   title: Symma API — Routines Contracts
-  version: 1.0.0
+  version: 1.1.0
+  description: >
+    Therapist JWT required; routines of another therapist's patients answer 404. A patient has at
+    most one ACTIVE routine, which is the only one served to the mobile app.
 
 paths:
   /routines:
     post:
       tags: [Routines]
       operationId: createRoutine
-      summary: Create a new routine with exercise items
+      summary: Create a routine; it becomes ACTIVE and the patient's previous ACTIVE routine is archived
       security:
         - bearerAuth: []
       requestBody:
@@ -19,32 +22,35 @@ paths:
               $ref: '#/components/schemas/CreateRoutineRequest'
       responses:
         '201':
+          description: Routine created
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/RoutineResponse'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
+        '409':
+          description: An exercise does not exist
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/ApiError'
     get:
       tags: [Routines]
       operationId: listRoutines
-      summary: List all routines (paginated)
+      summary: List the therapist's routines (paginated)
       security:
         - bearerAuth: []
       parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
+        - $ref: './common.yaml#/components/parameters/Page'
+        - $ref: './common.yaml#/components/parameters/Limit'
       responses:
         '200':
+          description: One page of routines
           content:
             application/json:
               schema:
@@ -56,40 +62,39 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/RoutineResponse'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
 
   /routines/{id}:
     get:
       tags: [Routines]
       operationId: getRoutine
-      summary: Get a routine by ID (includes items with exercises)
+      summary: Get a routine (items with exercises, patient, sessionsCount)
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       responses:
         '200':
+          description: The routine
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/RoutineResponse'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
     put:
       tags: [Routines]
       operationId: updateRoutine
-      summary: Update a routine (full replace of items)
+      summary: Update a routine (items are fully replaced when given)
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       requestBody:
         required: true
         content:
@@ -98,72 +103,117 @@ paths:
               $ref: '#/components/schemas/UpdateRoutineRequest'
       responses:
         '200':
+          description: Routine updated
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/RoutineResponse'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
+        '409':
+          description: Items cannot change once the routine has sessions; clone it instead
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/ApiError'
     delete:
       tags: [Routines]
       operationId: deleteRoutine
-      summary: Delete a routine
+      summary: Delete a routine, or archive it when it has sessions
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       responses:
         '204':
-          description: No content
+          description: Deleted or archived
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
 
   /routines/{id}/clone:
     post:
       tags: [Routines]
       operationId: cloneRoutine
-      summary: Clone an existing routine
+      summary: Clone a routine as DRAFT; the original and what the patient receives are unchanged
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       responses:
         '201':
+          description: The DRAFT copy
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/RoutineResponse'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
+
+  /routines/{id}/activate:
+    post:
+      tags: [Routines]
+      operationId: activateRoutine
+      summary: Make the routine ACTIVE and archive the patient's other ACTIVE routine, in one transaction
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: './common.yaml#/components/parameters/Id'
+      responses:
+        '200':
+          description: The activated routine (unchanged if it was already ACTIVE)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutineResponse'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
+        '409':
+          description: Concurrent activation for the same patient
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/ApiError'
 
   /patients/{id}/routines:
     get:
       tags: [Routines]
       operationId: listPatientRoutines
-      summary: List routines for a specific patient
+      summary: List every routine of a patient, newest first
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       responses:
         '200':
+          description: Routines of the patient
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/RoutineResponse'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     RoutineItemRequest:
       type: object
@@ -184,10 +234,11 @@ components:
         restBetweenSets:
           type: integer
           minimum: 0
-          default: 10
+          default: 60
         difficultyLevel:
           type: number
           format: float
+          minimum: 0
           default: 1.0
         strictMode:
           type: boolean
@@ -303,6 +354,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RoutineItemResponse'
+        patient:
+          $ref: './patients.yaml#/components/schemas/PatientResponse'
         sessionsCount:
           type: integer
-          description: Computed count of sessions for this routine
+          description: Computed count of sessions (GET /routines/{id} only)

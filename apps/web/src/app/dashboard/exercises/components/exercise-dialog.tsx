@@ -11,6 +11,10 @@ import type {
   UpdateExerciseRequest,
 } from '@symma/shared-types';
 import { Button } from '@/components/ui/button';
+import { ErrorAlert } from '@/components/ui/error-alert';
+import { useApiErrorHandler } from '@/hooks/use-api-error-handler';
+import { exerciseFormSchema, type ExerciseFormValues } from '@/lib/validation/exercise-form';
+import { toFieldErrors } from '@/lib/validation/field-errors';
 
 type Exercise = ExerciseResponse;
 
@@ -30,25 +34,15 @@ interface ExerciseDialogProps {
   onSubmit: (data: CreateExerciseRequest | UpdateExerciseRequest) => Promise<void>;
 }
 
-type ExerciseFormData = {
-  keyName: string;
-  name: string;
-  description: string;
-  type: ExerciseType;
-  category: ExerciseCategory;
-  mobileModule?: MobileModule;
-  assetAnimationUrl: string;
-  assetTutorialVideoUrl: string;
-};
-
 export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: ExerciseDialogProps) {
   const t = useTranslations('common');
   const tVal = useTranslations('validation');
   const tEnums = useTranslations('enums');
+  const handleApiError = useApiErrorHandler();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [formData, setFormData] = useState<ExerciseFormData>({
+  const [formData, setFormData] = useState<ExerciseFormValues>({
     keyName: '',
     name: '',
     description: '',
@@ -81,7 +75,6 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
     const { name, value } = e.target;
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
-      // Clear mobileModule if type doesn't support it
       if (name === 'type' && !MOBILE_SUPPORTED_TYPES.includes(value as ExerciseType)) {
         updated.mobileModule = undefined;
       }
@@ -90,30 +83,29 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.keyName.trim()) newErrors.keyName = tVal('keyNameRequired');
-    if (!formData.name.trim()) newErrors.name = tVal('nameRequired');
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    const validation = exerciseFormSchema.safeParse({
+      ...formData,
+      mobileModule: formData.mobileModule || undefined,
+    });
+    if (!validation.success) {
+      setErrors(toFieldErrors(validation.error, (key) => tVal(key)));
+      return;
+    }
+
+    const values = validation.data;
     setLoading(true);
     try {
-      // Clean up empty strings to avoid sending them if not needed, though backend now handles ''
-      const payload = {
-        ...formData,
-        assetAnimationUrl: formData.assetAnimationUrl || undefined,
-        assetTutorialVideoUrl: formData.assetTutorialVideoUrl || undefined,
-      };
-      await onSubmit(payload);
+      await onSubmit({
+        ...values,
+        assetAnimationUrl: values.assetAnimationUrl || undefined,
+        assetTutorialVideoUrl: values.assetTutorialVideoUrl || undefined,
+      });
       onClose();
     } catch (error) {
-      console.error(error);
-      setErrors({ submit: t('messages.failedToSaveExercise') });
+      const message = handleApiError(error);
+      if (message) setErrors({ submit: message });
     } finally {
       setLoading(false);
     }
@@ -136,58 +128,58 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {errors.submit && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-lg">
-              {errors.submit}
-            </div>
-          )}
+          <ErrorAlert message={errors.submit ?? null} />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.keyName')} <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="exercise-keyName">{t('labels.keyName')} <span className="text-red-600">*</span></label>
             <input
+              id="exercise-keyName"
               type="text"
               name="keyName"
               value={formData.keyName}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] ${errors.keyName ? 'border-red-300' : 'border-gray-200'}`}
-              placeholder="exercise_unique_key"
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand ${errors.keyName ? 'border-red-300' : 'border-gray-200'}`}
+              placeholder={t('exercises.keyNamePlaceholder')}
               disabled={!!exercise}
             />
-            {errors.keyName && <p className="text-red-500 text-xs mt-1">{errors.keyName}</p>}
+            {errors.keyName && <p className="text-red-600 text-xs mt-1">{errors.keyName}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.name')} <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="exercise-name">{t('labels.name')} <span className="text-red-600">*</span></label>
             <input
+              id="exercise-name"
               type="text"
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488] ${errors.name ? 'border-red-300' : 'border-gray-200'}`}
-              placeholder="Smile Stretch"
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand ${errors.name ? 'border-red-300' : 'border-gray-200'}`}
+              placeholder={t('exercises.namePlaceholder')}
             />
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+            {errors.name && <p className="text-red-600 text-xs mt-1">{errors.name}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.description')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="exercise-description">{t('labels.description')}</label>
             <textarea
+              id="exercise-description"
               name="description"
               value={formData.description}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand"
               rows={3}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.type')}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="exercise-type">{t('labels.type')}</label>
               <select
+                id="exercise-type"
                 name="type"
                 value={formData.type}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand"
               >
                 {EXERCISE_TYPES.map(type => (
                   <option key={type} value={type}>{tEnums(`ExerciseType.${type}`)}</option>
@@ -196,12 +188,13 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
             </div>
             {isMobileModuleEnabled && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.mobileModule')}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="exercise-mobileModule">{t('labels.mobileModule')}</label>
                 <select
+                  id="exercise-mobileModule"
                   name="mobileModule"
                   value={formData.mobileModule || ''}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand"
                 >
                   <option value="">{t('labels.selectModule')}</option>
                   {MOBILE_MODULES.map(module => (
@@ -211,12 +204,13 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.category')}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="exercise-category">{t('labels.category')}</label>
               <select
+                id="exercise-category"
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand"
               >
                 {EXERCISE_CATEGORIES.map(cat => (
                   <option key={cat} value={cat}>{tEnums(`ExerciseCategory.${cat}`)}</option>
@@ -226,25 +220,29 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.animationUrl')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="exercise-assetAnimationUrl">{t('labels.animationUrl')}</label>
             <input
+              id="exercise-assetAnimationUrl"
               type="text"
               name="assetAnimationUrl"
               value={formData.assetAnimationUrl}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
+              className={`w-full px-3 py-2 border ${errors.assetAnimationUrl ? 'border-red-300' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand`}
             />
+            {errors.assetAnimationUrl && <p className="text-red-600 text-xs mt-1">{errors.assetAnimationUrl}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('labels.tutorialVideoUrl')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="exercise-assetTutorialVideoUrl">{t('labels.tutorialVideoUrl')}</label>
             <input
+              id="exercise-assetTutorialVideoUrl"
               type="text"
               name="assetTutorialVideoUrl"
               value={formData.assetTutorialVideoUrl}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#0d9488]/20 focus:border-[#0d9488]"
+              className={`w-full px-3 py-2 border ${errors.assetTutorialVideoUrl ? 'border-red-300' : 'border-gray-200'} rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand`}
             />
+            {errors.assetTutorialVideoUrl && <p className="text-red-600 text-xs mt-1">{errors.assetTutorialVideoUrl}</p>}
           </div>
 
           {/* Actions */}
@@ -260,7 +258,7 @@ export function ExerciseDialog({ isOpen, onClose, exercise, onSubmit }: Exercise
             <Button
               type="submit"
               disabled={loading}
-              className="px-6 text-sm font-bold text-white bg-[#0d9488] hover:bg-[#0b857a] shadow-sm"
+              className="px-6 text-sm font-bold text-white bg-brand hover:bg-brand-hover shadow-sm"
             >
               {loading ? t('buttons.saving') : t('buttons.saveChanges')}
             </Button>

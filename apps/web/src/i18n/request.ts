@@ -1,15 +1,14 @@
+import { cookies } from 'next/headers';
 import { getRequestConfig } from 'next-intl/server';
-import { getMessages, defaultLocale } from './config';
+import { getMessages, LOCALE_COOKIE, resolveLocale } from './config';
 
 export default getRequestConfig(async () => {
-  // Try to get locale from headers or cookies if needed, or default to Spanish
-  const locale = defaultLocale;
-  
-  const messages = await getMessages(locale);
+  const cookieStore = await cookies();
+  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE)?.value);
 
   return {
     locale,
-    messages,
+    messages: await getMessages(locale),
     onError(error) {
       if (process.env.NODE_ENV === 'development') {
         console.warn('Missing translation:', error.message);
@@ -17,6 +16,6 @@ export default getRequestConfig(async () => {
     },
     getMessageFallback({ key }) {
       return key;
-    }
+    },
   };
 });

@@ -1,20 +1,36 @@
 import { auth } from '@/auth';
-import { getDashboardStats } from '@/lib/api';
-import { getTranslations } from 'next-intl/server';
+import { getDashboardStatsForCurrentUser } from '@/lib/server/api';
+import { AuthenticationError, describeApiError } from '@/lib/errors';
+import { getFormatter, getTranslations } from 'next-intl/server';
+import type { DashboardStatsResponse } from '@symma/shared-types';
+import { ErrorAlert } from '@/components/ui/error-alert';
+import { SessionExpired } from '@/components/auth/session-expired';
 import { DashboardKPIs } from './_components/DashboardKPIs';
 import { DashboardActions } from './_components/DashboardActions';
 import { RiskList } from './_components/RiskList';
 
-type SessionUserWithAccessToken = {
-  accessToken?: string;
-};
+type DashboardStatsResult =
+  | { status: 'loaded'; stats: DashboardStatsResponse }
+  | { status: 'sessionExpired' }
+  | { status: 'failed'; error: unknown };
+
+async function loadDashboardStats(): Promise<DashboardStatsResult> {
+  try {
+    return { status: 'loaded', stats: await getDashboardStatsForCurrentUser() };
+  } catch (error) {
+    if (error instanceof AuthenticationError) return { status: 'sessionExpired' };
+    return { status: 'failed', error };
+  }
+}
 
 export default async function DashboardPage() {
   const session = await auth();
-  const firstName = session?.user?.name?.split(' ')[0] || 'Doctor';
   const t = await getTranslations('common');
-  
-  const currentDate = new Date().toLocaleDateString('es-MX', {
+  const tErrors = await getTranslations('errors');
+  const format = await getFormatter();
+  const firstName = session?.user?.name?.split(' ')[0] ?? '';
+
+  const currentDate = format.dateTime(new Date(), {
     weekday: 'long',
     month: 'short',
     day: 'numeric',
@@ -28,26 +44,11 @@ export default async function DashboardPage() {
     return t('dashboard.goodEvening', { name: firstName });
   };
 
-  let dashboardData = null;
+  const result = await loadDashboardStats();
 
-  // Safe access to accessToken with potential type issue fallback
-  const accessToken = (session?.user as SessionUserWithAccessToken | undefined)?.accessToken;
-
-  if (accessToken) {
-    try {
-      dashboardData = await getDashboardStats(accessToken);
-    } catch (e) {
-      console.error("Failed to fetch dashboard stats", e);
-    }
+  if (result.status === 'sessionExpired') {
+    return <SessionExpired />;
   }
-
-  const metrics = dashboardData?.metrics || {
-    activePatients: { value: 0, trend: 0 },
-    complianceAlerts: { value: 0, trend: 0 },
-    avgEfficacy: { value: 0, trend: 0 }
-  };
-
-  const atRiskPatients = dashboardData?.atRiskPatients || [];
 
   return (
     <div className="max-w-[1200px] mx-auto flex flex-col gap-8 pb-10">
@@ -57,7 +58,7 @@ export default async function DashboardPage() {
           <h2 className="text-3xl font-bold text-[#0d1b1a] tracking-tight">
             {getGreeting()}
           </h2>
-          <p className="text-[#4c9a93] mt-1 font-medium">
+          <p className="text-brand-muted mt-1 font-medium">
             {t('dashboard.whatsHappening')}
           </p>
         </div>
@@ -67,14 +68,15 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <DashboardKPIs metrics={metrics} />
+      {result.status === 'loaded' ? (
+        <DashboardKPIs metrics={result.stats.metrics} />
+      ) : (
+        <ErrorAlert message={describeApiError(result.error, (key) => tErrors(key))} />
+      )}
 
-      {/* Quick Actions */}
       <DashboardActions />
 
-      {/* Risk Widget */}
-      <RiskList patients={atRiskPatients} />
+      {result.status === 'loaded' && <RiskList patients={result.stats.atRiskPatients} />}
     </div>
   );
 }

@@ -1,1 +1,74 @@
-{}
+{
+  "auth": {
+    "unauthorized": "Unauthorized",
+    "forbidden": "You do not have permission to perform this action",
+    "tokenExpired": "Your session has expired, please sign in again",
+    "invalidCredentials": "Invalid credentials",
+    "invalidAccessCode": "Invalid access code",
+    "tooManyAttempts": "Too many failed attempts. Try again in 15 minutes.",
+    "userNotFound": "User not found"
+  },
+  "server": {
+    "internalError": "Internal server error",
+    "badRequest": "Bad request",
+    "notFound": "Resource not found",
+    "timeout": "Request timed out",
+    "conflict": "The operation conflicts with the current state of the resource",
+    "tooManyRequests": "Too many requests, please try again later",
+    "unavailable": "Service temporarily unavailable"
+  },
+  "database": {
+    "uniqueConstraint": "This record already exists",
+    "foreignKeyConstraint": "The operation cannot be completed because of related records"
+  },
+  "network": {
+    "offline": "No internet connection",
+    "syncFailed": "Failed to sync data"
+  },
+  "generic": "An error occurred. Please try again.",
+  "patients": {
+    "notFound": "Patient not found",
+    "accessCodeExhausted": "Could not generate a unique access code, please try again"
+  },
+  "routines": {
+    "notFound": "Routine not found",
+    "invalidDateRange": "The start date must be before the end date",
+    "itemsLocked": "Exercises cannot be changed on a routine with recorded sessions; clone it to make changes"
+  },
+  "exercises": {
+    "notFound": "Exercise not found",
+    "inUse": "The exercise is used by {routines} active routine(s) and cannot be modified or deleted"
+  },
+  "sessions": {
+    "notFound": "Session not found",
+    "forbidden": "You do not have access to this session",
+    "routineForbidden": "The routine does not belong to this patient",
+    "routineNotActive": "The routine is not active; sessions can only be recorded on the active routine",
+    "unknownExercise": "The session includes an exercise that does not exist",
+    "invalidSnapshotKey": "The snapshot does not belong to this session"
+  },
+  "storage": {
+    "unavailable": "Image storage is not configured"
+  },
+  "validation": {
+    "required": "{property} is required",
+    "string": "{property} must be text",
+    "integer": "{property} must be an integer",
+    "number": "{property} must be a number",
+    "outOfRange": "{property} is out of the allowed range",
+    "uuid": "{property} must be a valid UUID",
+    "date": "{property} must be a valid ISO 8601 date",
+    "email": "{property} must be a valid email address",
+    "oneOf": "{property} is not an allowed value",
+    "url": "{property} must be a valid URL",
+    "format": "{property} has an invalid format",
+    "length": "{property} has an invalid length",
+    "boolean": "{property} must be true or false",
+    "array": "{property} must be a list",
+    "minItems": "{property} does not have enough items",
+    "object": "{property} must be an object",
+    "numberMap": "{property} must map names to numbers",
+    "notBefore": "{property} cannot be before the start time",
+    "invalid": "{property} is invalid"
+  }
+}

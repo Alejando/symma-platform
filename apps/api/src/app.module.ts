@@ -14,11 +14,13 @@ import { SessionsModule } from './sessions/sessions.module';
 import { AppI18nModule } from './i18n/i18n.module';
 import { APP_FILTER } from '@nestjs/core';
 import { I18nExceptionFilter } from './common/filters/i18n-exception.filter';
+import { validateEnvironment } from './config/environment';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validate: validateEnvironment,
     }),
     AppI18nModule,
     PrismaModule,

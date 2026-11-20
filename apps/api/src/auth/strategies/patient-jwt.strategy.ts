@@ -1,34 +1,59 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PATIENT_JWT_STRATEGY, PATIENT_ROLE } from '../auth.constants';
+import { credentialVersionOf } from '../access-code';
+import type { AuthenticatedPatient, PatientJwtPayload } from '../types';
 
 @Injectable()
 export class PatientJwtStrategy extends PassportStrategy(
   Strategy,
-  'jwt-patient',
+  PATIENT_JWT_STRATEGY,
 ) {
-  constructor(private prisma: PrismaService) {
+  constructor(
+    configService: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'super-secret', // Should match AuthModule
+      secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
     });
   }
 
-  async validate(payload: any) {
-    if (payload.role !== 'PATIENT') {
-      throw new UnauthorizedException('Invalid token role');
+  async validate(
+    payload: Partial<PatientJwtPayload>,
+  ): Promise<AuthenticatedPatient> {
+    if (payload.role !== PATIENT_ROLE || !payload.sub) {
+      throw new UnauthorizedException('errors.auth.unauthorized');
     }
 
     const patient = await this.prisma.patient.findUnique({
       where: { id: payload.sub },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        status: true,
+        accessCodeHash: true,
+      },
     });
 
-    if (!patient) {
-      throw new UnauthorizedException();
+    const hasCurrentCredentials =
+      !!patient?.accessCodeHash &&
+      patient.status !== 'ARCHIVED' &&
+      payload.credentialVersion === credentialVersionOf(patient.accessCodeHash);
+
+    if (!patient || !hasCurrentCredentials) {
+      throw new UnauthorizedException('errors.auth.unauthorized');
     }
 
-    return patient;
+    return {
+      id: patient.id,
+      firstName: patient.firstName,
+      lastName: patient.lastName,
+    };
   }
 }

@@ -1,40 +1,31 @@
-# Base stage with pnpm
 FROM node:20-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 WORKDIR /app
 
-# Dependencies stage
-FROM base AS deps
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/api/package.json ./apps/api/
-COPY packages/shared-types/package.json ./packages/shared-types/
-COPY packages/database/package.json ./packages/database/
-RUN pnpm install --frozen-lockfile
-
-# Builder stage
 FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=deps /app/packages ./packages
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm fetch
 COPY . .
+RUN pnpm install --offline --frozen-lockfile --filter api... --filter @symma/database...
+RUN pnpm --filter @symma/database exec prisma generate
+RUN pnpm --filter api build
+RUN pnpm --filter api deploy --prod /prod/api
 
-# Generate Prisma client
-RUN cd packages/database && pnpm prisma generate
-
-# Build the API
-RUN cd apps/api && pnpm build
-
-# Production stage
 FROM node:20-alpine AS runner
+RUN apk add --no-cache openssl
 WORKDIR /app
-
 ENV NODE_ENV=production
 
-# Copy built files
+COPY --from=builder /prod/api ./
 COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/database/prisma ./prisma
 
+# The Prisma CLI is pinned to the installed client so `prisma migrate deploy` and the generated client never drift.
+RUN npm install --global "prisma@$(node -p "require('@prisma/client/package.json').version")" \
+    && prisma generate --schema prisma/schema.prisma \
+    && npm cache clean --force
+
+USER node
 EXPOSE 4001
 
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "prisma migrate deploy --schema prisma/schema.prisma && exec node dist/src/main.js"]

@@ -87,61 +87,83 @@ class StrategiesTest {
 
     // ==================== EyesInverseStrategy Tests ====================
 
+    private val eyesWideBaseline = CalibrationBaseline(
+        eyesWideMax = 0.4f,
+        neutralOffsets = mapOf(CalibrationBaseline.KEY_EYES_WIDE to 0.05f)
+    )
+
+    private fun restingEyes() = listOf(
+        createCategory("eyeBlinkLeft", 0.05f),
+        createCategory("eyeBlinkRight", 0.05f),
+        createCategory("eyeWideLeft", 0.05f),
+        createCategory("eyeWideRight", 0.05f)
+    )
+
     @Test
-    fun `EyesInverseStrategy - perfect score when eyes wide open (blink near 0)`() {
-        val strategy = EyesInverseStrategy()
-        val baseline = CalibrationBaseline(eyesOpenMin = 0.1f)
-        
-        val shapes = listOf(
-            createCategory("eyeBlinkLeft", 0.0f),
-            createCategory("eyeBlinkRight", 0.0f)
-        )
-        
-        val score = strategy.calculateScore(shapes, baseline, 1.0f)
-        assertTrue("Score should be close to 1.0 for wide open eyes", score >= 0.95f)
+    fun `EyesInverseStrategy - resting face stays below the engage threshold`() {
+        val score = EyesInverseStrategy().calculateScore(restingEyes(), eyesWideBaseline, 1.0f)
+
+        assertTrue("Resting face scored $score", score < REP_RELEASE_THRESHOLD)
+        assertEquals(0.0f, score, 0.01f)
     }
 
     @Test
-    fun `EyesInverseStrategy - lower score when eyes partially closed`() {
-        val strategy = EyesInverseStrategy()
-        val baseline = CalibrationBaseline(eyesOpenMin = 0.1f)
-        
-        val shapes = listOf(
-            createCategory("eyeBlinkLeft", 0.5f),
-            createCategory("eyeBlinkRight", 0.5f)
-        )
-        
-        val score = strategy.calculateScore(shapes, baseline, 1.0f)
-        assertTrue("Score should be less than 0.6 for partially closed eyes", score < 0.6f)
+    fun `EyesInverseStrategy - resting face without tare stays below the engage threshold`() {
+        val uncalibrated = CalibrationBaseline()
+
+        val score = EyesInverseStrategy().calculateScore(restingEyes(), uncalibrated, 1.0f)
+
+        assertTrue("Resting face scored $score", score < REP_ENGAGE_THRESHOLD)
     }
 
     @Test
-    fun `EyesInverseStrategy - zero score when eyes fully closed`() {
-        val strategy = EyesInverseStrategy()
-        val baseline = CalibrationBaseline(eyesOpenMin = 0.1f)
-        
+    fun `EyesInverseStrategy - perfect score when eyes open as wide as calibrated`() {
+        val shapes = listOf(
+            createCategory("eyeWideLeft", 0.45f),
+            createCategory("eyeWideRight", 0.45f)
+        )
+
+        val score = EyesInverseStrategy().calculateScore(shapes, eyesWideBaseline, 1.0f)
+
+        assertEquals(1.0f, score, 0.01f)
+    }
+
+    @Test
+    fun `EyesInverseStrategy - partial opening gives a proportional score after tare`() {
+        val shapes = listOf(
+            createCategory("eyeWideLeft", 0.25f),
+            createCategory("eyeWideRight", 0.25f)
+        )
+
+        val score = EyesInverseStrategy().calculateScore(shapes, eyesWideBaseline, 1.0f)
+
+        assertEquals(0.5f, score, 0.01f)
+    }
+
+    @Test
+    fun `EyesInverseStrategy - closed eyes score zero`() {
         val shapes = listOf(
             createCategory("eyeBlinkLeft", 1.0f),
-            createCategory("eyeBlinkRight", 1.0f)
+            createCategory("eyeBlinkRight", 1.0f),
+            createCategory("eyeWideLeft", 0.0f),
+            createCategory("eyeWideRight", 0.0f)
         )
-        
-        val score = strategy.calculateScore(shapes, baseline, 1.0f)
+
+        val score = EyesInverseStrategy().calculateScore(shapes, eyesWideBaseline, 1.0f)
+
         assertEquals(0.0f, score, 0.01f)
     }
 
     @Test
     fun `EyesInverseStrategy - difficulty affects score`() {
-        val strategy = EyesInverseStrategy()
-        val baseline = CalibrationBaseline(eyesOpenMin = 0.1f)
-        
         val shapes = listOf(
-            createCategory("eyeBlinkLeft", 0.0f),
-            createCategory("eyeBlinkRight", 0.0f)
+            createCategory("eyeWideLeft", 0.25f),
+            createCategory("eyeWideRight", 0.25f)
         )
-        
-        val scoreEasy = strategy.calculateScore(shapes, baseline, 1.0f)
-        val scoreHard = strategy.calculateScore(shapes, baseline, 2.0f)
-        
+
+        val scoreEasy = EyesInverseStrategy().calculateScore(shapes, eyesWideBaseline, 1.0f)
+        val scoreHard = EyesInverseStrategy().calculateScore(shapes, eyesWideBaseline, 2.0f)
+
         assertTrue("Harder difficulty should result in lower score", scoreHard < scoreEasy)
     }
 

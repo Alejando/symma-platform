@@ -1,16 +1,17 @@
 openapi: 3.0.3
 info:
   title: Symma API — Sessions Contracts
-  version: 1.0.0
+  version: 1.1.0
 
 paths:
   /sessions:
     post:
       tags: [Sessions]
       operationId: createSession
-      summary: Create a new therapy session record (used by mobile sync)
+      summary: Record a therapy session (mobile sync, idempotent by client-generated id)
       security:
         - bearerAuth: []
+      description: Requires a patient JWT. The routine must belong to the patient and be ACTIVE.
       requestBody:
         required: true
         content:
@@ -19,13 +20,75 @@ paths:
               $ref: '#/components/schemas/CreateSessionRequest'
       responses:
         '201':
+          description: Session created
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SessionResponse'
+        '200':
+          description: Replay of an id this patient already recorded; returns the stored session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
+        '409':
+          description: The routine is DRAFT or ARCHIVED
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/ApiError'
+
+  /sessions/{id}:
+    get:
+      tags: [Sessions]
+      operationId: getSessionDetail
+      summary: Session detail for therapist review
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: './common.yaml#/components/parameters/Id'
+      responses:
+        '200':
+          description: Session with items, signed snapshot URLs and navigation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionDetailResponse'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
+    SessionCalibration:
+      type: object
+      required: [capturedAt, values]
+      properties:
+        capturedAt:
+          type: string
+          format: date-time
+        values:
+          type: object
+          additionalProperties:
+            type: number
+
     SessionItemRequest:
       type: object
       required: [exerciseId, repsCompleted]
@@ -33,47 +96,63 @@ components:
         exerciseId:
           type: string
           format: uuid
+          description: Must reference an existing exercise (400 otherwise)
         repsCompleted:
           type: integer
           minimum: 0
-        difficulty:
-          type: integer
-          default: 0
         averageAccuracy:
           type: number
-          format: float
           minimum: 0
           maximum: 100
-          description: Average symmetry score (0–100)
+          description: Exercise score against the calibrated threshold
+        symmetryScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Left/right facial symmetry, 100 = perfectly symmetric
+        averageHoldSeconds:
+          type: number
+          minimum: 0
+        snapshotKey:
+          type: string
+          maxLength: 512
+          description: >
+            Key returned by POST /mobile/snapshots/upload-url for this session and exercise;
+            any other key answers 400.
         seriesData:
           description: Detailed per-rep series data (JSON blob)
 
     CreateSessionRequest:
       type: object
-      required: [routineId, startTime, endTime, items]
+      required: [id, routineId, startTime, endTime, items]
       description: >
-        Session creation payload sent by the mobile app after completing an exercise session.
-        Note: isSynced and syncedAt are local-only mobile fields and MUST NOT appear here.
+        isSynced and syncedAt are local-only mobile fields and MUST NOT appear here.
       properties:
+        id:
+          type: string
+          format: uuid
+          description: Client-generated UUID used for idempotency
         routineId:
           type: string
           format: uuid
         startTime:
           type: string
           format: date-time
-          description: ISO 8601 UTC with Z suffix
         endTime:
           type: string
           format: date-time
-          description: ISO 8601 UTC with Z suffix
+          description: Must not be before startTime
+        calibration:
+          $ref: '#/components/schemas/SessionCalibration'
         items:
           type: array
+          minItems: 1
           items:
             $ref: '#/components/schemas/SessionItemRequest'
 
     SessionItemResponse:
       type: object
-      required: [id, sessionId, exerciseId, repsCompleted, difficulty]
+      required: [id, sessionId, exerciseId, repsCompleted, averageAccuracy, symmetryScore, averageHoldSeconds, seriesData]
       properties:
         id:
           type: string
@@ -86,18 +165,69 @@ components:
           format: uuid
         repsCompleted:
           type: integer
-        difficulty:
-          type: integer
         averageAccuracy:
           type: number
-          format: float
+          nullable: true
+        symmetryScore:
+          type: number
+          nullable: true
+        averageHoldSeconds:
+          type: number
           nullable: true
         seriesData:
           nullable: true
 
     SessionResponse:
       type: object
-      required: [id, routineId, date, durationSeconds, score, createdAt]
+      required: [id, routineId, date, durationSeconds, score, calibration, isSynced, createdAt, items]
+      properties:
+        id:
+          type: string
+          format: uuid
+        routineId:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date-time
+        durationSeconds:
+          type: integer
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Average of the items' averageAccuracy (0 when none reported)
+        calibration:
+          allOf:
+            - $ref: '#/components/schemas/SessionCalibration'
+          nullable: true
+        isSynced:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionItemResponse'
+
+    SessionItemDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/SessionItemResponse'
+        - type: object
+          required: [exerciseName, snapshotUrl]
+          properties:
+            exerciseName:
+              type: string
+            snapshotUrl:
+              type: string
+              format: uri
+              nullable: true
+              description: Signed GET URL valid for 5 minutes; null without snapshot or storage
+
+    SessionDetailResponse:
+      type: object
+      required: [id, routineId, date, durationSeconds, score, isSynced, createdAt, calibration, items, navigation]
       properties:
         id:
           type: string
@@ -114,11 +244,28 @@ components:
           type: integer
           minimum: 0
           maximum: 100
-          description: Session score as integer percentage (0–100)
+        isSynced:
+          type: boolean
         createdAt:
           type: string
           format: date-time
+        calibration:
+          allOf:
+            - $ref: '#/components/schemas/SessionCalibration'
+          nullable: true
         items:
           type: array
           items:
-            $ref: '#/components/schemas/SessionItemResponse'
+            $ref: '#/components/schemas/SessionItemDetailResponse'
+        navigation:
+          type: object
+          required: [previousSessionId, nextSessionId]
+          properties:
+            previousSessionId:
+              type: string
+              format: uuid
+              nullable: true
+            nextSessionId:
+              type: string
+              format: uuid
+              nullable: true

@@ -1,7 +1,8 @@
 package com.symma.app.presentation
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.os.SystemClock
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -19,14 +20,37 @@ import com.symma.app.presentation.features.calibration.CalibrationScreen
 import com.symma.app.presentation.player.PlayerScreen
 import com.symma.app.presentation.summary.SummaryScreen
 import com.symma.app.core.theme.SymmaTheme
+import com.symma.app.core.security.SessionExpiryNotifier
 import com.symma.app.core.security.TokenManager
+import com.symma.app.core.security.AppLock
+import com.symma.app.presentation.unlock.UnlockScreen
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.LaunchedEffect
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     @Inject
     lateinit var tokenManager: TokenManager
+
+    @Inject
+    lateinit var sessionExpiryNotifier: SessionExpiryNotifier
+
+    @Inject
+    lateinit var appLock: AppLock
+
+    override fun onStart() {
+        super.onStart()
+        appLock.onAppForegrounded(SystemClock.elapsedRealtime())
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (!isChangingConfigurations) appLock.onAppBackgrounded(SystemClock.elapsedRealtime())
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,63 +65,91 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    NavHost(navController = navController, startDestination = startDestination) {
-                        composable("login") {
-                            LoginScreen(
-                                onNavigateToHome = {
-                                    navController.navigate("home") {
-                                        popUpTo("login") { inclusive = true }
+                    val isLocked by appLock.isLocked.collectAsStateWithLifecycle()
+                    val navigateToLogin = {
+                        if (navController.currentDestination?.route != "login") {
+                            navController.navigate("login") {
+                                popUpTo(navController.graph.id) { inclusive = true }
+                            }
+                        }
+                    }
+                    LaunchedEffect(navController) {
+                        sessionExpiryNotifier.sessionExpired.collect { navigateToLogin() }
+                    }
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        NavHost(navController = navController, startDestination = startDestination) {
+                            composable("login") {
+                                LoginScreen(
+                                    onNavigateToHome = {
+                                        navController.navigate("home") {
+                                            popUpTo("login") { inclusive = true }
+                                        }
                                     }
-                                }
-                            )
-                        }
-                        composable("home") {
-                            HomeScreen(
-                                onNavigateToSession = {
-                                    navController.navigate("calibration")
-                                }
-                            )
-                        }
+                                )
+                            }
+                            composable("home") {
+                                HomeScreen(
+                                    onNavigateToSession = { routineId ->
+                                        navController.navigate("calibration/$routineId")
+                                    }
+                                )
+                            }
 
-                        composable("calibration") {
-                            CalibrationScreen(
-                                onCalibrationComplete = {
-                                    navController.navigate("player") {
-                                        popUpTo("calibration") { inclusive = true }
+                            composable(
+                                route = "calibration/{routineId}",
+                                arguments = listOf(
+                                    navArgument("routineId") { type = NavType.StringType }
+                                )
+                            ) { backStackEntry ->
+                                val routineId = backStackEntry.arguments?.getString("routineId") ?: ""
+                                CalibrationScreen(
+                                    onCalibrationComplete = {
+                                        navController.navigate("player/$routineId") {
+                                            popUpTo("calibration/{routineId}") { inclusive = true }
+                                        }
                                     }
-                                }
-                            )
-                        }
+                                )
+                            }
 
-                        composable("player") {
-                            PlayerScreen(
-                                onNavigateBack = {
-                                    navController.popBackStack()
-                                },
-                                onNavigateToSummary = { routineId, duration ->
-                                    navController.navigate("summary/$routineId/$duration") {
-                                        // Pop up to home to clear player from backstack
-                                        popUpTo("home") { inclusive = false }
+                            composable(
+                                route = "player/{routineId}",
+                                arguments = listOf(
+                                    navArgument("routineId") { type = NavType.StringType }
+                                )
+                            ) {
+                                PlayerScreen(
+                                    onNavigateBack = {
+                                        navController.popBackStack()
+                                    },
+                                    onNavigateToSummary = { rId, duration, sessionId ->
+                                        navController.navigate("summary/$rId/$duration/$sessionId") {
+                                            // Pop up to home to clear player from backstack
+                                            popUpTo("home") { inclusive = false }
+                                        }
                                     }
-                                }
-                            )
-                        }
+                                )
+                            }
                         
-                        composable(
-                            route = "summary/{routineId}/{duration}",
-                            arguments = listOf(
-                                navArgument("routineId") { type = NavType.StringType },
-                                navArgument("duration") { type = NavType.LongType }
-                            )
-                        ) {
-                            SummaryScreen(
-                                onNavigateHome = {
-                                    // Navigate back to home and clear everything in between
-                                    navController.navigate("home") {
-                                        popUpTo("home") { inclusive = true }
+                            composable(
+                                route = "summary/{routineId}/{duration}/{sessionId}",
+                                arguments = listOf(
+                                    navArgument("routineId") { type = NavType.StringType },
+                                    navArgument("duration") { type = NavType.LongType },
+                                    navArgument("sessionId") { type = NavType.StringType }
+                                )
+                            ) {
+                                SummaryScreen(
+                                    onNavigateHome = {
+                                        // Navigate back to home and clear everything in between
+                                        navController.navigate("home") {
+                                            popUpTo("home") { inclusive = true }
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            }
+                        }
+                        if (isLocked) {
+                            UnlockScreen(onSignInRequired = navigateToLogin)
                         }
                     }
                 }
@@ -105,4 +157,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-

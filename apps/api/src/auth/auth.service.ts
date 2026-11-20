@@ -1,14 +1,18 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import type { Therapist } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { LoginResponse, TherapistInfo } from './types';
+import type { JwtPayload, LoginResponse, TherapistInfo } from './types';
+import { therapistTokenTtl } from './token-ttl';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   async validateUser(
@@ -28,35 +32,26 @@ export class AuthService {
       therapist.passwordHash,
     );
 
-    if (!isPasswordValid) {
-      return null;
-    }
-
-    return {
-      id: therapist.id,
-      email: therapist.email,
-      firstName: therapist.firstName,
-      lastName: therapist.lastName,
-      role: therapist.role,
-      clinicId: therapist.clinicId,
-    };
+    return isPasswordValid ? toTherapistInfo(therapist) : null;
   }
 
   async login(email: string, password: string): Promise<LoginResponse> {
     const user = await this.validateUser(email, password);
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('errors.auth.invalidCredentials');
     }
 
-    const payload = {
+    const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
       role: user.role,
     };
 
     return {
-      accessToken: this.jwtService.sign(payload),
+      accessToken: this.jwtService.sign(payload, {
+        expiresIn: therapistTokenTtl(this.configService),
+      }),
     };
   }
 
@@ -65,17 +60,17 @@ export class AuthService {
       where: { id: userId },
     });
 
-    if (!therapist) {
-      return null;
-    }
-
-    return {
-      id: therapist.id,
-      email: therapist.email,
-      firstName: therapist.firstName,
-      lastName: therapist.lastName,
-      role: therapist.role,
-      clinicId: therapist.clinicId,
-    };
+    return therapist ? toTherapistInfo(therapist) : null;
   }
+}
+
+function toTherapistInfo(therapist: Therapist): TherapistInfo {
+  return {
+    id: therapist.id,
+    email: therapist.email,
+    firstName: therapist.firstName,
+    lastName: therapist.lastName,
+    role: therapist.role,
+    clinicId: therapist.clinicId,
+  };
 }

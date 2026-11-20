@@ -73,30 +73,20 @@ describe('PatientsController', () => {
     it('should return patients for authenticated therapist', async () => {
       mockPatientsService.findAll.mockResolvedValue([mockPatient]);
 
-      const result = await controller.findAll(
-        mockRequest,
-        undefined,
-        undefined,
-        undefined,
-      );
+      const result = await controller.findAll(mockRequest, {});
 
-      expect(service.findAll).toHaveBeenCalledWith('therapist-123', {
-        search: undefined,
-        page: undefined,
-        limit: undefined,
-      });
+      expect(service.findAll).toHaveBeenCalledWith('therapist-123', {});
       expect(result).toEqual([mockPatient]);
     });
 
     it('should pass search query to service', async () => {
       mockPatientsService.findAll.mockResolvedValue([mockPatient]);
 
-      await controller.findAll(mockRequest, 'john', undefined, undefined);
+      await controller.findAll(mockRequest, { search: 'john', page: 2 });
 
       expect(service.findAll).toHaveBeenCalledWith('therapist-123', {
         search: 'john',
-        page: undefined,
-        limit: undefined,
+        page: 2,
       });
     });
   });
@@ -145,13 +135,12 @@ describe('PatientsController', () => {
         status: 'ARCHIVED',
       });
 
-      const result = await controller.remove(mockRequest, 'patient-456');
+      await controller.remove(mockRequest, 'patient-456');
 
       expect(service.remove).toHaveBeenCalledWith(
         'therapist-123',
         'patient-456',
       );
-      expect(result.status).toBe('ARCHIVED');
     });
   });
 });

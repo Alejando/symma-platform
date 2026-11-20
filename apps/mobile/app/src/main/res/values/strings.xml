@@ -78,19 +78,122 @@
     <string name="calib_dist_ok">Mantén la posición 1 segundo</string>
     <string name="calib_neutral_capture">Relaja tu rostro y mira al frente</string>
     <string name="calib_step_smile">¡Sonríe ampliamente!</string>
-    <string name="calib_step_brow_raise">¡Levanta las cejas!</string>
+    <string name="calib_step_surprise">¡Pon cara de sorpresa: levanta las cejas!</string>
+    <string name="calib_retry_step">No detectamos el gesto con claridad. Repitamos este paso.</string>
+    <string name="calib_step_counter">Paso %1$d de %2$d</string>
     <string name="calib_step_kiss">¡Haz un beso!</string>
     <string name="calib_step_jaw_open">¡Abre la boca!</string>
     <string name="calib_step_eyes_closed">¡Cierra los ojos fuerte!</string>
+    <string name="calib_warn_keep_still">⚠️ Mantén la cabeza quieta</string>
+    <string name="calib_warn_face_camera">⚠️ Mira de frente a la cámara</string>
+    <string name="calib_step_eyes_wide">¡Abre los ojos lo más que puedas!</string>
     <string name="calib_complete">¡Calibración completa!</string>
     <string name="calib_start">Iniciar Calibración</string>
     <string name="calib_hold_position">Mantén la posición...</string>
     <string name="calib_warn_too_close">⚠️ Muy cerca - Riesgo de distorsión</string>
     <string name="calib_warn_too_far">⚠️ Muy lejos - Baja resolución</string>
     <string name="calib_warn_ok">✓ Distancia correcta</string>
+    <string name="calib_warn_more_intensity">💪 ¡Hazlo con más intensidad!</string>
+    <string name="calib_continue">Continuar</string>
 
     <!-- Camera Permission -->
     <string name="camera_permission_title">Permiso de Cámara Requerido</string>
     <string name="camera_permission_desc">Necesitamos acceso a la cámara para que puedas ver tus movimientos faciales mientras realizas los ejercicios de rehabilitación.</string>
     <string name="camera_permission_button">Permitir Acceso a Cámara</string>
+
+    <!-- Login -->
+    <string name="login_invalid_access_code">Código de acceso inválido</string>
+    <string name="login_no_connection">Sin conexión. Revisa tu internet e intenta de nuevo.</string>
+    <string name="login_server_unavailable">El servidor no responde. Intenta más tarde.</string>
+    <string name="login_too_many_attempts">Demasiados intentos. Espera un momento antes de volver a intentar.</string>
+    <string name="login_backspace">Borrar</string>
+
+    <!-- Home sync -->
+    <string name="home_sync_error_desc">No pudimos actualizar tu rutina. Verifica tu conexión e intenta de nuevo.</string>
+
+    <!-- Player -->
+    <string name="player_feedback_release">Relaja y suelta</string>
+    <string name="player_feedback_hold">¡Mantén!</string>
+    <string name="player_feedback_almost_there">¡Ya casi!</string>
+    <string name="player_feedback_almost">¡Casi!</string>
+    <string name="player_feedback_keep_going">Sigue así…</string>
+    <string name="player_feedback_try_harder">Un poco más fuerte</string>
+    <string name="player_feedback_nice">¡Bien!</string>
+    <string name="player_feedback_go">¡Vamos!</string>
+    <string name="player_feedback_get_in_position">Colócate en posición</string>
+    <string name="player_sets_label">SERIES</string>
+    <string name="player_reps_label">REPS</string>
+    <string name="player_target_reached">Objetivo alcanzado</string>
+    <string name="player_perform_gesture">Realiza el gesto</string>
+    <string name="player_resume">Reanudar</string>
+    <string name="player_pause">Pausar</string>
+    <string name="player_skip">Saltar</string>
+    <string name="player_skip_exercise">Saltar ejercicio</string>
+    <string name="player_close">Cerrar</string>
+    <string name="player_hide_points">Ocultar puntos</string>
+    <string name="player_show_points">Mostrar puntos</string>
+    <string name="player_hide_mesh">Ocultar malla</string>
+    <string name="player_show_mesh">Mostrar malla</string>
+    <string name="player_get_ready">PREPÁRATE</string>
+    <string name="player_set_complete">Serie %1$d/%2$d completada</string>
+    <string name="player_rest">DESCANSO</string>
+    <string name="player_next_exercise">Siguiente: %1$s</string>
+    <string name="player_next_set">Siguiente: %1$s - Serie %2$d</string>
+    <string name="player_skip_rest">Saltar descanso</string>
+    <string name="player_great_job">¡Buen trabajo!</string>
+    <string name="player_completed_summary">Completaste %1$d ejercicios en %2$d s</string>
+    <string name="player_done">Listo</string>
+
+    <!-- Summary -->
+    <string name="summary_saving">Guardando tu progreso…</string>
+    <string name="summary_error">Algo salió mal.</string>
+    <string name="summary_go_home">Ir al inicio</string>
+    <string name="summary_session_complete">¡Sesión completada!</string>
+    <string name="summary_great_progress">Estás progresando muy bien.</string>
+    <string name="summary_unknown_exercise">Ejercicio</string>
+    <string name="summary_exercise_reps">%1$d repeticiones</string>
+    <string name="summary_exercise_accuracy">Precisión: %1$d%%</string>
+    <string name="summary_exercise_accuracy_unavailable">Precisión: sin datos</string>
+    <string name="summary_exercise_symmetry">Simetría izquierda-derecha: %1$d%%</string>
+    <string name="summary_exercise_symmetry_unavailable">Simetría izquierda-derecha: sin datos</string>
+    <string name="summary_exercise_hold">Sostén promedio: %1$.1f s</string>
+    <string name="summary_finish">Finalizar</string>
+
+    <!-- Enums -->
+    <string name="enum_role_admin">Administrador</string>
+    <string name="enum_role_therapist">Terapeuta</string>
+    <string name="enum_gender_male">Masculino</string>
+    <string name="enum_gender_female">Femenino</string>
+    <string name="enum_gender_other">Otro</string>
+    <string name="enum_patient_status_active">Activo</string>
+    <string name="enum_patient_status_inactive">Inactivo</string>
+    <string name="enum_patient_status_archived">Archivado</string>
+    <string name="enum_exercise_type_isotonic">Isotónico</string>
+    <string name="enum_exercise_type_isometric">Isométrico</string>
+    <string name="enum_exercise_type_manual">Manual</string>
+    <string name="enum_exercise_type_relaxation">Relajación</string>
+    <string name="enum_exercise_category_warmup">Calentamiento</string>
+    <string name="enum_exercise_category_core">Principal</string>
+    <string name="enum_exercise_category_cooldown">Enfriamiento</string>
+    <string name="enum_routine_status_active">Activa</string>
+    <string name="enum_routine_status_archived">Archivada</string>
+    <string name="enum_mobile_module_eyes">Ojos</string>
+    <string name="enum_mobile_module_eyes_inverse">Ojos Inverso</string>
+    <string name="enum_mobile_module_brows">Cejas</string>
+    <string name="enum_mobile_module_jaw">Mandíbula</string>
+    <string name="enum_mobile_module_smile">Sonrisa</string>
+    <string name="enum_mobile_module_kiss">Beso</string>
+    <string name="enum_mobile_module_unknown">Desconocido</string>
+    <string name="unlock_title">Confirma que eres tú</string>
+    <string name="unlock_device_explanation">Tus datos de terapia están protegidos. Usa tu huella, tu rostro o el bloqueo de pantalla de tu teléfono.</string>
+    <string name="unlock_button">Desbloquear</string>
+    <string name="unlock_prompt_title">Desbloquear Symma</string>
+    <string name="unlock_prompt_subtitle">Confirma tu identidad para ver tus datos</string>
+    <string name="unlock_access_code_explanation">Tu teléfono no tiene bloqueo de pantalla. Ingresa tu código de acceso para continuar.</string>
+    <plurals name="unlock_wrong_access_code">
+        <item quantity="one">Código incorrecto. Te queda %1$d intento.</item>
+        <item quantity="many">Código incorrecto. Te quedan %1$d intentos.</item>
+        <item quantity="other">Código incorrecto. Te quedan %1$d intentos.</item>
+    </plurals>
+    <string name="unlock_set_up_screen_lock">Configurar bloqueo de pantalla</string>
 </resources>

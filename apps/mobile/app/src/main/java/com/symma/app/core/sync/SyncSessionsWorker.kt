@@ -4,8 +4,14 @@ import android.content.Context
 import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkerParameters
+import com.symma.app.domain.model.RetryableSyncException
+import com.symma.app.domain.model.Session
 import com.symma.app.domain.repository.SessionRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -22,54 +28,57 @@ class SyncSessionsWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        Log.d(TAG, "Starting sync work")
+        if (isFreshRun()) {
+            sessionRepository.requeueFailedSessions()
+            sessionRepository.discardOrphanSnapshots()
+        }
 
         val pendingSessions = sessionRepository.getPendingSessions()
+        if (pendingSessions.isEmpty()) return Result.success()
 
-        if (pendingSessions.isEmpty()) {
-            Log.d(TAG, "No pending sessions to sync")
-            return Result.success()
-        }
-
-        Log.d(TAG, "Found ${pendingSessions.size} pending sessions")
-
-        var hasNetworkError = false
-
-        for (session in pendingSessions) {
-            try {
-                val syncResult = sessionRepository.syncSession(session.id)
-
-                if (syncResult.isFailure) {
-                    val exception = syncResult.exceptionOrNull()
-                    if (exception is IOException) {
-                        Log.w(TAG, "Network error syncing session ${session.id}, will retry")
-                        hasNetworkError = true
-                    } else {
-                        Log.e(TAG, "Permanent error syncing session ${session.id}: ${exception?.message}")
-                    }
-                } else {
-                    Log.d(TAG, "Successfully synced session ${session.id}")
-                }
-            } catch (e: IOException) {
-                Log.w(TAG, "Network exception syncing session ${session.id}", e)
-                hasNetworkError = true
-            } catch (e: Exception) {
-                Log.e(TAG, "Unexpected exception syncing session ${session.id}", e)
+        val sessionsToRetry = pendingSessions.filter { session -> needsRetry(session) }
+        return when {
+            sessionsToRetry.isEmpty() -> Result.success()
+            hasAttemptsLeft() -> {
+                Log.d(TAG, "${sessionsToRetry.size} sessions will retry (attempt ${currentAttempt()} of $MAX_ATTEMPTS)")
+                Result.retry()
             }
-        }
-
-        return if (hasNetworkError) {
-            Log.d(TAG, "Sync work completed with network errors, scheduling retry")
-            Result.retry()
-        } else {
-            Log.d(TAG, "Sync work completed successfully")
-            Result.success()
+            else -> {
+                Log.w(TAG, "Giving up on ${sessionsToRetry.size} sessions after $MAX_ATTEMPTS attempts")
+                sessionsToRetry.forEach { session -> sessionRepository.markError(session.id) }
+                Result.failure()
+            }
         }
     }
 
+    /** Sessions in ERROR get a new chance on every sync run that is not itself a retry. */
+    private fun isFreshRun() = runAttemptCount == 0
+
+    private fun currentAttempt() = runAttemptCount + 1
+
+    private fun hasAttemptsLeft() = currentAttempt() < MAX_ATTEMPTS
+
+    private suspend fun needsRetry(session: Session): Boolean {
+        val failure = try {
+            sessionRepository.syncSession(session.id).exceptionOrNull()
+        } catch (e: Exception) {
+            e
+        } ?: return false
+        Log.w(TAG, "Sync failed for session ${session.id}: ${failure.message}")
+        return failure.isRetryable()
+    }
+
+    private fun Throwable.isRetryable() = this is IOException || this is RetryableSyncException
+
     companion object {
         const val WORK_NAME = "sync_sessions_work"
-        val BACKOFF_DELAY = 30L
+        const val MAX_ATTEMPTS = 3
+        const val BACKOFF_DELAY = 30L
         val BACKOFF_DELAY_UNIT = TimeUnit.SECONDS
+
+        fun buildRequest(): OneTimeWorkRequest = OneTimeWorkRequestBuilder<SyncSessionsWorker>()
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_DELAY, BACKOFF_DELAY_UNIT)
+            .build()
     }
 }

@@ -79,11 +79,13 @@ sealed interface PlayerUiState {
      * 
      * @param totalExercises Total exercises completed
      * @param totalTimeSeconds Total session duration in seconds
+     * @param sessionId Id under which the session results are stored
      */
     data class Completed(
         val routineId: String,
         val totalExercises: Int,
-        val totalTimeSeconds: Long
+        val totalTimeSeconds: Long,
+        val sessionId: String = ""
     ) : PlayerUiState
 }
 

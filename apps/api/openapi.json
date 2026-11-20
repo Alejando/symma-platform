@@ -72,7 +72,10 @@
             "description": "Returns JWT Token"
           },
           "401": {
-            "description": "Invalid PIN or ID"
+            "description": "Invalid PIN"
+          },
+          "429": {
+            "description": "Too many failed attempts from this client"
           }
         },
         "summary": "Login for Mobile App using PIN",
@@ -106,32 +109,7 @@
       },
       "get": {
         "operationId": "PatientsController_findAll",
-        "parameters": [
-          {
-            "name": "search",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "page",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": ""
@@ -208,7 +186,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "204": {
             "description": ""
           }
         },
@@ -275,7 +253,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "204": {
             "description": ""
           }
         },
@@ -332,24 +310,7 @@
       },
       "get": {
         "operationId": "RoutinesController_findAll",
-        "parameters": [
-          {
-            "name": "page",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": ""
@@ -426,7 +387,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "204": {
             "description": ""
           }
         },
@@ -458,35 +419,33 @@
         ]
       }
     },
-    "/exercises": {
-      "get": {
-        "operationId": "ExercisesController_findAll",
+    "/routines/{id}/activate": {
+      "post": {
+        "operationId": "RoutinesController_activate",
         "parameters": [
           {
-            "name": "search",
+            "name": "id",
             "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "page",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": true,
-            "in": "query",
+            "in": "path",
             "schema": {
               "type": "string"
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Routines"
+        ]
+      }
+    },
+    "/exercises": {
+      "get": {
+        "operationId": "ExercisesController_findAll",
+        "parameters": [],
         "responses": {
           "200": {
             "description": ""
@@ -585,7 +544,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "204": {
             "description": ""
           }
         },
@@ -620,6 +579,29 @@
     "/routines/{id}/history": {
       "get": {
         "operationId": "AnalyticsController_getRoutineHistory",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/patients/{id}/stats": {
+      "get": {
+        "operationId": "AnalyticsController_getPatientStats",
         "parameters": [
           {
             "name": "id",
@@ -681,6 +663,39 @@
         ]
       }
     },
+    "/mobile/snapshots/upload-url": {
+      "post": {
+        "operationId": "MobileController_createSnapshotUploadUrl",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnapshotUploadUrlDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Upload URL and snapshot key"
+          },
+          "503": {
+            "description": "Snapshot storage not configured"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Presigned URL to upload the best-attempt snapshot",
+        "tags": [
+          "Mobile Features"
+        ]
+      }
+    },
     "/sessions": {
       "post": {
         "operationId": "SessionsController_create",
@@ -696,8 +711,17 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "Replay of an existing session"
+          },
           "201": {
-            "description": ""
+            "description": "Session created"
+          },
+          "403": {
+            "description": "Routine or session of another patient"
+          },
+          "409": {
+            "description": "Routine is not ACTIVE"
           }
         },
         "security": [
@@ -705,7 +729,42 @@
             "bearer": []
           }
         ],
-        "summary": "Create a new therapy session record",
+        "summary": "Record a therapy session (idempotent by id)",
+        "tags": [
+          "Sessions"
+        ]
+      }
+    },
+    "/sessions/{id}": {
+      "get": {
+        "operationId": "SessionsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session with items and navigation"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get session detail for therapist review",
         "tags": [
           "Sessions"
         ]
@@ -883,6 +942,47 @@
           "items"
         ]
       },
+      "SnapshotUploadUrlDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Client-generated id of the session being recorded"
+          },
+          "exerciseId": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg"
+            ]
+          }
+        },
+        "required": [
+          "sessionId",
+          "exerciseId",
+          "contentType"
+        ]
+      },
+      "SessionCalibrationDto": {
+        "type": "object",
+        "properties": {
+          "capturedAt": {
+            "type": "string"
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "capturedAt",
+          "values"
+        ]
+      },
       "SessionItemDto": {
         "type": "object",
         "properties": {
@@ -890,15 +990,27 @@
             "type": "string"
           },
           "repsCompleted": {
-            "type": "number"
-          },
-          "difficulty": {
             "type": "number",
-            "default": 0
+            "minimum": 0
           },
           "averageAccuracy": {
             "type": "number",
-            "description": "Average symmetry score (0-100)"
+            "minimum": 0,
+            "maximum": 100
+          },
+          "symmetryScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Left/right facial symmetry, 100 = perfectly symmetric"
+          },
+          "averageHoldSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "snapshotKey": {
+            "type": "string",
+            "description": "Key returned by POST /mobile/snapshots/upload-url"
           },
           "seriesData": {
             "type": "object",
@@ -913,6 +1025,10 @@
       "CreateSessionDto": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "description": "Client-generated UUID for idempotency"
+          },
           "routineId": {
             "type": "string"
           },
@@ -922,6 +1038,9 @@
           "endTime": {
             "type": "string"
           },
+          "calibration": {
+            "$ref": "#/components/schemas/SessionCalibrationDto"
+          },
           "items": {
             "type": "array",
             "items": {
@@ -930,6 +1049,7 @@
           }
         },
         "required": [
+          "id",
           "routineId",
           "startTime",
           "endTime",

@@ -43,8 +43,9 @@ symma-platform/
 ├── packages/
 │   ├── database/       # Prisma Schema & Client
 │   ├── shared-types/   # TypeScript Interfaces (The Contract)
-│   ├── config/         # Shared ESLint/TSConfig
-│   └── ui/             # (Optional) Shared React components
+│   ├── i18n/           # Shared translation catalogs (es, en)
+│   ├── eslint-config/  # Shared ESLint config
+│   └── typescript-config/ # Shared TSConfig
 ```
 
 3\. Design System & UX Standards
@@ -54,7 +55,7 @@ symma-platform/
 
 *   **Font Family:** Inter (Google Fonts).
     
-*   **Primary Color:** Teal 600 (**#0D9488**) - Represents clinical precision & calm.
+*   **Primary Color:** Teal 700 (**#0F766E**) - Represents clinical precision & calm. Contrast 5.47:1 on white (WCAG AA). The original Teal 600 (#0D9488) only reaches 3.74:1 on white and must not be used for text.
     
 *   **Secondary Color:** Rose 600 (**#E11D48**) - For alerts/correction needed.
     
@@ -85,7 +86,7 @@ symma-platform/
 
 ### A. Web Performance (Next.js)
 
-*   **React Compiler:** Must be enabled in next.config.js (experimental: { reactCompiler: true }).
+*   **React Compiler:** Must be enabled in next.config.ts (`reactCompiler: true`).
     
 *   **Rendering:** Use **Server Components** by default. Use "use client" only for interactive forms and Recharts visualizations.
     
@@ -113,26 +114,23 @@ symma-platform/
         
     *   **Processing:** Extract blendshapes (e.g., mouthSmileLeft) @ 30fps.
         
-    *   **Output:** Metadata (Score) + 1 Snapshot Image (Best attempt).
+    *   **Output:** Metadata (gesture accuracy and left/right symmetry, both 0–100) + 1 Snapshot Image per exercise (Best attempt).
         
 
 5\. Data Model (Prisma Schema)
 ------------------------------
 
-_All IDs must be UUIDs._
+_All IDs must be UUIDs. Session IDs are generated on the device and double as the idempotency key of `POST /sessions`. Source of truth: `packages/database/prisma/schema.prisma` (detailed in `docs/diagrama-er.md`)._
 
 ```
 erDiagram
-    %% --- GESTIÓN DE USUARIOS Y CLÍNICAS ---
+    %% --- USERS AND CLINICS ---
     CLINIC ||--|{ THERAPIST : emplea
     THERAPIST ||--|{ PATIENT : atiende
 
     CLINIC {
         uuid id PK
         string name
-        string address
-        string contact_phone
-        string billing_info
         timestamp created_at
     }
 
@@ -140,10 +138,10 @@ erDiagram
         uuid id PK
         uuid clinic_id FK
         string email UK
-        string password_hash
+        string password_hash "bcrypt"
         string first_name
         string last_name
-        string role "ADMIN | THERAPIST"
+        string role "ADMIN | THERAPIST (only ADMIN edits the exercise catalog)"
         boolean is_active
         timestamp created_at
     }
@@ -165,9 +163,8 @@ erDiagram
         %% Contacto Emergencia
         string emergency_contact_name
         string emergency_contact_phone
-        %% Seguridad Offline
-        string auth_pin_hash "Hash del PIN para acceso local"
-        string avatar_url
+        %% Acceso móvil
+        string access_code_hash UK "HMAC-SHA256 of the 6-digit PIN (PIN_HMAC_SECRET)"
         timestamp created_at
         timestamp updated_at
     }
@@ -175,16 +172,19 @@ erDiagram
     %% --- MOTOR DE REHABILITACIÓN (Configuración) ---
     PATIENT ||--|{ ROUTINE : tiene_asignada
     ROUTINE ||--|{ ROUTINE_ITEM : contiene
-    EXERCISE_CATALOG ||--|{ ROUTINE_ITEM : base_de
+    EXERCISE ||--|{ ROUTINE_ITEM : base_de
 
-    EXERCISE_CATALOG {
+    EXERCISE {
         uuid id PK
         string key_name UK "Clave i18n (ej: exercise_smile)"
+        string name
+        string description
         string type "ISOTONIC | ISOMETRIC | MANUAL | RELAXATION"
         string category "WARMUP | CORE | COOLDOWN"
+        string mobile_module "EYES | EYES_INVERSE | BROWS | JAW | SMILE | KISS"
         string asset_animation_url
         string asset_tutorial_video_url
-        jsonb default_config "Config base: {threshold: 0.5, hold: 5}"
+        timestamp created_at
     }
 
     ROUTINE {
@@ -193,9 +193,10 @@ erDiagram
         string name "Ej: Fase 1 - Movilidad"
         date start_date
         date end_date
-        boolean is_active
+        string status "DRAFT | ACTIVE | ARCHIVED (max. one ACTIVE per patient)"
         text therapist_notes
         timestamp created_at
+        timestamp updated_at
     }
 
     ROUTINE_ITEM {
@@ -204,44 +205,41 @@ erDiagram
         uuid exercise_id FK
         int order_index
         %% Configuración Específica para este Paciente
-        int target_repetitions
-        int target_sets
-        int hold_time_seconds
-        float success_threshold "0.0 - 1.0 (Sobrescribe el default)"
-        int rest_between_sets_seconds
+        int sets
+        int reps_per_set
+        int target_hold_seconds
+        float difficulty_level "Multiplies the calibrated threshold"
+        int rest_between_sets "seconds"
+        boolean strict_mode
+        boolean allow_skip
     }
 
     %% --- EJECUCIÓN Y RESULTADOS (Sincronización) ---
-    PATIENT ||--|{ SESSION : realiza
-    SESSION ||--|{ SESSION_RESULT : genera
-    EXERCISE_CATALOG ||--|{ SESSION_RESULT : corresponde_a
+    ROUTINE ||--|{ SESSION : genera
+    SESSION ||--|{ SESSION_ITEM : registra
+    EXERCISE ||--|{ SESSION_ITEM : corresponde_a
 
     SESSION {
-        uuid id PK
-        uuid patient_id FK
-        timestamp started_at
-        timestamp ended_at
-        %% Datos de Calibración
-        jsonb calibration_vector "Datos crudos del rostro neutro"
-        string calibration_snapshot_url
-        %% Control de Sincronización
-        boolean is_synced "False si se creó offline y aun no sube"
-        timestamp synced_at
+        uuid id PK "Generated on the device (idempotency key)"
+        uuid routine_id FK
+        timestamp date
+        int duration_seconds
+        float score "0-100"
+        boolean is_synced
+        jsonb calibration "Calibration used: {capturedAt, values}"
+        timestamp created_at
     }
 
-    SESSION_RESULT {
+    SESSION_ITEM {
         uuid id PK
         uuid session_id FK
         uuid exercise_id FK
-        %% Métricas de Éxito
-        boolean is_completed
-        float max_score_achieved "Puntaje más alto (0.0 - 1.0)"
-        float avg_symmetry_score "Promedio de la sesión"
-        float hold_time_avg "Cuanto tiempo aguantó el gesto"
-        int repetitions_completed
-        %% Evidencia
-        string evidence_snapshot_url "Foto del mejor momento"
-        jsonb metadata "Cualquier dato extra técnico"
+        int reps_completed
+        float average_accuracy "Gesture accuracy vs. calibrated threshold (0-100)"
+        float symmetry_score "Left/right symmetry (0-100)"
+        float average_hold_seconds
+        string snapshot_key "S3 key of the best-attempt snapshot"
+        jsonb series_data "Detailed per-rep data"
     }
 ``` 
 
@@ -283,8 +281,8 @@ erDiagram
 7\. Security & Compliance
 -------------------------
 
-*   **LFPDPPP (Mexico):** All sensitive data transmission must be TLS 1.3.
+*   **LFPDPPP (Mexico):** All sensitive data transmission must use TLS 1.2 or higher, with TLS 1.3 preferred (RNF-011).
     
 *   **Permissions:** Mobile app must request Camera permission explaining the therapeutic necessity.
     
-*   **Images:** Stored in S3-compatible storage, never directly in DB.
+*   **Images:** Stored in S3-compatible storage (MinIO locally), never directly in DB. The database keeps only the object key; clients upload and read through short-lived signed URLs.

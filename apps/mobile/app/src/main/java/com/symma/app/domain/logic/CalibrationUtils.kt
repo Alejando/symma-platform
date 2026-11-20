@@ -1,7 +1,6 @@
 package com.symma.app.domain.logic
 
 import android.graphics.RectF
-import android.util.Size
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -29,12 +28,13 @@ const val REP_RELEASE_THRESHOLD = 0.75f
 const val CALIBRATION_THRESHOLD_DEFAULT = 0.15f
 const val CALIBRATION_THRESHOLD_BROW_RAISE = 0.10f
 const val CALIBRATION_THRESHOLD_EYES_CLOSED = 0.10f
+const val CALIBRATION_THRESHOLD_EYES_WIDE = 0.10f
 const val CALIBRATION_THRESHOLD_SMILE = 0.20f
 const val CALIBRATION_THRESHOLD_JAW_OPEN = 0.20f
 const val CALIBRATION_THRESHOLD_KISS = 0.20f
 
-/** Minimum valid stable samples required before a calibration step can finalize. */
-const val CALIBRATION_MIN_VALID_SAMPLES = 30
+/** Half a second of valid frames at 30 fps; a three-second window with fewer is captured again. */
+const val CALIBRATION_MIN_VALID_SAMPLES = 15
 
 object CalibrationUtils {
 
@@ -122,14 +122,15 @@ object CalibrationUtils {
      * - OK: ratio between 0.25 and 0.45 (optimal)
      *
      * @param faceBox Face bounding box from MediaPipe
-     * @param screenSize Screen dimensions
+     * @param imageWidth Width of the analyzed image
+     * @param imageHeight Height of the analyzed image
      * @return DistanceState indicating user positioning
      */
-    fun isDistanceCorrect(faceBox: RectF?, screenSize: Size): DistanceState {
+    fun isDistanceCorrect(faceBox: RectF?, imageWidth: Int, imageHeight: Int): DistanceState {
         if (faceBox == null) return DistanceState.TOO_FAR
 
         val faceArea = faceBox.width() * faceBox.height()
-        val screenArea = screenSize.width.toFloat() * screenSize.height.toFloat()
+        val screenArea = imageWidth.toFloat() * imageHeight.toFloat()
         
         if (screenArea <= 0) return DistanceState.TOO_FAR
         

@@ -8,213 +8,182 @@ import type {
   CreateRoutineDto,
   UpdateRoutineDto,
   Routine,
+  RoutineHistoryQuery,
+  RoutineHistoryItem,
   RoutineHistoryResponse,
   RoutineStatsResponse,
   SessionDetailResponse,
-  DashboardStatsResponse,
+  PaginatedResponse,
+  PaginationQuery,
+  PatientStatsResponse,
+  AccessCodeResponse,
+  AccessCodeStatusResponse,
 } from '@symma/shared-types';
 
-import { AuthenticationError } from './errors';
+import { NetworkError, throwIfNotOk } from './errors';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
+export const BACKEND_PROXY_PATH = '/api/backend';
 
-async function fetchWithAuth(
-  url: string,
-  token: string,
-  options: RequestInit = {}
-): Promise<Response> {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
+function currentPortalLanguage(): Record<string, string> {
+  return typeof document !== 'undefined' && document.documentElement.lang
+    ? { 'Accept-Language': document.documentElement.lang }
+    : {};
+}
 
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      throw new AuthenticationError('Session expired or unauthorized');
-    }
-    const error = await response.json().catch(() => ({ message: 'Request failed' }));
-    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+async function fetchFromProxy(path: string, options: RequestInit): Promise<Response> {
+  try {
+    return await fetch(`${BACKEND_PROXY_PATH}${path}`, {
+      ...options,
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        ...currentPortalLanguage(),
+        ...options.headers,
+      },
+    });
+  } catch (cause) {
+    throw new NetworkError(cause);
   }
+}
 
+async function requestApi(path: string, options: RequestInit = {}): Promise<Response> {
+  const response = await fetchFromProxy(path, options);
+  await throwIfNotOk(response);
   return response;
 }
 
-export async function getPatients(token: string, search?: string): Promise<Patient[]> {
-  const url = new URL(`${API_URL}/api/v1/patients`);
-  if (search) {
-    url.searchParams.set('search', search);
+async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
+  const response = await requestApi(path, options);
+  return response.json();
+}
+
+function withJsonBody(method: string, data: unknown): RequestInit {
+  return { method, body: JSON.stringify(data) };
+}
+
+const MAX_PAGE_SIZE = 100;
+
+function withQuery(path: string, query: PaginationQuery): string {
+  const params = new URLSearchParams();
+  if (query.page) params.set('page', String(query.page));
+  if (query.limit) params.set('limit', String(query.limit));
+  if (query.search) params.set('search', query.search);
+  const search = params.toString();
+  return search ? `${path}?${search}` : path;
+}
+
+export function getPatients(query: PaginationQuery = {}): Promise<PaginatedResponse<Patient>> {
+  return requestJson(withQuery('/patients', query));
+}
+
+export function getPatient(id: string): Promise<Patient> {
+  return requestJson(`/patients/${id}`);
+}
+
+export function getPatientStats(id: string): Promise<PatientStatsResponse> {
+  return requestJson(`/patients/${id}/stats`);
+}
+
+export function createPatient(data: CreatePatientDto): Promise<Patient> {
+  return requestJson('/patients', withJsonBody('POST', data));
+}
+
+export function updatePatient(id: string, data: UpdatePatientDto): Promise<Patient> {
+  return requestJson(`/patients/${id}`, withJsonBody('PATCH', data));
+}
+
+export async function deletePatient(id: string): Promise<void> {
+  await requestApi(`/patients/${id}`, { method: 'DELETE' });
+}
+
+export function getExercises(query: PaginationQuery = {}): Promise<PaginatedResponse<Exercise>> {
+  return requestJson(withQuery('/exercises', query));
+}
+
+async function collectAllPages<T>(
+  fetchPage: (query: { page: number; limit: number }) => Promise<PaginatedResponse<T>>,
+): Promise<T[]> {
+  const collected: T[] = [];
+  for (let page = 1; ; page++) {
+    const result = await fetchPage({ page, limit: MAX_PAGE_SIZE });
+    collected.push(...result.data);
+    if (result.data.length === 0 || collected.length >= result.total) {
+      return collected;
+    }
   }
-  const response = await fetchWithAuth(url.toString(), token);
-  const result = await response.json();
-  // API returns PaginatedResponse { data, total, page, limit }
-  return result.data ?? result;
 }
 
-export async function getPatient(token: string, id: string): Promise<Patient> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/patients/${id}`, token);
-  return response.json();
+export function getAllExercises(): Promise<Exercise[]> {
+  return collectAllPages(getExercises);
 }
 
-export async function createPatient(
-  token: string,
-  data: CreatePatientDto
-): Promise<Patient> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/patients`, token, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-  return response.json();
+export function createExercise(data: CreateExerciseRequest): Promise<Exercise> {
+  return requestJson('/exercises', withJsonBody('POST', data));
 }
 
-export async function updatePatient(
-  token: string,
-  id: string,
-  data: UpdatePatientDto
-): Promise<Patient> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/patients/${id}`, token, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  });
-  return response.json();
+export function updateExercise(id: string, data: UpdateExerciseRequest): Promise<Exercise> {
+  return requestJson(`/exercises/${id}`, withJsonBody('PATCH', data));
 }
 
-export async function deletePatient(token: string, id: string): Promise<Patient> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/patients/${id}`, token, {
-    method: 'DELETE',
-  });
-  return response.json();
+export async function deleteExercise(id: string): Promise<void> {
+  await requestApi(`/exercises/${id}`, { method: 'DELETE' });
 }
 
-export async function getExercises(token: string): Promise<Exercise[]> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/exercises`, token);
-  const result = await response.json();
-  // API returns PaginatedResponse { data, total, page, limit }
-  return result.data ?? result;
+export function createRoutine(data: CreateRoutineDto): Promise<Routine> {
+  return requestJson('/routines', withJsonBody('POST', data));
 }
 
-export async function createRoutine(
-  token: string,
-  data: CreateRoutineDto
-): Promise<Routine> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/routines`, token, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-  return response.json();
+export function getPatientRoutines(patientId: string): Promise<Routine[]> {
+  return requestJson(`/patients/${patientId}/routines`);
 }
 
-export async function getPatientRoutines(token: string, patientId: string): Promise<Routine[]> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/patients/${patientId}/routines`, token);
-  return response.json();
+export function getRoutine(routineId: string): Promise<Routine> {
+  return requestJson(`/routines/${routineId}`);
 }
 
-export async function getRoutineStats(token: string, routineId: string): Promise<RoutineStatsResponse> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}/stats`, token);
-  return response.json();
+export function updateRoutine(routineId: string, data: UpdateRoutineDto): Promise<Routine> {
+  return requestJson(`/routines/${routineId}`, withJsonBody('PUT', data));
 }
 
-export async function getRoutineHistory(token: string, routineId: string): Promise<RoutineHistoryResponse> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}/history`, token);
-  return response.json();
+export async function deleteRoutine(routineId: string): Promise<void> {
+  await requestApi(`/routines/${routineId}`, { method: 'DELETE' });
 }
 
-export async function getSessionDetail(token: string, sessionId: string): Promise<SessionDetailResponse> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/sessions/${sessionId}`, token);
-  return response.json();
-}
-export async function createExercise(token: string, data: CreateExerciseRequest): Promise<Exercise> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/exercises`, token, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-  return response.json();
+export function cloneRoutine(routineId: string): Promise<Routine> {
+  return requestJson(`/routines/${routineId}/clone`, { method: 'POST' });
 }
 
-export async function updateExercise(token: string, id: string, data: UpdateExerciseRequest): Promise<Exercise> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/exercises/${id}`, token, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  });
-  return response.json();
+export function activateRoutine(routineId: string): Promise<Routine> {
+  return requestJson(`/routines/${routineId}/activate`, { method: 'POST' });
 }
 
-export async function deleteExercise(token: string, id: string): Promise<Exercise> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/exercises/${id}`, token, {
-    method: 'DELETE',
-  });
-  return response.json();
+export function getRoutineStats(routineId: string): Promise<RoutineStatsResponse> {
+  return requestJson(`/routines/${routineId}/stats`);
 }
 
-// Routine Lifecycle Functions
-
-export async function getRoutine(token: string, routineId: string): Promise<Routine> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}`, token);
-  return response.json();
-}
-
-export async function updateRoutine(
-  token: string,
+export function getRoutineHistory(
   routineId: string,
-  data: UpdateRoutineDto
-): Promise<Routine> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}`, token, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  });
-  return response.json();
+  query: RoutineHistoryQuery = {},
+): Promise<RoutineHistoryResponse> {
+  return requestJson(withQuery(`/routines/${routineId}/history`, query));
 }
 
-export async function deleteRoutine(token: string, routineId: string): Promise<Routine> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}`, token, {
-    method: 'DELETE',
-  });
-  return response.json();
+export function getAllRoutineHistory(routineId: string): Promise<RoutineHistoryItem[]> {
+  return collectAllPages((query) => getRoutineHistory(routineId, query));
 }
 
-export async function cloneRoutine(token: string, routineId: string): Promise<Routine> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/routines/${routineId}/clone`, token, {
-    method: 'POST',
-  });
-  return response.json();
+export function getSessionDetail(sessionId: string): Promise<SessionDetailResponse> {
+  return requestJson(`/sessions/${sessionId}`);
 }
 
-// ============================================
-// Patient Access Code (Mobile PIN)
-// ============================================
-
-export async function generatePatientAccessCode(
-  token: string,
-  patientId: string
-): Promise<{ accessCode: string }> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/patients/${patientId}/access-code`, token, {
-    method: 'POST',
-  });
-  return response.json();
+export function generatePatientAccessCode(patientId: string): Promise<AccessCodeResponse> {
+  return requestJson(`/patients/${patientId}/access-code`, { method: 'POST' });
 }
 
-export async function revokePatientAccessCode(
-  token: string,
-  patientId: string
-): Promise<void> {
-  await fetchWithAuth(`${API_URL}/api/v1/patients/${patientId}/access-code`, token, {
-    method: 'DELETE',
-  });
+export async function revokePatientAccessCode(patientId: string): Promise<void> {
+  await requestApi(`/patients/${patientId}/access-code`, { method: 'DELETE' });
 }
 
-export async function getPatientAccessCodeStatus(
-  token: string,
-  patientId: string
-): Promise<{ hasAccessCode: boolean }> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/patients/${patientId}/access-code/status`, token);
-  return response.json();
-}
-
-
-export async function getDashboardStats(token: string): Promise<DashboardStatsResponse> {
-  const response = await fetchWithAuth(`${API_URL}/api/v1/dashboard/stats`, token);
-  return response.json();
+export function getPatientAccessCodeStatus(patientId: string): Promise<AccessCodeStatusResponse> {
+  return requestJson(`/patients/${patientId}/access-code/status`);
 }

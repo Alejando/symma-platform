@@ -2,30 +2,34 @@ package com.symma.app.presentation.summary
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.symma.app.domain.model.SessionExerciseResult
+import com.symma.app.domain.repository.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 sealed interface SummaryUiState {
     data object Loading : SummaryUiState
-    data object Success : SummaryUiState
+    data class Success(val exerciseResults: List<SessionExerciseResult> = emptyList()) : SummaryUiState
     data class Error(val message: String) : SummaryUiState
 }
 
 @HiltViewModel
 class SummaryViewModel @Inject constructor(
+    sessionRepository: SessionRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<SummaryUiState>(SummaryUiState.Success)
-    val uiState: StateFlow<SummaryUiState> = _uiState.asStateFlow()
-    
-    // Arguments passed via Navigation (kept for display purposes)
     val routineId: String = checkNotNull(savedStateHandle["routineId"])
     val durationSeconds: Long = checkNotNull(savedStateHandle["duration"]) { "Duration is required" }.toString().toLong()
+    private val sessionId: String = savedStateHandle["sessionId"] ?: ""
 
-    // Session is already saved by PlayerViewModel via SaveAndSyncSessionUseCase
-    // No need to call submitSession() here - just show success immediately
+    /** The session is saved by the Player; results appear here as soon as Room stores them. */
+    val uiState: StateFlow<SummaryUiState> = sessionRepository.observeExerciseResults(sessionId)
+        .map<List<SessionExerciseResult>, SummaryUiState> { results -> SummaryUiState.Success(results) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SummaryUiState.Success())
 }

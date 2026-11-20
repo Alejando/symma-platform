@@ -1,32 +1,26 @@
 openapi: 3.0.3
 info:
   title: Symma API — Exercises Contracts
-  version: 1.0.0
+  version: 1.1.0
+  description: >
+    Global exercise catalog. Any therapist may read it; only role ADMIN may create, update or
+    delete (403 otherwise). Exercises used by an ACTIVE routine cannot be updated or deleted (409).
 
 paths:
   /exercises:
     get:
       tags: [Exercises]
       operationId: listExercises
-      summary: List all exercises (paginated)
+      summary: List exercises (paginated, ordered by name)
       security:
         - bearerAuth: []
       parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
+        - $ref: './common.yaml#/components/parameters/Page'
+        - $ref: './common.yaml#/components/parameters/Limit'
+        - $ref: './common.yaml#/components/parameters/Search'
       responses:
         '200':
+          description: One page of exercises
           content:
             application/json:
               schema:
@@ -38,10 +32,14 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/ExerciseResponse'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
     post:
       tags: [Exercises]
       operationId: createExercise
-      summary: Create a new exercise
+      summary: Create an exercise (ADMIN only)
       security:
         - bearerAuth: []
       requestBody:
@@ -52,10 +50,23 @@ paths:
               $ref: '#/components/schemas/CreateExerciseRequest'
       responses:
         '201':
+          description: Exercise created
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExerciseResponse'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '409':
+          description: keyName already exists
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/ApiError'
 
   /exercises/{id}:
     get:
@@ -65,31 +76,26 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       responses:
         '200':
+          description: The exercise
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExerciseResponse'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
     patch:
       tags: [Exercises]
       operationId: updateExercise
-      summary: Update an exercise
+      summary: Update an exercise (ADMIN only)
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       requestBody:
         required: true
         content:
@@ -98,28 +104,56 @@ paths:
               $ref: '#/components/schemas/UpdateExerciseRequest'
       responses:
         '200':
+          description: Exercise updated
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExerciseResponse'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
+        '409':
+          description: Used by an ACTIVE routine, or keyName already exists
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/ApiError'
     delete:
       tags: [Exercises]
       operationId: deleteExercise
-      summary: Delete an exercise
+      summary: Delete an exercise (ADMIN only)
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       responses:
         '204':
-          description: No content
+          description: Deleted
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './common.yaml#/components/responses/Forbidden'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
+        '409':
+          description: Used by an ACTIVE routine, or still referenced by other routines or sessions
+          content:
+            application/json:
+              schema:
+                $ref: './common.yaml#/components/schemas/ApiError'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     ExerciseDefaultConfig:
       type: object

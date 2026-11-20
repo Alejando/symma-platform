@@ -1,11 +1,13 @@
 package com.symma.app.presentation.player
 
+import com.symma.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import com.symma.app.presentation.components.feedback.QualityBar
+import com.symma.app.presentation.components.feedback.GestureProgressBar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,7 +53,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun PlayerOverlay(
     state: PlayerUiState,
-    symmetryScore: Float,
+    gestureProgress: Float,
     isMeshVisible: Boolean,
     showMeshPoints: Boolean,
     onToggleMesh: () -> Unit,
@@ -93,7 +95,7 @@ fun PlayerOverlay(
                 is PlayerUiState.Exercise -> {
                     ExerciseView(
                         state = targetState,
-                        symmetryScore = symmetryScore,
+                        gestureProgress = gestureProgress,
                         onPause = onPause,
                         onResume = onResume,
                         onSkip = onSkip
@@ -117,35 +119,35 @@ fun PlayerOverlay(
 @Composable
 private fun ExerciseView(
     state: PlayerUiState.Exercise,
-    symmetryScore: Float,
+    gestureProgress: Float,
     onPause: () -> Unit,
     onResume: () -> Unit,
     onSkip: () -> Unit
 ) {
     // Feedback Logic: release gate takes priority over normal feedback
     val feedbackText = when {
-        state.awaitingRelease -> "Relax and release"
+        state.awaitingRelease -> stringResource(R.string.player_feedback_release)
         state.isIsometric -> when {
-            state.isTargetReached -> "Hold it!"
-            symmetryScore >= 0.8f -> "Almost there!"
-            symmetryScore >= 0.5f -> "Keep going..."
-            symmetryScore > 0f -> "Try harder"
-            else -> "Get in position"
+            state.isTargetReached -> stringResource(R.string.player_feedback_hold)
+            gestureProgress >= 0.8f -> stringResource(R.string.player_feedback_almost_there)
+            gestureProgress >= 0.5f -> stringResource(R.string.player_feedback_keep_going)
+            gestureProgress > 0f -> stringResource(R.string.player_feedback_try_harder)
+            else -> stringResource(R.string.player_feedback_get_in_position)
         }
         else -> when {
-            state.isTargetReached -> "Nice!"
-            symmetryScore >= 0.8f -> "Almost!"
-            symmetryScore >= 0.5f -> "Keep going..."
-            symmetryScore > 0f -> "Go!"
-            else -> "Get in position"
+            state.isTargetReached -> stringResource(R.string.player_feedback_nice)
+            gestureProgress >= 0.8f -> stringResource(R.string.player_feedback_almost)
+            gestureProgress >= 0.5f -> stringResource(R.string.player_feedback_keep_going)
+            gestureProgress > 0f -> stringResource(R.string.player_feedback_go)
+            else -> stringResource(R.string.player_feedback_get_in_position)
         }
     }
     
     val feedbackColor = when {
         state.awaitingRelease -> Color(0xFFFFC107) // Amber — release required
         state.isTargetReached -> Color.Green
-        symmetryScore >= 0.8f -> Color(0xFFFFC107)
-        symmetryScore >= 0.5f -> Color(0xFFFFC107)
+        gestureProgress >= 0.8f -> Color(0xFFFFC107)
+        gestureProgress >= 0.5f -> Color(0xFFFFC107)
         else -> Color.White
     }
 
@@ -184,8 +186,8 @@ private fun ExerciseView(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            QualityBar(
-                score = symmetryScore * 100f,
+            GestureProgressBar(
+                percent = gestureProgress * 100f,
                 modifier = Modifier.padding(horizontal = 32.dp)
             )
             
@@ -221,7 +223,7 @@ private fun ExerciseView(
                 // Set Counter
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "SERIES",
+                        text = stringResource(R.string.player_sets_label),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.Gray
                     )
@@ -275,7 +277,7 @@ private fun ExerciseView(
                     ) {
                         Icon(
                             imageVector = if (state.isTargetReached) Icons.Default.Check else Icons.Default.FitnessCenter,
-                            contentDescription = if (state.isTargetReached) "Target reached" else "Perform gesture",
+                            contentDescription = stringResource(if (state.isTargetReached) R.string.player_target_reached else R.string.player_perform_gesture),
                             tint = if (state.isTargetReached) Color.Green else Color.White,
                             modifier = Modifier.size(40.dp)
                         )
@@ -285,7 +287,7 @@ private fun ExerciseView(
                 // Rep Counter
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "REP",
+                        text = stringResource(R.string.player_reps_label),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.Gray
                     )
@@ -316,7 +318,7 @@ private fun ExerciseView(
                 ) {
                     Icon(
                         imageVector = if (state.isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                        contentDescription = if (state.isPaused) "Resume" else "Pause",
+                        contentDescription = stringResource(if (state.isPaused) R.string.player_resume else R.string.player_pause),
                         modifier = Modifier.size(32.dp)
                     )
                 }
@@ -329,11 +331,11 @@ private fun ExerciseView(
                         contentColor = Color.White
                     )
                 ) {
-                    Text("Skip")
+                    Text(stringResource(R.string.player_skip))
                     Spacer(modifier = Modifier.size(8.dp))
                     Icon(
                         imageVector = Icons.Default.SkipNext,
-                        contentDescription = "Skip Exercise",
+                        contentDescription = stringResource(R.string.player_skip_exercise),
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -366,7 +368,7 @@ private fun TopHeader(
         ) {
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "Cerrar"
+                contentDescription = stringResource(R.string.player_close)
             )
         }
         
@@ -385,7 +387,7 @@ private fun TopHeader(
             ) {
                 Icon(
                     imageVector = Icons.Default.ScatterPlot,
-                    contentDescription = if (showMeshPoints) "Ocultar puntos" else "Mostrar puntos"
+                    contentDescription = stringResource(if (showMeshPoints) R.string.player_hide_points else R.string.player_show_points)
                 )
             }
             
@@ -399,7 +401,7 @@ private fun TopHeader(
             ) {
                 Icon(
                     imageVector = if (isMeshVisible) Icons.Default.Face else Icons.Default.FaceRetouchingOff,
-                    contentDescription = if (isMeshVisible) "Ocultar malla" else "Mostrar malla"
+                    contentDescription = stringResource(if (isMeshVisible) R.string.player_hide_mesh else R.string.player_show_mesh)
                 )
             }
         }
@@ -429,7 +431,7 @@ private fun GetReadyView(state: PlayerUiState.GetReady) {
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "GET READY",
+                text = stringResource(R.string.player_get_ready),
                 style = MaterialTheme.typography.headlineLarge,
                 color = Color.White,
                 fontWeight = FontWeight.Bold
@@ -498,7 +500,7 @@ private fun RestView(
             // Show set progress if this is rest between sets
             if (state.isSetRest && state.totalSets > 1) {
                 Text(
-                    text = "Set ${state.currentSet}/${state.totalSets} Complete",
+                    text = stringResource(R.string.player_set_complete, state.currentSet, state.totalSets),
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.White.copy(alpha = 0.8f)
                 )
@@ -506,7 +508,7 @@ private fun RestView(
             }
             
             Text(
-                text = "REST",
+                text = stringResource(R.string.player_rest),
                 style = MaterialTheme.typography.headlineLarge,
                 color = Color.White,
                 fontWeight = FontWeight.Bold
@@ -522,7 +524,11 @@ private fun RestView(
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "Next: ${state.nextExerciseName}",
+                text = if (state.isSetRest) {
+                    stringResource(R.string.player_next_set, state.nextExerciseName, state.currentSet + 1)
+                } else {
+                    stringResource(R.string.player_next_exercise, state.nextExerciseName)
+                },
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White.copy(alpha = 0.9f)
             )
@@ -537,7 +543,7 @@ private fun RestView(
                 ),
                 modifier = Modifier.fillMaxWidth(0.5f)
             ) {
-                Text("Skip Rest")
+                Text(stringResource(R.string.player_skip_rest))
             }
         }
     }
@@ -559,7 +565,7 @@ private fun CompletedView(
             modifier = Modifier.padding(24.dp)
         ) {
             Text(
-                text = "Great Job!",
+                text = stringResource(R.string.player_great_job),
                 style = MaterialTheme.typography.displayMedium,
                 color = Color.Green,
                 fontWeight = FontWeight.Bold
@@ -568,7 +574,7 @@ private fun CompletedView(
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "Completed ${state.totalExercises} exercises in ${state.totalTimeSeconds}s",
+                text = stringResource(R.string.player_completed_summary, state.totalExercises, state.totalTimeSeconds),
                 style = MaterialTheme.typography.headlineSmall,
                 color = Color.White,
                 textAlign = TextAlign.Center
@@ -585,7 +591,7 @@ private fun CompletedView(
                 modifier = Modifier.fillMaxWidth(0.6f)
             ) {
                 Text(
-                    text = "Done",
+                    text = stringResource(R.string.player_done),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )

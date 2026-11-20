@@ -1,34 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { getPatient, updatePatient } from '@/lib/api';
-import { useAuthErrorHandler } from '@/hooks/use-auth-error-handler';
-import type { Patient, UpdatePatientDto, CreatePatientDto } from '@symma/shared-types';
+import { ageInYears } from '@/lib/patient-age';
+import { useApiErrorHandler } from '@/hooks/use-api-error-handler';
+import type { Patient, PatientStatus, UpdatePatientDto, CreatePatientDto } from '@symma/shared-types';
 import { PatientDialog } from '@/components/patients';
 import { PatientContext } from '@/components/patients/patient-context';
 import { Button } from '@/components/ui/button';
 import { EnumLabel } from '@/components/ui/enum-label';
+import { ErrorAlert } from '@/components/ui/error-alert';
+
+const PATIENT_STATUS_BADGE_STYLES: Record<PatientStatus, string> = {
+  ACTIVE: 'bg-brand text-white',
+  INACTIVE: 'bg-gray-200 text-gray-800',
+  ARCHIVED: 'bg-red-100 text-red-800',
+};
 
 function getInitials(firstName: string, lastName: string) {
   return `${firstName[0]}${lastName[0]}`.toUpperCase();
 }
-
-function calculateAge(dateOfBirth: string) {
-  const today = new Date();
-  const birthDate = new Date(dateOfBirth);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
-}
-
-import { use } from 'react';
 
 export default function PatientLayout({
   children,
@@ -38,10 +32,10 @@ export default function PatientLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { data: session } = useSession();
   const t = useTranslations('common');
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const pathname = usePathname();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
@@ -50,39 +44,33 @@ export default function PatientLayout({
   };
 
   const handleEditSubmit = async (data: CreatePatientDto | UpdatePatientDto) => {
-    if (!session?.user?.accessToken || !patient) return;
-    try {
-      const updatedPatient = await updatePatient(session.user.accessToken, patient.id, data as UpdatePatientDto);
-      setPatient(updatedPatient);
-      setIsEditDialogOpen(false);
-    } catch (error) {
-      console.error('Failed to update patient:', error);
-      throw error; // Re-throw to let dialog handle it via its own error state if needed, or just log
-    }
+    if (!patient) return;
+    const updatedPatient = await updatePatient(patient.id, data as UpdatePatientDto);
+    setPatient(updatedPatient);
+    setIsEditDialogOpen(false);
   };
 
-  const handleAuthError = useAuthErrorHandler();
+  const handleApiError = useApiErrorHandler();
 
   useEffect(() => {
     async function loadPatient() {
-      if (session?.user?.accessToken) {
-        try {
-          const data = await getPatient(session.user.accessToken, id);
-          setPatient(data);
-        } catch (error) {
-          if (!handleAuthError(error)) {
-            console.error('Failed to load patient:', error);
-          }
-        } finally {
-          setLoading(false);
-        }
+      try {
+        setPatient(await getPatient(id));
+      } catch (error) {
+        setLoadError(handleApiError(error));
+      } finally {
+        setLoading(false);
       }
     }
     loadPatient();
-  }, [session, id, handleAuthError]);
+  }, [id, handleApiError]);
 
   if (loading) {
     return <div className="p-8">{t('patientLayout.loading')}</div>;
+  }
+
+  if (loadError) {
+    return <ErrorAlert message={loadError} className="m-8" />;
   }
 
   if (!patient) {
@@ -101,7 +89,7 @@ export default function PatientLayout({
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           {/* Patient Info */}
           <div className="flex items-center gap-4 md:gap-6">
-            <div className="h-14 w-14 md:h-20 md:w-20 rounded-full bg-[#0d9488]/10 flex items-center justify-center text-xl md:text-2xl font-bold text-[#0d9488] ring-4 ring-white shadow-sm shrink-0">
+            <div className="h-14 w-14 md:h-20 md:w-20 rounded-full bg-brand/10 flex items-center justify-center text-xl md:text-2xl font-bold text-brand ring-4 ring-white shadow-sm shrink-0">
               {getInitials(patient.firstName, patient.lastName)}
             </div>
             <div className="min-w-0 flex-1">
@@ -109,23 +97,25 @@ export default function PatientLayout({
                 <h1 className="text-xl md:text-2xl font-bold text-[#0d1b1a] truncate">
                   {patient.firstName} {patient.lastName}
                 </h1>
-                <span className="bg-[#0D9488] text-white text-xs font-medium px-2 py-0.5 rounded-full shrink-0">
-                  {t('routineDetail.active')}
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${PATIENT_STATUS_BADGE_STYLES[patient.status]}`}>
+                  <EnumLabel enumName="PatientStatus" value={patient.status} />
                 </span>
               </div>
               <div className="flex items-center gap-3 md:gap-4 text-sm text-gray-500 flex-wrap">
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-base md:text-lg">calendar_today</span>
-                  <span>{patient.dateOfBirth ? t('patientLayout.yrs', { age: calculateAge(patient.dateOfBirth) }) : t('patientDetail.na')}</span>
+                  <span>{patient.dateOfBirth ? t('patientLayout.yrs', { age: ageInYears(patient.dateOfBirth) }) : t('labels.notAvailable')}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-base md:text-lg">wc</span>
                   <span className="capitalize">{patient.gender ? <EnumLabel enumName="Gender" value={patient.gender} /> : '-'}</span>
                 </div>
-                <div className="hidden sm:flex items-center gap-1">
-                  <span className="material-symbols-outlined text-base md:text-lg">medical_services</span>
-                  <span>{t('patientLayout.postOpRecovery')}</span>
-                </div>
+                {patient.diagnosis && (
+                  <div className="hidden sm:flex items-center gap-1">
+                    <span className="material-symbols-outlined text-base md:text-lg">medical_services</span>
+                    <span>{patient.diagnosis}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -142,7 +132,7 @@ export default function PatientLayout({
             </Button>
             <Link
               href={`/dashboard/patients/${id}/routines/new`}
-              className="flex items-center justify-center gap-1 md:gap-2 px-3 md:px-4 py-2 text-sm font-medium text-white bg-[#0d9488] rounded-lg hover:bg-[#0f766e] transition-colors shadow-sm"
+              className="flex items-center justify-center gap-1 md:gap-2 px-3 md:px-4 py-2 text-sm font-medium text-white bg-brand rounded-lg hover:bg-brand-hover transition-colors shadow-sm"
             >
               <span className="material-symbols-outlined text-lg">add</span>
               <span className="inline">{t('patientLayout.assignRoutine')}</span>
@@ -161,7 +151,7 @@ export default function PatientLayout({
                 className={`
                   pb-3 md:pb-4 text-sm font-medium transition-colors border-b-2 whitespace-nowrap
                   ${isActive
-                    ? 'border-[#0d9488] text-[#0d9488]'
+                    ? 'border-brand text-brand'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }
                 `}
@@ -175,7 +165,7 @@ export default function PatientLayout({
 
       {/* Content Area */}
       <div className="flex-1 overflow-auto p-4 md:p-8">
-        <PatientContext.Provider value={{ patient, loading, refreshPatient: async () => { /* no-op or re-fetch if needed */ } }}>
+        <PatientContext.Provider value={{ patient, loading }}>
           {children}
         </PatientContext.Provider>
       </div>
