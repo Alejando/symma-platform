@@ -3,6 +3,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { SessionsController } from './sessions.controller';
 import { SessionsService } from './sessions.service';
 import { CreateSessionDto } from './dto/create-session.dto';
+import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../auth/types';
 
 describe('SessionsController', () => {
@@ -34,21 +35,37 @@ describe('SessionsController', () => {
   });
 
   describe('create', () => {
-    it('should delegate to sessionsService.create', async () => {
-      const req = { user: { id: 'patient-1' } };
-      const dto: CreateSessionDto = {
-        routineId: 'routine-1',
-        startTime: '2026-02-22T10:00:00.000Z',
-        endTime: '2026-02-22T10:10:00.000Z',
-        items: [],
-      };
-      const expected = { id: 'session-1' };
+    const req = {
+      user: { id: 'patient-1', firstName: 'Ana', lastName: 'Diaz' },
+    };
+    const dto: CreateSessionDto = {
+      id: '3f0c8a52-6a55-4f8e-9a10-2b7a3d5c9e11',
+      routineId: 'routine-1',
+      startTime: '2026-02-22T10:00:00.000Z',
+      endTime: '2026-02-22T10:10:00.000Z',
+      items: [{ exerciseId: 'exercise-1', repsCompleted: 5 }],
+    };
 
-      mockSessionsService.create.mockResolvedValue(expected);
+    it.each([
+      [true, 201],
+      [false, 200],
+    ])(
+      'answers %s-created sessions with HTTP %i',
+      async (created, expectedStatus) => {
+        const session = { id: dto.id };
+        const response = { status: jest.fn() } as unknown as Response;
+        mockSessionsService.create.mockResolvedValue({ session, created });
 
-      await expect(controller.create(req, dto)).resolves.toEqual(expected);
-      expect(mockSessionsService.create).toHaveBeenCalledWith('patient-1', dto);
-    });
+        await expect(controller.create(req, dto, response)).resolves.toBe(
+          session,
+        );
+        expect(mockSessionsService.create).toHaveBeenCalledWith(
+          'patient-1',
+          dto,
+        );
+        expect(response.status).toHaveBeenCalledWith(expectedStatus);
+      },
+    );
   });
 
   describe('findOne', () => {

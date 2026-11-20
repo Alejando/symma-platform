@@ -2,32 +2,43 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import type { JwtPayload, ValidatedUser } from './types';
+import { PrismaService } from '../prisma/prisma.service';
+import { PATIENT_ROLE } from './auth.constants';
+import type { ValidatedUser } from './types';
+
+type UnverifiedPayload = { sub?: string; email?: string; role?: string };
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(configService: ConfigService) {
-    const secret = configService.get<string>('JWT_SECRET');
-    if (!secret) {
-      throw new Error('JWT_SECRET environment variable is not set');
-    }
-
+  constructor(
+    configService: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: secret,
+      secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
     });
   }
 
-  validate(payload: JwtPayload): ValidatedUser {
-    if (!payload.sub || !payload.email) {
-      throw new UnauthorizedException('Invalid token payload');
+  async validate(payload: UnverifiedPayload): Promise<ValidatedUser> {
+    if (!payload.sub || !payload.email || payload.role === PATIENT_ROLE) {
+      throw new UnauthorizedException('errors.auth.unauthorized');
+    }
+
+    const therapist = await this.prisma.therapist.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, email: true, role: true, isActive: true },
+    });
+
+    if (!therapist || !therapist.isActive) {
+      throw new UnauthorizedException('errors.auth.unauthorized');
     }
 
     return {
-      userId: payload.sub,
-      email: payload.email,
-      role: payload.role,
+      userId: therapist.id,
+      email: therapist.email,
+      role: therapist.role,
     };
   }
 }

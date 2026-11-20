@@ -1,72 +1,59 @@
 import {
+  BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
-  BadRequestException,
-  ForbiddenException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateRoutineDto } from './dto/create-routine.dto';
-import { UpdateRoutineDto } from './dto/update-routine.dto';
+import { Prisma } from '@prisma/client';
 import type { PaginatedResponse } from '@symma/shared-types';
+import { PrismaService } from '../prisma/prisma.service';
+import {
+  CreateRoutineDto,
+  CreateRoutineItemDto,
+} from './dto/create-routine.dto';
+import { UpdateRoutineDto } from './dto/update-routine.dto';
+import {
+  type PublicPatient,
+  toPatientResponse,
+} from '../patients/patient-response';
+
+const DEFAULT_REST_BETWEEN_SETS_SECONDS = 60;
+
+const routineDetailInclude = {
+  items: {
+    include: { exercise: true },
+    orderBy: { orderIndex: 'asc' },
+  },
+  patient: true,
+} satisfies Prisma.RoutineInclude;
+
+type TransactionClient = Prisma.TransactionClient;
 
 @Injectable()
 export class RoutinesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(therapistId: string, createRoutineDto: CreateRoutineDto) {
-    // Validate dates
-    const startDate = new Date(createRoutineDto.startDate);
-    if (createRoutineDto.endDate) {
-      const endDate = new Date(createRoutineDto.endDate);
-      if (startDate >= endDate) {
-        throw new BadRequestException('Start date must be before end date');
-      }
-    }
+  /** A newly created routine becomes the patient's only ACTIVE routine. */
+  async create(therapistId: string, dto: CreateRoutineDto) {
+    assertStartBeforeEnd(dto.startDate, dto.endDate);
+    await this.assertPatientOwnedBy(therapistId, dto.patientId);
 
-    // Verify patient belongs to therapist
-    const patient = await this.prisma.patient.findFirst({
-      where: {
-        id: createRoutineDto.patientId,
-        therapistId,
-      },
-    });
-
-    if (!patient) {
-      throw new NotFoundException('Patient not found');
-    }
-
-    // Create routine with nested items using Prisma nested writes
-    return this.prisma.routine.create({
-      data: {
-        patientId: createRoutineDto.patientId,
-        name: createRoutineDto.name,
-        startDate,
-        endDate: createRoutineDto.endDate
-          ? new Date(createRoutineDto.endDate)
-          : null,
-        therapistNotes: createRoutineDto.therapistNotes,
-        items: {
-          create: createRoutineDto.items.map((item, index) => ({
-            exerciseId: item.exerciseId,
-            orderIndex: index,
-            sets: item.sets,
-            repsPerSet: item.repsPerSet,
-            targetHoldSeconds: item.targetHoldSeconds,
-            difficultyLevel: item.difficultyLevel ?? 1.0,
-            restBetweenSets: item.restBetweenSets ?? 60,
-            strictMode: item.strictMode ?? false,
-            allowSkip: item.allowSkip ?? true,
-          })),
+    const routine = await this.prisma.$transaction(async (tx) => {
+      await archiveActiveRoutines(tx, dto.patientId);
+      return tx.routine.create({
+        data: {
+          patientId: dto.patientId,
+          name: dto.name,
+          startDate: new Date(dto.startDate),
+          endDate: dto.endDate ? new Date(dto.endDate) : null,
+          status: 'ACTIVE',
+          therapistNotes: dto.therapistNotes,
+          items: { create: dto.items.map(toRoutineItemInput) },
         },
-      },
-      include: {
-        items: {
-          include: { exercise: true },
-          orderBy: { orderIndex: 'asc' },
-        },
-        patient: true,
-      },
+        include: routineDetailInclude,
+      });
     });
+    return withPatientResponse(routine);
   }
 
   async findAll(
@@ -74,24 +61,20 @@ export class RoutinesService {
     options: { page?: number; limit?: number } = {},
   ): Promise<PaginatedResponse<unknown>> {
     const { page = 1, limit = 20 } = options;
-    const skip = (page - 1) * limit;
-
     const where = { patient: { therapistId } };
 
     const [data, total] = await Promise.all([
       this.prisma.routine.findMany({
         where,
         include: {
-          patient: {
-            select: { firstName: true, lastName: true },
-          },
+          patient: { select: { firstName: true, lastName: true } },
           items: {
             include: { exercise: true },
             orderBy: { orderIndex: 'asc' },
           },
         },
         orderBy: { createdAt: 'desc' },
-        skip,
+        skip: (page - 1) * limit,
         take: limit,
       }),
       this.prisma.routine.count({ where }),
@@ -101,27 +84,12 @@ export class RoutinesService {
   }
 
   async findAllByPatient(therapistId: string, patientId: string) {
-    // Verify patient belongs to therapist
-    const patient = await this.prisma.patient.findFirst({
-      where: {
-        id: patientId,
-        therapistId,
-      },
-    });
-
-    if (!patient) {
-      throw new NotFoundException('Patient not found');
-    }
+    await this.assertPatientOwnedBy(therapistId, patientId);
 
     return this.prisma.routine.findMany({
-      where: {
-        patientId,
-      },
+      where: { patientId },
       include: {
-        items: {
-          include: { exercise: true },
-          orderBy: { orderIndex: 'asc' },
-        },
+        items: { include: { exercise: true }, orderBy: { orderIndex: 'asc' } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -129,147 +97,84 @@ export class RoutinesService {
 
   async findOne(therapistId: string, id: string) {
     const routine = await this.prisma.routine.findFirst({
-      where: {
-        id,
-        patient: { therapistId },
-      },
+      where: { id, patient: { therapistId } },
       include: {
-        patient: true,
-        items: {
-          include: { exercise: true },
-          orderBy: { orderIndex: 'asc' },
-        },
-        _count: {
-          select: { sessions: true },
-        },
+        ...routineDetailInclude,
+        _count: { select: { sessions: true } },
       },
     });
 
     if (!routine) {
-      throw new NotFoundException('Routine not found');
+      throw new NotFoundException('errors.routines.notFound');
     }
 
-    // Transform _count to sessionsCount for frontend compatibility
-    return {
-      ...routine,
-      sessionsCount: routine._count.sessions,
-      _count: undefined,
-    };
+    const { _count, ...rest } = routine;
+    return { ...withPatientResponse(rest), sessionsCount: _count.sessions };
   }
 
-  async update(
-    therapistId: string,
-    id: string,
-    updateRoutineDto: UpdateRoutineDto,
-  ) {
-    // Verify ownership
-    await this.findOne(therapistId, id);
-
-    // Check if routine has sessions (data integrity guard)
-    const sessionCount = await this.prisma.session.count({
-      where: { routineId: id },
-    });
-
-    // If routine has sessions, block changes to items (exercises)
-    if (sessionCount > 0 && updateRoutineDto.items) {
-      throw new ForbiddenException(
-        'Cannot modify exercises for a routine with existing sessions. Clone the routine to make changes.',
-      );
-    }
-
-    // Validate dates if both provided
-    if (updateRoutineDto.startDate && updateRoutineDto.endDate) {
-      const startDate = new Date(updateRoutineDto.startDate);
-      const endDate = new Date(updateRoutineDto.endDate);
-      if (startDate >= endDate) {
-        throw new BadRequestException('Start date must be before end date');
-      }
-    }
-
-    // Build update data (metadata only if locked)
-    const updateData: Record<string, unknown> = {};
-
-    if (updateRoutineDto.name) updateData.name = updateRoutineDto.name;
-    if (updateRoutineDto.startDate)
-      updateData.startDate = new Date(updateRoutineDto.startDate);
-    if (updateRoutineDto.endDate)
-      updateData.endDate = new Date(updateRoutineDto.endDate);
-    if (updateRoutineDto.therapistNotes !== undefined)
-      updateData.therapistNotes = updateRoutineDto.therapistNotes;
-
-    // If items are provided (and allowed), replace all items with new ones
-    if (updateRoutineDto.items) {
-      // Delete existing items and create new ones in a transaction
-      await this.prisma.$transaction([
-        this.prisma.routineItem.deleteMany({ where: { routineId: id } }),
-        ...updateRoutineDto.items.map((item, index) =>
-          this.prisma.routineItem.create({
-            data: {
-              routineId: id,
-              exerciseId: item.exerciseId,
-              orderIndex: index,
-              sets: item.sets,
-              repsPerSet: item.repsPerSet,
-              targetHoldSeconds: item.targetHoldSeconds,
-              difficultyLevel: item.difficultyLevel ?? 1.0,
-              restBetweenSets: item.restBetweenSets ?? 60,
-              strictMode: item.strictMode ?? false,
-              allowSkip: item.allowSkip ?? true,
-            },
-          }),
-        ),
-      ]);
-    }
-
-    // Update routine itself
-    return this.prisma.routine.update({
-      where: { id },
-      data: updateData,
-      include: {
-        items: {
-          include: { exercise: true },
-          orderBy: { orderIndex: 'asc' },
-        },
-        patient: true,
-      },
-    });
-  }
-
-  async remove(therapistId: string, id: string) {
-    // Verify ownership
+  async update(therapistId: string, id: string, dto: UpdateRoutineDto) {
     const routine = await this.findOne(therapistId, id);
 
-    // Check if routine has sessions
-    const sessionCount = await this.prisma.session.count({
-      where: { routineId: id },
-    });
+    if (dto.items && routine.sessionsCount > 0) {
+      throw new ConflictException('errors.routines.itemsLocked');
+    }
 
-    if (sessionCount > 0) {
-      // Soft delete: Archive the routine to preserve historical data
-      return this.prisma.routine.update({
+    assertStartBeforeEnd(
+      dto.startDate ?? routine.startDate.toISOString(),
+      dto.endDate ?? routine.endDate?.toISOString(),
+    );
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (dto.items) {
+        await tx.routineItem.deleteMany({ where: { routineId: id } });
+        await tx.routineItem.createMany({
+          data: dto.items.map((item, index) => ({
+            ...toRoutineItemInput(item, index),
+            routineId: id,
+          })),
+        });
+      }
+
+      return tx.routine.update({
+        where: { id },
+        data: {
+          name: dto.name,
+          startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+          endDate: dto.endDate ? new Date(dto.endDate) : undefined,
+          therapistNotes: dto.therapistNotes,
+        },
+        include: routineDetailInclude,
+      });
+    });
+    return withPatientResponse(updated);
+  }
+
+  /** Routines with recorded sessions are archived to preserve clinical history. */
+  async remove(therapistId: string, id: string): Promise<void> {
+    const routine = await this.findOne(therapistId, id);
+
+    if (routine.sessionsCount > 0) {
+      await this.prisma.routine.update({
         where: { id },
         data: { status: 'ARCHIVED' },
       });
+      return;
     }
 
-    // Hard delete: No sessions, safe to remove completely
-    return this.prisma.routine.delete({
-      where: { id },
-    });
+    await this.prisma.routine.delete({ where: { id } });
   }
 
+  /** The copy stays DRAFT, so the patient keeps the original until it is activated. */
   async clone(therapistId: string, id: string) {
-    // Fetch original routine with items
     const original = await this.findOne(therapistId, id);
 
-    // Create a deep copy with new ID and reset stats
-    return this.prisma.routine.create({
+    const copy = await this.prisma.routine.create({
       data: {
         patientId: original.patientId,
         name: `${original.name} (Copy)`,
-        startDate: new Date(), // Reset to today
+        startDate: new Date(),
         endDate: null,
-        status: 'ACTIVE',
+        status: 'DRAFT',
         therapistNotes: original.therapistNotes,
         items: {
           create: original.items.map((item, index) => ({
@@ -285,13 +190,74 @@ export class RoutinesService {
           })),
         },
       },
-      include: {
-        items: {
-          include: { exercise: true },
-          orderBy: { orderIndex: 'asc' },
-        },
-        patient: true,
-      },
+      include: routineDetailInclude,
     });
+    return withPatientResponse(copy);
   }
+
+  async activate(therapistId: string, id: string) {
+    const routine = await this.findOne(therapistId, id);
+
+    if (routine.status === 'ACTIVE') {
+      return routine;
+    }
+
+    const activated = await this.prisma.$transaction(async (tx) => {
+      await archiveActiveRoutines(tx, routine.patientId);
+      return tx.routine.update({
+        where: { id },
+        data: { status: 'ACTIVE' },
+        include: routineDetailInclude,
+      });
+    });
+    return withPatientResponse(activated);
+  }
+
+  private async assertPatientOwnedBy(
+    therapistId: string,
+    patientId: string,
+  ): Promise<void> {
+    const patient = await this.prisma.patient.findFirst({
+      where: { id: patientId, therapistId },
+      select: { id: true },
+    });
+
+    if (!patient) {
+      throw new NotFoundException('errors.patients.notFound');
+    }
+  }
+}
+
+function withPatientResponse<T extends { patient: PublicPatient }>(routine: T) {
+  return { ...routine, patient: toPatientResponse(routine.patient) };
+}
+
+function archiveActiveRoutines(tx: TransactionClient, patientId: string) {
+  return tx.routine.updateMany({
+    where: { patientId, status: 'ACTIVE' },
+    data: { status: 'ARCHIVED' },
+  });
+}
+
+function assertStartBeforeEnd(startDate: string, endDate?: string): void {
+  if (endDate && new Date(startDate) >= new Date(endDate)) {
+    throw new BadRequestException('errors.routines.invalidDateRange');
+  }
+}
+
+function toRoutineItemInput(
+  item: CreateRoutineItemDto,
+  orderIndex: number,
+): Prisma.RoutineItemUncheckedCreateWithoutRoutineInput {
+  return {
+    exerciseId: item.exerciseId,
+    orderIndex,
+    sets: item.sets,
+    repsPerSet: item.repsPerSet,
+    targetHoldSeconds: item.targetHoldSeconds,
+    difficultyLevel: item.difficultyLevel ?? 1.0,
+    restBetweenSets: item.restBetweenSets ?? DEFAULT_REST_BETWEEN_SETS_SECONDS,
+    strictMode: item.strictMode ?? false,
+    allowSkip: item.allowSkip ?? true,
+  };
 }

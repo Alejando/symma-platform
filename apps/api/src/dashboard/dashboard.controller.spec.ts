@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
+import type { AuthenticatedRequest } from '../auth/types';
 
 describe('DashboardController', () => {
   let controller: DashboardController;
@@ -47,7 +48,7 @@ describe('DashboardController', () => {
           email: 'test@example.com',
           role: 'THERAPIST',
         },
-      };
+      } as AuthenticatedRequest;
 
       const result = await controller.getStats(mockRequest);
 
@@ -57,7 +58,10 @@ describe('DashboardController', () => {
     });
 
     it('should not use req.user.id (which would be undefined)', async () => {
-      mockDashboardService.getStats.mockResolvedValue({ metrics: {}, atRiskPatients: [] });
+      mockDashboardService.getStats.mockResolvedValue({
+        metrics: {},
+        atRiskPatients: [],
+      });
 
       const mockRequest = {
         user: {
@@ -65,7 +69,7 @@ describe('DashboardController', () => {
           email: 'test@example.com',
           role: 'THERAPIST',
         },
-      };
+      } as AuthenticatedRequest;
 
       await controller.getStats(mockRequest);
 

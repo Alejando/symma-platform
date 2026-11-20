@@ -1,72 +1,110 @@
 openapi: 3.0.3
 info:
   title: Symma API — Analytics Contracts
-  version: 1.0.0
+  version: 1.1.0
+  description: >
+    Therapist-only analytics. Every endpoint requires a therapist JWT (401 without it) and answers
+    404 for routines or patients of another therapist. Scores are on a 0–100 scale. Calendar days
+    are computed in the ANALYTICS_TIME_ZONE of the API (UTC by default).
 
 paths:
   /routines/{id}/stats:
     get:
       tags: [Analytics]
       operationId: getRoutineStats
-      summary: Get aggregated statistics for a routine
+      summary: Aggregated statistics for a routine
+      security:
+        - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       responses:
         '200':
+          description: Routine statistics
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/RoutineStatsResponse'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
         '404':
-          description: Routine not found
+          $ref: './common.yaml#/components/responses/NotFound'
 
   /routines/{id}/history:
     get:
       tags: [Analytics]
       operationId: getRoutineHistory
-      summary: Get session history for a routine (most recent first, limit 20)
+      summary: Paginated session history for a routine, newest first
+      security:
+        - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
+        - $ref: './common.yaml#/components/parameters/Page'
+        - $ref: './common.yaml#/components/parameters/Limit'
       responses:
         '200':
+          description: One page of sessions
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: './sessions.yaml#/components/schemas/SessionResponse'
+                $ref: '#/components/schemas/RoutineHistoryResponse'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
         '404':
-          description: Routine not found
+          $ref: './common.yaml#/components/responses/NotFound'
+
+  /patients/{id}/stats:
+    get:
+      tags: [Analytics]
+      operationId: getPatientStats
+      summary: Adherence and activity of a patient
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: './common.yaml#/components/parameters/Id'
+      responses:
+        '200':
+          description: Patient statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientStatsResponse'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     RoutineChartPoint:
       type: object
-      required: [date, score]
+      required: [date, score, symmetry]
       properties:
         date:
           type: string
           format: date
-          description: YYYY-MM-DD
+          description: Calendar day of the session (YYYY-MM-DD)
         score:
           type: integer
           minimum: 0
           maximum: 100
-          description: Session score as integer percentage
+        symmetry:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: Average symmetryScore of the session items; null when none was reported
 
     RoutineStatsResponse:
       type: object
-      required: [summary, chartData]
+      required: [summary, averageSymmetry, chartData]
       properties:
         summary:
           type: object
@@ -76,13 +114,98 @@ components:
               type: integer
             currentStreak:
               type: integer
-              description: Consecutive days with at least one session
+              description: Consecutive calendar days with a session, ending today or yesterday
             avgScore:
               type: integer
               minimum: 0
               maximum: 100
-              description: Average score as integer percentage (0–100)
+        averageSymmetry:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
         chartData:
           type: array
+          description: One point per session, oldest first
           items:
             $ref: '#/components/schemas/RoutineChartPoint'
+
+    HistoryItemSummary:
+      type: object
+      required: [exerciseId, exerciseName, repsCompleted, averageAccuracy, symmetryScore, averageHoldSeconds]
+      properties:
+        exerciseId:
+          type: string
+          format: uuid
+        exerciseName:
+          type: string
+        repsCompleted:
+          type: integer
+        averageAccuracy:
+          type: number
+          minimum: 0
+          maximum: 100
+          nullable: true
+        symmetryScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          nullable: true
+        averageHoldSeconds:
+          type: number
+          minimum: 0
+          nullable: true
+
+    RoutineHistoryItem:
+      type: object
+      required: [id, date, durationSeconds, score, isSynced, items]
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date-time
+        durationSeconds:
+          type: integer
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        isSynced:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoryItemSummary'
+
+    RoutineHistoryResponse:
+      allOf:
+        - $ref: './common.yaml#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/RoutineHistoryItem'
+
+    PatientStatsResponse:
+      type: object
+      required: [adherencePercent, sessionsCompleted, lastSessionAt]
+      properties:
+        adherencePercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: >
+            Share of calendar days with at least one session over the last 30 days of the ACTIVE
+            routine's period (from its start date, or 30 days ago if later, until today or its end
+            date). null without an ACTIVE routine or before it starts.
+        sessionsCompleted:
+          type: integer
+          description: Sessions across all of the patient's routines
+        lastSessionAt:
+          type: string
+          format: date-time
+          nullable: true

@@ -7,6 +7,8 @@ import {
   Min,
   IsOptional,
   IsString,
+  IsNumber,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateRoutineDto } from './create-routine.dto';
@@ -14,7 +16,7 @@ import { CreateRoutineDto } from './create-routine.dto';
 export class UpdateRoutineItemDto {
   @IsOptional()
   @IsUUID()
-  id?: string; // Existing item ID (for update), undefined for new items
+  id?: string;
 
   @IsString()
   exerciseId: string;
@@ -37,12 +39,16 @@ export class UpdateRoutineItemDto {
   restBetweenSets?: number;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
   difficultyLevel?: number;
 
   @IsOptional()
+  @IsBoolean()
   strictMode?: boolean;
 
   @IsOptional()
+  @IsBoolean()
   allowSkip?: boolean;
 }
 

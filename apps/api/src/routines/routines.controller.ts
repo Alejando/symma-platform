@@ -1,21 +1,23 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Put,
-  Param,
+  Controller,
   Delete,
-  UseGuards,
-  Request,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Put,
   Query,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
 import { RoutinesService } from './routines.service';
 import { CreateRoutineDto } from './dto/create-routine.dto';
 import { UpdateRoutineDto } from './dto/update-routine.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../auth/types';
+import { PaginationQueryDto } from '../common/pagination/pagination-query.dto';
 
 @Controller('routines')
 @UseGuards(JwtAuthGuard)
@@ -33,13 +35,9 @@ export class RoutinesController {
   @Get()
   findAll(
     @Request() req: AuthenticatedRequest,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.routinesService.findAll(req.user.userId, {
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? Math.min(parseInt(limit, 10), 100) : undefined,
-    });
+    return this.routinesService.findAll(req.user.userId, query);
   }
 
   @Get(':id')
@@ -57,6 +55,7 @@ export class RoutinesController {
   }
 
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.routinesService.remove(req.user.userId, id);
   }
@@ -64,5 +63,11 @@ export class RoutinesController {
   @Post(':id/clone')
   clone(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.routinesService.clone(req.user.userId, id);
+  }
+
+  @Post(':id/activate')
+  @HttpCode(HttpStatus.OK)
+  activate(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.routinesService.activate(req.user.userId, id);
   }
 }

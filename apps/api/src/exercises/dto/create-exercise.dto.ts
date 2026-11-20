@@ -53,17 +53,19 @@ export class CreateExerciseDto implements CreateExerciseRequest {
   @IsIn(EXERCISE_CATEGORY_VALUES)
   category: ExerciseCategory;
 
-  @ValidateIf((o) => o.assetAnimationUrl !== '')
+  @ValidateIf((dto: CreateExerciseDto) => dto.assetAnimationUrl !== '')
   @IsUrl()
   @IsOptional()
   assetAnimationUrl?: string;
 
-  @ValidateIf((o) => o.assetTutorialVideoUrl !== '')
+  @ValidateIf((dto: CreateExerciseDto) => dto.assetTutorialVideoUrl !== '')
   @IsUrl()
   @IsOptional()
   assetTutorialVideoUrl?: string;
 
-  @ValidateIf((o) => MOBILE_SUPPORTED_TYPES.includes(o.type))
+  @ValidateIf((dto: CreateExerciseDto) =>
+    MOBILE_SUPPORTED_TYPES.includes(dto.type),
+  )
   @IsIn(MOBILE_MODULE_VALUES)
   @IsOptional()
   mobileModule?: MobileModule;

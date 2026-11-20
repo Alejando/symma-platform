@@ -1,10 +1,103 @@
 openapi: 3.0.3
 info:
   title: Symma API — Common Schemas
-  version: 1.0.0
-  description: Shared enums, pagination, and error schemas used across all domains.
+  version: 1.1.0
+  description: >
+    Shared enums, pagination, parameters and error responses used across all domains.
+    Every error body is an ApiError whose `message` is translated according to the
+    Accept-Language request header (`es` by default, `en` supported).
+paths: {}
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Page:
+      name: page
+      in: query
+      description: 1-indexed page number. Non-integers or values below 1 answer 400.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      description: Items per page. Non-integers or values outside 1–100 answer 400.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Search:
+      name: search
+      in: query
+      description: Case-insensitive text filter
+      schema:
+        type: string
+    AcceptLanguage:
+      name: Accept-Language
+      in: header
+      description: Language of error messages (`es` default, `en`)
+      schema:
+        type: string
+        example: en-US,en;q=0.9
+
+  responses:
+    BadRequest:
+      description: Invalid request; `message` lists one translated message per invalid field
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Missing, invalid, expired or revoked token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: Authenticated but not allowed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Resource not found, or owned by another therapist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: Conflicts with the current state (unique key, foreign key, resource in use)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    TooManyRequests:
+      description: Too many failed attempts from this client
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ServiceUnavailable:
+      description: A required external service is not configured or available
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
   schemas:
     # ==========================================
     # Enums
@@ -31,7 +124,9 @@ components:
 
     RoutineStatus:
       type: string
-      enum: [ACTIVE, ARCHIVED]
+      enum: [DRAFT, ACTIVE, ARCHIVED]
+      description: >
+        DRAFT routines are never served to the patient. A patient has at most one ACTIVE routine.
 
     MobileModule:
       type: string
@@ -40,24 +135,6 @@ components:
     # ==========================================
     # Pagination
     # ==========================================
-    PaginationQuery:
-      type: object
-      properties:
-        page:
-          type: integer
-          minimum: 1
-          default: 1
-          description: 1-indexed page number
-        limit:
-          type: integer
-          minimum: 1
-          maximum: 100
-          default: 20
-          description: Items per page
-        search:
-          type: string
-          description: Optional text search filter
-
     PaginatedResponse:
       type: object
       required: [data, total, page, limit]
@@ -81,11 +158,12 @@ components:
     # ==========================================
     ApiError:
       type: object
-      required: [statusCode, message]
+      required: [statusCode, message, timestamp]
       properties:
         statusCode:
           type: integer
         message:
+          description: Translated according to Accept-Language
           oneOf:
             - type: string
             - type: array
@@ -93,3 +171,7 @@ components:
                 type: string
         error:
           type: string
+          description: HTTP reason phrase, when available
+        timestamp:
+          type: string
+          format: date-time

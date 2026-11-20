@@ -13,10 +13,10 @@ datasource db {
 // ===========================================
 
 model Clinic {
-  id           String      @id @default(uuid())
-  name         String
-  createdAt    DateTime    @default(now()) @map("created_at")
-  therapists   Therapist[]
+  id         String      @id @default(uuid())
+  name       String
+  createdAt  DateTime    @default(now()) @map("created_at")
+  therapists Therapist[]
 
   @@map("clinics")
 }
@@ -65,7 +65,6 @@ model Patient {
 // Rehabilitation Engine Models
 // ===========================================
 
-
 enum MobileModule {
   EYES
   EYES_INVERSE
@@ -110,20 +109,20 @@ model Routine {
 }
 
 model RoutineItem {
-  id                String       @id @default(uuid())
-  routineId         String       @map("routine_id")
-  exerciseId        String       @map("exercise_id")
-  orderIndex        Int          @map("order_index")
+  id         String @id @default(uuid())
+  routineId  String @map("routine_id")
+  exerciseId String @map("exercise_id")
+  orderIndex Int    @map("order_index")
 
-  sets              Int          @default(1)
-  repsPerSet        Int          @default(10) @map("reps_per_set")
-  targetHoldSeconds Int          @default(0) @map("target_hold_seconds")
-  difficultyLevel   Float        @default(1.0) @map("difficulty_level")
-  restBetweenSets   Int          @default(10) @map("rest_between_sets")
-  strictMode        Boolean      @default(false) @map("strict_mode")
-  allowSkip         Boolean      @default(true) @map("allow_skip")
-  routine           Routine      @relation(fields: [routineId], references: [id], onDelete: Cascade)
-  exercise          Exercise     @relation(fields: [exerciseId], references: [id])
+  sets              Int      @default(1)
+  repsPerSet        Int      @default(10) @map("reps_per_set")
+  targetHoldSeconds Int      @default(0) @map("target_hold_seconds")
+  difficultyLevel   Float    @default(1.0) @map("difficulty_level")
+  restBetweenSets   Int      @default(10) @map("rest_between_sets")
+  strictMode        Boolean  @default(false) @map("strict_mode")
+  allowSkip         Boolean  @default(true) @map("allow_skip")
+  routine           Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercise          Exercise @relation(fields: [exerciseId], references: [id])
 
   @@map("routine_items")
 }
@@ -163,18 +162,20 @@ enum ExerciseCategory {
 }
 
 enum RoutineStatus {
+  DRAFT
   ACTIVE
   ARCHIVED
 }
 
 model Session {
-  id              String   @id @default(uuid())
-  routineId       String   @map("routine_id")
+  id              String        @id @default(uuid())
+  routineId       String        @map("routine_id")
   date            DateTime
-  durationSeconds Int      @map("duration_seconds")
-  score           Float
+  durationSeconds Int           @map("duration_seconds")
+  score           Float // 0–100
   items           SessionItem[]
   isSynced        Boolean       @default(false) @map("is_synced")
+  calibration     Json?
   createdAt       DateTime      @default(now()) @map("created_at")
   routine         Routine       @relation(fields: [routineId], references: [id], onDelete: Cascade)
 
@@ -182,14 +183,17 @@ model Session {
 }
 
 model SessionItem {
-  id              String   @id @default(uuid())
-  sessionId       String   @map("session_id")
-  exerciseId      String   @map("exercise_id")
-  repsCompleted   Int      @map("reps_completed")
-  averageAccuracy Float?   @map("average_accuracy") // RFC-026: AI Metric
-  seriesData      Json?    @map("series_data")      // RFC-030: Detailed Series Data
-  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  exercise        Exercise @relation(fields: [exerciseId], references: [id])
+  id                 String   @id @default(uuid())
+  sessionId          String   @map("session_id")
+  exerciseId         String   @map("exercise_id")
+  repsCompleted      Int      @map("reps_completed")
+  averageAccuracy    Float?   @map("average_accuracy") // 0–100
+  symmetryScore      Float?   @map("symmetry_score") // 0–100, 100 = perfectly symmetric
+  averageHoldSeconds Float?   @map("average_hold_seconds")
+  snapshotKey        String?  @map("snapshot_key")
+  seriesData         Json?    @map("series_data")
+  session            Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise           Exercise @relation(fields: [exerciseId], references: [id])
 
   @@map("session_items")
 }

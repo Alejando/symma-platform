@@ -40,12 +40,16 @@ export class CreateRoutineItemDto implements RoutineItemRequest {
   restBetweenSets?: number;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
   difficultyLevel?: number;
 
   @IsOptional()
+  @IsBoolean()
   strictMode?: boolean;
 
   @IsOptional()
+  @IsBoolean()
   allowSkip?: boolean;
 }
 

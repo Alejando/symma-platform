@@ -1,126 +1,129 @@
 import { Injectable } from '@nestjs/common';
+import type {
+  AtRiskPatientResponse,
+  DashboardStatsResponse,
+} from '@symma/shared-types';
 import { PrismaService } from '../prisma/prisma.service';
+
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+export const AT_RISK_INACTIVITY_DAYS = 3;
+export const EFFICACY_WINDOW_DAYS = 7;
+
+interface AtRiskCandidate {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async getStats(therapistId: string) {
+  async getStats(therapistId: string): Promise<DashboardStatsResponse> {
     const now = new Date();
-    const threeDaysAgo = new Date(now.getTime() - 72 * 60 * 60 * 1000);
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const inactivityThreshold = daysBefore(now, AT_RISK_INACTIVITY_DAYS);
 
-    const [activePatientsCount, atRiskPatients, recentSessions] =
-      await Promise.all([
-        // 1. Active Patients Count
-        this.prisma.patient.count({
-          where: {
-            therapistId,
-            status: 'ACTIVE',
+    const [activePatients, atRiskCandidates, efficacy] = await Promise.all([
+      this.prisma.patient.count({ where: { therapistId, status: 'ACTIVE' } }),
+      this.prisma.patient.findMany({
+        where: {
+          therapistId,
+          status: 'ACTIVE',
+          routines: {
+            some: {
+              status: 'ACTIVE',
+              OR: [{ endDate: { gt: now } }, { endDate: null }],
+            },
           },
-        }),
-
-        // 2. At Risk Patients Candidates
-        // Find patients with active routines who haven't practiced in 3 days
-        this.prisma.patient.findMany({
-          where: {
-            therapistId,
-            status: 'ACTIVE',
+          NOT: {
             routines: {
               some: {
-                status: 'ACTIVE',
-                OR: [{ endDate: { gt: now } }, { endDate: null }],
-              },
-            },
-            // NOT: Has any session in the last 3 days
-            NOT: {
-              routines: {
-                some: {
-                  sessions: {
-                    some: {
-                      date: { gt: threeDaysAgo },
-                    },
-                  },
-                },
+                sessions: { some: { date: { gt: inactivityThreshold } } },
               },
             },
           },
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        }),
-
-        // 3. Avg Efficacy (Last 7 days)
-        this.prisma.session.findMany({
-          where: {
-            date: { gt: sevenDaysAgo },
-            routine: {
-              patient: {
-                therapistId,
-              },
-            },
-          },
-          select: {
-            score: true,
-          },
-        }),
-      ]);
-
-    // Calculate days inactive for at-risk patients
-    // We need to fetch the last session date for each at-risk patient to be precise
-    const atRiskDetails = await Promise.all(
-      atRiskPatients.map(async (p) => {
-        const lastSession = await this.prisma.session.findFirst({
-          where: { routine: { patientId: p.id } },
-          orderBy: { date: 'desc' },
-        });
-
-        let daysInactive = 0;
-        if (lastSession) {
-          daysInactive = Math.floor(
-            (now.getTime() - lastSession.date.getTime()) / (1000 * 3600 * 24),
-          );
-        } else {
-          // If no sessions ever, use the oldest active routine start date?
-          // Or just default to "3+"
-          // Let's just say 4 as a placeholder or calculate from routine start
-          const firstRoutine = await this.prisma.routine.findFirst({
-            where: { patientId: p.id, status: 'ACTIVE' },
-            orderBy: { startDate: 'asc' },
-          });
-          if (firstRoutine) {
-            daysInactive = Math.floor(
-              (now.getTime() - firstRoutine.startDate.getTime()) /
-                (1000 * 3600 * 24),
-            );
-          }
-        }
-
-        return {
-          id: p.id,
-          name: `${p.firstName} ${p.lastName}`,
-          daysInactive: daysInactive || 3, // At least 3 by definition of the query
-        };
+        },
+        select: { id: true, firstName: true, lastName: true },
       }),
-    );
+      this.prisma.session.aggregate({
+        where: {
+          date: { gt: daysBefore(now, EFFICACY_WINDOW_DAYS) },
+          routine: { patient: { therapistId } },
+        },
+        _avg: { score: true },
+      }),
+    ]);
 
-    // Sort by most inactive
-    atRiskDetails.sort((a, b) => b.daysInactive - a.daysInactive);
-
-    // Calculate Average Efficacy
-    const scores = recentSessions.map((s) => s.score);
-    const avgEfficacy =
-      scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+    const atRiskPatients = await this.describeInactivity(atRiskCandidates, now);
 
     return {
       metrics: {
-        activePatients: { value: activePatientsCount, trend: 0 }, // Trend logic omitted for v1
-        complianceAlerts: { value: atRiskDetails.length, trend: 0 },
-        avgEfficacy: { value: Math.round(avgEfficacy), trend: 0 },
+        activePatients: { value: activePatients, trend: 0 },
+        complianceAlerts: { value: atRiskPatients.length, trend: 0 },
+        avgEfficacy: { value: Math.round(efficacy._avg.score ?? 0), trend: 0 },
       },
-      atRiskPatients: atRiskDetails,
+      atRiskPatients,
     };
   }
+
+  private async describeInactivity(
+    candidates: AtRiskCandidate[],
+    now: Date,
+  ): Promise<AtRiskPatientResponse[]> {
+    if (candidates.length === 0) {
+      return [];
+    }
+
+    const routines = await this.prisma.routine.findMany({
+      where: { patientId: { in: candidates.map(({ id }) => id) } },
+      select: { id: true, patientId: true, status: true, startDate: true },
+    });
+    const lastSessionByRoutine = await this.prisma.session.groupBy({
+      by: ['routineId'],
+      where: { routineId: { in: routines.map(({ id }) => id) } },
+      _max: { date: true },
+    });
+
+    const lastSessionAt = new Map<string, Date>();
+    const firstActiveStart = new Map<string, Date>();
+    const patientOfRoutine = new Map(
+      routines.map(({ id, patientId }) => [id, patientId]),
+    );
+
+    for (const { routineId, _max } of lastSessionByRoutine) {
+      const patientId = patientOfRoutine.get(routineId);
+      const previous = patientId ? lastSessionAt.get(patientId) : undefined;
+      if (patientId && _max.date && (!previous || _max.date > previous)) {
+        lastSessionAt.set(patientId, _max.date);
+      }
+    }
+
+    for (const { patientId, status, startDate } of routines) {
+      const previous = firstActiveStart.get(patientId);
+      if (status === 'ACTIVE' && (!previous || startDate < previous)) {
+        firstActiveStart.set(patientId, startDate);
+      }
+    }
+
+    return candidates
+      .map(({ id, firstName, lastName }) => {
+        const inactiveSince =
+          lastSessionAt.get(id) ?? firstActiveStart.get(id) ?? now;
+        return {
+          id,
+          name: `${firstName} ${lastName}`,
+          daysInactive:
+            wholeDaysBetween(inactiveSince, now) || AT_RISK_INACTIVITY_DAYS,
+        };
+      })
+      .sort((a, b) => b.daysInactive - a.daysInactive);
+  }
+}
+
+function daysBefore(instant: Date, days: number): Date {
+  return new Date(instant.getTime() - days * MILLISECONDS_PER_DAY);
+}
+
+function wholeDaysBetween(from: Date, to: Date): number {
+  return Math.floor((to.getTime() - from.getTime()) / MILLISECONDS_PER_DAY);
 }

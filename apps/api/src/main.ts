@@ -1,21 +1,18 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { configureApp } from './app.setup';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Global prefix for all routes
-  app.setGlobalPrefix('api/v1');
+  configureApp(app);
 
-  // Enable CORS for web app
   app.enableCors({
     origin: ['http://localhost:4000'],
     credentials: true,
   });
 
-  // Swagger Documentation
-  const { DocumentBuilder, SwaggerModule } = await import('@nestjs/swagger');
   const config = new DocumentBuilder()
     .setTitle('Symma Platform API')
     .setDescription('API documentation for Web Dashboard and Mobile App')
@@ -25,18 +22,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // Global validation pipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: false,
-      transform: true,
-    }),
-  );
-
   const port = process.env.PORT ?? 4001;
   await app.listen(port);
   console.log(`🚀 API running on http://localhost:${port}/api/v1`);
   console.log(`📚 Swagger docs at http://localhost:${port}/api/docs`);
 }
-bootstrap();
+void bootstrap();

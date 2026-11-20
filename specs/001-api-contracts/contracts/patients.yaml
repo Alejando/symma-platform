@@ -1,14 +1,17 @@
 openapi: 3.0.3
 info:
   title: Symma API — Patients Contracts
-  version: 1.0.0
+  version: 1.1.0
+  description: >
+    Therapist JWT required. Patients of another therapist answer 404. The PIN is stored only as an
+    HMAC-SHA256 and no response ever contains it or its hash. Statistics: see analytics.yaml.
 
 paths:
   /patients:
     post:
       tags: [Patients]
       operationId: createPatient
-      summary: Create a new patient
+      summary: Create a patient for the authenticated therapist
       security:
         - bearerAuth: []
       requestBody:
@@ -19,25 +22,28 @@ paths:
               $ref: '#/components/schemas/CreatePatientRequest'
       responses:
         '201':
+          description: Patient created
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PatientResponse'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
     get:
       tags: [Patients]
       operationId: listPatients
-      summary: List patients (paginated)
+      summary: List the therapist's non-archived patients (paginated)
       security:
         - bearerAuth: []
       parameters:
-        - $ref: './common.yaml#/components/schemas/PaginationQuery/properties/page'
-        - $ref: './common.yaml#/components/schemas/PaginationQuery/properties/limit'
-        - name: search
-          in: query
-          schema:
-            type: string
+        - $ref: './common.yaml#/components/parameters/Page'
+        - $ref: './common.yaml#/components/parameters/Limit'
+        - $ref: './common.yaml#/components/parameters/Search'
       responses:
         '200':
+          description: One page of patients
           content:
             application/json:
               schema:
@@ -49,6 +55,10 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/PatientResponse'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
 
   /patients/{id}:
     get:
@@ -58,20 +68,18 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       responses:
         '200':
+          description: The patient
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PatientResponse'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
         '404':
-          description: Patient not found
+          $ref: './common.yaml#/components/responses/NotFound'
     patch:
       tags: [Patients]
       operationId: updatePatient
@@ -79,12 +87,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       requestBody:
         required: true
         content:
@@ -93,86 +96,99 @@ paths:
               $ref: '#/components/schemas/UpdatePatientRequest'
       responses:
         '200':
+          description: Patient updated
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PatientResponse'
+        '400':
+          $ref: './common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
     delete:
       tags: [Patients]
       operationId: deletePatient
-      summary: Delete a patient
+      summary: Archive a patient (soft delete); their patient tokens stop working
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       responses:
         '204':
-          description: No content
+          description: Archived
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
 
   /patients/{id}/access-code:
     post:
       tags: [Patients]
       operationId: generateAccessCode
-      summary: Generate a new access code for mobile login
+      summary: Generate a new 6-digit PIN; tokens issued for the previous PIN stop working
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       responses:
         '201':
+          description: The plain PIN, shown only once
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AccessCodeResponse'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
+        '503':
+          $ref: './common.yaml#/components/responses/ServiceUnavailable'
     delete:
       tags: [Patients]
       operationId: revokeAccessCode
-      summary: Revoke patient access code
+      summary: Revoke the PIN; tokens issued for it stop working immediately
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       responses:
         '204':
-          description: No content
+          description: Revoked
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
 
   /patients/{id}/access-code/status:
     get:
       tags: [Patients]
       operationId: getAccessCodeStatus
-      summary: Check if patient has an active access code
+      summary: Whether the patient has an active PIN
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: './common.yaml#/components/parameters/Id'
       responses:
         '200':
+          description: PIN status
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AccessCodeStatusResponse'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
+        '404':
+          $ref: './common.yaml#/components/responses/NotFound'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     CreatePatientRequest:
       type: object
@@ -285,9 +301,6 @@ components:
         emergencyContactPhone:
           type: string
           nullable: true
-        avatarUrl:
-          type: string
-          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -301,6 +314,7 @@ components:
       properties:
         accessCode:
           type: string
+          pattern: '^\d{6}$'
           description: Plain-text 6-digit code (shown once)
         patientId:
           type: string

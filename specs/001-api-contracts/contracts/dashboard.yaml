@@ -1,24 +1,33 @@
 openapi: 3.0.3
 info:
   title: Symma API — Dashboard Contracts
-  version: 1.0.0
+  version: 1.1.0
 
 paths:
   /dashboard/stats:
     get:
       tags: [Dashboard]
       operationId: getDashboardStats
-      summary: Get dashboard statistics for the authenticated therapist
+      summary: Dashboard statistics for the authenticated therapist
       security:
         - bearerAuth: []
       responses:
         '200':
+          description: Metrics and patients at risk
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DashboardStatsResponse'
+        '401':
+          $ref: './common.yaml#/components/responses/Unauthorized'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     DashboardMetric:
       type: object
@@ -45,9 +54,6 @@ components:
           type: integer
           minimum: 0
           description: Number of days since last session
-        avatarUrl:
-          type: string
-          nullable: true
 
     DashboardStatsResponse:
       type: object
@@ -62,7 +68,10 @@ components:
             complianceAlerts:
               $ref: '#/components/schemas/DashboardMetric'
             avgEfficacy:
-              $ref: '#/components/schemas/DashboardMetric'
+              allOf:
+                - $ref: '#/components/schemas/DashboardMetric'
+              description: >
+                Average session score (0–100, same scale as routine analytics) over the last 7 days
         atRiskPatients:
           type: array
           items:
