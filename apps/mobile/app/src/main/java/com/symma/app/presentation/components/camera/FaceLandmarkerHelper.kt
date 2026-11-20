@@ -7,6 +7,7 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import com.google.mediapipe.framework.image.BitmapExtractor
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.core.BaseOptions
@@ -124,7 +125,8 @@ class FaceLandmarkerHelper(
                 inferenceTime,
                 input.height,
                 input.width,
-                performance
+                performance,
+                frame = runCatching { BitmapExtractor.extract(input) }.getOrNull()
             )
         )
     }
@@ -175,7 +177,9 @@ class FaceLandmarkerHelper(
         val inferenceTime: Long,
         val inputImageHeight: Int,
         val inputImageWidth: Int,
-        val performance: VisionPerformanceSnapshot? = null
+        val performance: VisionPerformanceSnapshot? = null,
+        /** The analyzed, mirrored frame; MediaPipe never recycles it, so it stays valid while referenced. */
+        val frame: Bitmap? = null
     )
 
     interface LandmarkerListener {

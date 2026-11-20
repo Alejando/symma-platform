@@ -79,12 +79,35 @@ class CalibrationViewModelTest {
         target.startCalibration()
     }
 
-    private fun feed(frame: FaceLandmarkerResult, times: Int, target: CalibrationViewModel = viewModel) {
-        repeat(times) { target.processFrame(frame, IMAGE_SIZE, IMAGE_SIZE) }
+    private var frameClockMs = 0L
+
+    private fun feed(
+        frame: FaceLandmarkerResult,
+        times: Int,
+        target: CalibrationViewModel = viewModel,
+        frameIntervalMs: Long = FRAME_INTERVAL_MS
+    ) {
+        repeat(times) {
+            frameClockMs += frameIntervalMs
+            target.processFrame(frame, IMAGE_SIZE, IMAGE_SIZE, frameClockMs)
+        }
     }
 
     private fun completeNeutralCapture(target: CalibrationViewModel = viewModel, resting: FaceLandmarkerResult = restingFace()) {
-        feed(resting, NEUTRAL_FRAMES, target)
+        feed(resting, WINDOW_FRAMES, target)
+    }
+
+    /** Completes the current gesture step and lets the post-step pause elapse. */
+    private fun completeGestureStep(target: CalibrationViewModel, frame: FaceLandmarkerResult) {
+        feed(frame, WINDOW_FRAMES, target)
+        testDispatcher.scheduler.advanceUntilIdle()
+    }
+
+    private fun completeDocumentedGestureSteps(target: CalibrationViewModel) {
+        completeGestureStep(target, smileFrame(0.70f))
+        completeGestureStep(target, gestureFrame("browInnerUp" to 0.6f, "browOuterUpLeft" to 0.6f, "browOuterUpRight" to 0.6f))
+        completeGestureStep(target, gestureFrame("mouthPucker" to 0.7f))
+        completeGestureStep(target, gestureFrame("jawOpen" to 0.7f))
     }
 
     @Test
@@ -173,6 +196,7 @@ class CalibrationViewModelTest {
             every { faceBlendshapes() } returns Optional.empty()
             every { faceLandmarks() } returns listOf(centeredFaceLandmarks())
             every { facialTransformationMatrixes() } returns Optional.empty()
+            every { timestampMs() } returns 0L
         }
 
         feed(frameWithoutBlendshapes, 10)
@@ -184,10 +208,11 @@ class CalibrationViewModelTest {
     fun `neutral capture stores the average resting value of each blendshape as tare`() {
         holdFaceInPositionAndStart()
 
-        repeat(NEUTRAL_FRAMES / 2) {
-            viewModel.processFrame(restingFace(smile = 0.08f, jawOpen = 0.04f), IMAGE_SIZE, IMAGE_SIZE)
-            viewModel.processFrame(restingFace(smile = 0.12f, jawOpen = 0.06f), IMAGE_SIZE, IMAGE_SIZE)
+        repeat(WINDOW_FRAMES / 2) {
+            feed(restingFace(smile = 0.08f, jawOpen = 0.04f), 1)
+            feed(restingFace(smile = 0.12f, jawOpen = 0.06f), 1)
         }
+        feed(restingFace(smile = 0.10f, jawOpen = 0.05f), 1)
 
         val state = viewModel.uiState.value
         val baseline = state.currentBaseline
@@ -202,7 +227,7 @@ class CalibrationViewModelTest {
         holdFaceInPositionAndStart()
         completeNeutralCapture(resting = restingFace(smile = 0.10f))
 
-        feed(smileFrame(0.70f), ACTIVE_FRAMES)
+        feed(smileFrame(0.70f), WINDOW_FRAMES)
 
         val state = viewModel.uiState.value
         assertTrue(state.stepCompleted)
@@ -214,7 +239,7 @@ class CalibrationViewModelTest {
         holdFaceInPositionAndStart()
         completeNeutralCapture(resting = restingFace(smile = 0.10f))
 
-        feed(smileFrame(0.70f), ACTIVE_FRAMES - 1)
+        feed(smileFrame(0.70f), WINDOW_FRAMES - 1)
         feed(smileFrame(1.00f), 1)
 
         assertEquals(0.60f, viewModel.uiState.value.currentBaseline.mouthSmileMax, 0.0001f)
@@ -225,12 +250,129 @@ class CalibrationViewModelTest {
         holdFaceInPositionAndStart()
         completeNeutralCapture(resting = restingFace(smile = 0.10f))
 
-        feed(smileFrame(0.10f + CALIBRATION_THRESHOLD_SMILE - 0.05f), ACTIVE_FRAMES)
+        feed(smileFrame(0.10f + CALIBRATION_THRESHOLD_SMILE - 0.05f), WINDOW_FRAMES - 1)
 
         val state = viewModel.uiState.value
         assertEquals(0, state.framesCaptured)
         assertFalse(state.isGestureIntensitySufficient)
         assertFalse(state.stepCompleted)
+    }
+
+    // ==================== RF-054: three-second window ====================
+
+    @Test
+    fun `a step lasts three seconds of frame time and not a number of frames`() {
+        holdFaceInPositionAndStart()
+
+        feed(restingFace(), times = 61, frameIntervalMs = 33)
+        assertEquals(CalibrationPhase.NEUTRAL_CAPTURE, viewModel.uiState.value.phase)
+
+        feed(restingFace(), times = 31, frameIntervalMs = 33)
+        assertEquals(CalibrationPhase.ACTIVE_CAPTURE, viewModel.uiState.value.phase)
+    }
+
+    @Test
+    fun `a slow camera finishes the step in three seconds with fewer frames`() {
+        holdFaceInPositionAndStart()
+
+        feed(restingFace(), times = 21, frameIntervalMs = 150)
+
+        assertEquals(CalibrationPhase.ACTIVE_CAPTURE, viewModel.uiState.value.phase)
+    }
+
+    @Test
+    fun `capture progress follows elapsed time`() {
+        holdFaceInPositionAndStart()
+
+        feed(restingFace(), times = WINDOW_FRAMES / 2 + 1)
+
+        assertEquals(0.5f, viewModel.uiState.value.captureProgress, 0.01f)
+    }
+
+    @Test
+    fun `a window with almost no valid frames is captured again instead of accepted`() {
+        holdFaceInPositionAndStart()
+        completeNeutralCapture(resting = restingFace(smile = 0.10f))
+        val weakSmile = smileFrame(0.10f + CALIBRATION_THRESHOLD_SMILE - 0.05f)
+
+        feed(smileFrame(0.70f), CALIBRATION_MIN_VALID_SAMPLES - 1)
+        feed(weakSmile, WINDOW_FRAMES - CALIBRATION_MIN_VALID_SAMPLES + 1)
+
+        val retried = viewModel.uiState.value
+        assertTrue(retried.isRetryingStep)
+        assertFalse(retried.stepCompleted)
+        assertEquals(CalibrationStep.Smile, retried.currentStep)
+        assertEquals(0, retried.framesCaptured)
+        assertEquals(0f, retried.captureProgress, 0f)
+        assertEquals(CalibrationBaseline().mouthSmileMax, retried.currentBaseline.mouthSmileMax, 0f)
+
+        feed(smileFrame(0.70f), WINDOW_FRAMES)
+
+        assertTrue(viewModel.uiState.value.stepCompleted)
+        assertEquals(0.60f, viewModel.uiState.value.currentBaseline.mouthSmileMax, 0.0001f)
+    }
+
+    @Test
+    fun `only valid frames enter the P95 of the window`() {
+        holdFaceInPositionAndStart()
+        completeNeutralCapture(resting = restingFace(smile = 0.10f))
+
+        feed(smileFrame(0.50f), CALIBRATION_MIN_VALID_SAMPLES + 5)
+        feed(smileFrame(0.12f), WINDOW_FRAMES - CALIBRATION_MIN_VALID_SAMPLES - 5)
+
+        val state = viewModel.uiState.value
+        assertTrue(state.stepCompleted)
+        assertEquals(0.40f, state.currentBaseline.mouthSmileMax, 0.0001f)
+    }
+
+    // ==================== RF-053: five-step wizard ====================
+
+    @Test
+    fun `the wizard runs the five documented steps in order`() = runTest(testDispatcher) {
+        every { routineRepository.getRoutineFlow() } returns flowOf(routineWith("SMILE"))
+        val wizard = createViewModel(routineId = ROUTINE_ID)
+        advanceUntilIdle()
+        holdFaceInPositionAndStart(wizard)
+        val visitedSteps = mutableListOf(wizard.uiState.value.currentStep)
+
+        completeNeutralCapture(wizard)
+        visitedSteps += wizard.uiState.value.currentStep
+        completeGestureStep(wizard, smileFrame(0.70f))
+        visitedSteps += wizard.uiState.value.currentStep
+        completeGestureStep(wizard, gestureFrame("browInnerUp" to 0.6f, "browOuterUpLeft" to 0.6f, "browOuterUpRight" to 0.6f))
+        visitedSteps += wizard.uiState.value.currentStep
+        completeGestureStep(wizard, gestureFrame("mouthPucker" to 0.7f))
+        visitedSteps += wizard.uiState.value.currentStep
+        completeGestureStep(wizard, gestureFrame("jawOpen" to 0.7f))
+        visitedSteps += wizard.uiState.value.currentStep
+
+        assertEquals(
+            listOf(
+                CalibrationStep.Neutral,
+                CalibrationStep.Smile,
+                CalibrationStep.Surprise,
+                CalibrationStep.Kiss,
+                CalibrationStep.JawOpen,
+                CalibrationStep.Complete
+            ),
+            visitedSteps
+        )
+        assertEquals(5, wizard.uiState.value.totalSteps)
+    }
+
+    @Test
+    fun `a routine with eye modules adds the eye steps its strategies need after the documented five`() = runTest(testDispatcher) {
+        every { routineRepository.getRoutineFlow() } returns flowOf(routineWith("SMILE", "EYES", "EYES_INVERSE"))
+        val withEyes = createViewModel(routineId = ROUTINE_ID)
+        advanceUntilIdle()
+        holdFaceInPositionAndStart(withEyes)
+
+        completeNeutralCapture(withEyes)
+        completeDocumentedGestureSteps(withEyes)
+        assertEquals(CalibrationStep.EyesClosed, withEyes.uiState.value.currentStep)
+        completeGestureStep(withEyes, gestureFrame("eyeBlinkLeft" to 0.8f, "eyeBlinkRight" to 0.8f))
+        assertEquals(CalibrationStep.EyesWide, withEyes.uiState.value.currentStep)
+        assertEquals(7, withEyes.uiState.value.totalSteps)
     }
 
     // ==================== Threading ====================
@@ -277,7 +419,7 @@ class CalibrationViewModelTest {
         holdFaceInPositionAndStart()
         completeNeutralCapture(resting = restingFace(smile = 0.10f))
 
-        feed(smileFrame(0.70f, headPitchDegrees = -11f), ACTIVE_FRAMES)
+        feed(smileFrame(0.70f, headPitchDegrees = -11f), WINDOW_FRAMES * 2)
 
         val state = viewModel.uiState.value
         assertEquals(0, state.framesCaptured)
@@ -286,22 +428,25 @@ class CalibrationViewModelTest {
     }
 
     @Test
-    fun `a constant tilt from a low camera is not treated as rotation`() {
+    fun `a head already turned when capture starts is paused because the angle is measured against the camera`() {
         holdFaceInPositionAndStart()
 
-        feed(restingFace(headPitchDegrees = 25f), NEUTRAL_FRAMES)
+        feed(restingFace(headPitchDegrees = 25f), WINDOW_FRAMES * 2)
 
-        assertEquals(CalibrationPhase.ACTIVE_CAPTURE, viewModel.uiState.value.phase)
+        val state = viewModel.uiState.value
+        assertEquals(CalibrationPhase.NEUTRAL_CAPTURE, state.phase)
+        assertEquals(0, state.framesCaptured)
+        assertTrue(state.isHeadRotated)
     }
 
     // ==================== Dynamic sequence and saved baseline ====================
 
     @Test
-    fun `calibrating a partial routine keeps the saved values of modules outside the routine`() = runTest(testDispatcher) {
+    fun `calibrating keeps the saved values of eye modules the routine does not use`() = runTest(testDispatcher) {
         val saved = CalibrationBaseline(
-            browRaiseMax = 0.33f,
+            eyesClosedMax = 0.33f,
             mouthSmileMax = 0.44f,
-            neutralOffsets = mapOf(CalibrationBaseline.KEY_BROW_RAISE to 0.07f, CalibrationBaseline.KEY_SMILE to 0.02f)
+            neutralOffsets = mapOf(CalibrationBaseline.KEY_EYES_CLOSED to 0.07f, CalibrationBaseline.KEY_SMILE to 0.02f)
         )
         every { calibrationRepository.getBaseline() } returns saved
         every { routineRepository.getRoutineFlow() } returns flowOf(routineWith("SMILE"))
@@ -310,20 +455,19 @@ class CalibrationViewModelTest {
 
         holdFaceInPositionAndStart(partial)
         completeNeutralCapture(partial, restingFace(smile = 0.10f))
-        feed(smileFrame(0.70f), ACTIVE_FRAMES, partial)
-        advanceUntilIdle()
+        completeDocumentedGestureSteps(partial)
 
         val savedBaseline = slot<CalibrationBaseline>()
         coVerify(exactly = 1) { calibrationRepository.saveBaseline(capture(savedBaseline)) }
         assertEquals(0.60f, savedBaseline.captured.mouthSmileMax, 0.0001f)
         assertEquals(0.10f, savedBaseline.captured.getNeutralOffset(CalibrationBaseline.KEY_SMILE), 0.0001f)
-        assertEquals(0.33f, savedBaseline.captured.browRaiseMax, 0.0001f)
-        assertEquals(0.07f, savedBaseline.captured.getNeutralOffset(CalibrationBaseline.KEY_BROW_RAISE), 0.0001f)
+        assertEquals(0.33f, savedBaseline.captured.eyesClosedMax, 0.0001f)
+        assertEquals(0.07f, savedBaseline.captured.getNeutralOffset(CalibrationBaseline.KEY_EYES_CLOSED), 0.0001f)
         assertEquals(CalibrationPhase.COMPLETE, partial.uiState.value.phase)
     }
 
     @Test
-    fun `missing routine falls back to the full sequence instead of saving defaults`() = runTest(testDispatcher) {
+    fun `missing routine falls back to the documented wizard instead of saving defaults`() = runTest(testDispatcher) {
         every { routineRepository.getRoutineFlow() } returns flowOf(null)
         val withoutRoutine = createViewModel(routineId = ROUTINE_ID)
         advanceUntilIdle()
@@ -338,7 +482,7 @@ class CalibrationViewModelTest {
     }
 
     @Test
-    fun `routine without calibratable modules falls back to the full sequence`() = runTest(testDispatcher) {
+    fun `routine without calibratable modules still runs the documented wizard`() = runTest(testDispatcher) {
         every { routineRepository.getRoutineFlow() } returns flowOf(routineWith("UNKNOWN_MODULE"))
         val unknownModules = createViewModel(routineId = ROUTINE_ID)
         advanceUntilIdle()
@@ -359,10 +503,10 @@ class CalibrationViewModelTest {
 
         holdFaceInPositionAndStart(eyesInverse)
         completeNeutralCapture(eyesInverse, gestureFrame("eyeWideLeft" to 0.05f, "eyeWideRight" to 0.05f))
+        completeDocumentedGestureSteps(eyesInverse)
         assertEquals(CalibrationStep.EyesWide, eyesInverse.uiState.value.currentStep)
 
-        feed(gestureFrame("eyeWideLeft" to 0.45f, "eyeWideRight" to 0.45f), ACTIVE_FRAMES, eyesInverse)
-        advanceUntilIdle()
+        completeGestureStep(eyesInverse, gestureFrame("eyeWideLeft" to 0.45f, "eyeWideRight" to 0.45f))
 
         val savedBaseline = slot<CalibrationBaseline>()
         coVerify { calibrationRepository.saveBaseline(capture(savedBaseline)) }
@@ -439,13 +583,15 @@ class CalibrationViewModelTest {
             every { faceBlendshapes() } returns Optional.of(listOf(categories))
             every { faceLandmarks() } returns listOf(centeredFaceLandmarks())
             every { facialTransformationMatrixes() } returns Optional.of(listOf(headPose))
+            every { timestampMs() } returns 0L
         }
     }
 
     private companion object {
         const val ROUTINE_ID = "routine-1"
         const val IMAGE_SIZE = 1000
-        const val NEUTRAL_FRAMES = 60
-        const val ACTIVE_FRAMES = 90
+        const val FRAME_INTERVAL_MS = 50L
+        /** The first frame of a window only sets the clock; 60 more frames of 50 ms complete three seconds. */
+        const val WINDOW_FRAMES = 61
     }
 }

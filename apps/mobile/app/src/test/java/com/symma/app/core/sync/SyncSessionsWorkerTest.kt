@@ -125,20 +125,18 @@ class SyncSessionsWorkerTest {
     }
 
     @Test
-    fun `three network failures followed by success sync the session`() = runBlocking {
+    fun `two network failures followed by success sync the session on the third attempt`() = runBlocking {
         coEvery { sessionRepository.getPendingSessions() } returns listOf(createSession("session-1"))
         coEvery { sessionRepository.syncSession("session-1") } returnsMany listOf(
-            Result.failure(IOException("offline")),
             Result.failure(IOException("offline")),
             Result.failure(IOException("offline")),
             Result.success(Unit)
         )
 
-        val results = (0..3).map { attempt -> workerOnAttempt(attempt).doWork() }
+        val results = (0..2).map { attempt -> workerOnAttempt(attempt).doWork() }
 
         assertEquals(
             listOf(
-                ListenableWorker.Result.retry(),
                 ListenableWorker.Result.retry(),
                 ListenableWorker.Result.retry(),
                 ListenableWorker.Result.success()
@@ -149,13 +147,21 @@ class SyncSessionsWorkerTest {
     }
 
     @Test
-    fun `gives up after three retries and marks the session ERROR`() = runBlocking {
+    fun `three network failures exhaust the three attempts and mark the session ERROR`() = runBlocking {
         coEvery { sessionRepository.getPendingSessions() } returns listOf(createSession("session-1"))
         coEvery { sessionRepository.syncSession("session-1") } returns Result.failure(IOException("offline"))
 
-        val result = workerOnAttempt(SyncSessionsWorker.MAX_RETRIES).doWork()
+        val results = (0..2).map { attempt -> workerOnAttempt(attempt).doWork() }
 
-        assertEquals(ListenableWorker.Result.failure(), result)
+        assertEquals(
+            listOf(
+                ListenableWorker.Result.retry(),
+                ListenableWorker.Result.retry(),
+                ListenableWorker.Result.failure()
+            ),
+            results
+        )
+        coVerify(exactly = 3) { sessionRepository.syncSession("session-1") }
         coVerify(exactly = 1) { sessionRepository.markError("session-1") }
     }
 
@@ -170,13 +176,14 @@ class SyncSessionsWorkerTest {
     }
 
     @Test
-    fun `a fresh run requeues sessions in ERROR and a retry does not`() = runBlocking {
+    fun `a fresh run requeues sessions in ERROR and purges orphan snapshots and a retry does neither`() = runBlocking {
         coEvery { sessionRepository.getPendingSessions() } returns emptyList()
 
         workerOnAttempt(0).doWork()
         workerOnAttempt(2).doWork()
 
         coVerify(exactly = 1) { sessionRepository.requeueFailedSessions() }
+        coVerify(exactly = 1) { sessionRepository.discardOrphanSnapshots() }
     }
 
     @Test

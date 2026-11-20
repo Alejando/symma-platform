@@ -30,7 +30,7 @@ fun PlayerScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val faceResult by viewModel.faceResult.collectAsState()
-    val symmetryScore by viewModel.symmetryScore.collectAsState()
+    val gestureProgress by viewModel.gestureProgress.collectAsState()
     
     // FaceMesh visibility toggles
     var isMeshVisible by remember { mutableStateOf(true) }
@@ -80,7 +80,7 @@ fun PlayerScreen(
             // Layer 2: UI Overlay
             PlayerOverlay(
                 state = uiState,
-                symmetryScore = symmetryScore,
+                gestureProgress = gestureProgress,
                 isMeshVisible = isMeshVisible,
                 showMeshPoints = showMeshPoints,
                 onToggleMesh = { isMeshVisible = !isMeshVisible },

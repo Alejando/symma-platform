@@ -74,6 +74,33 @@ class DatabaseMigrationTest {
         assertEquals(10, upgraded.sessionDao().getItemsForSession("pending-session").single().repsCompleted)
     }
 
+    @Test
+    fun `upgrading from version 6 rescales accuracy and score to 0-100 and adds the symmetry, hold, calibration and snapshot columns`() = runBlocking {
+        createDatabaseFromExportedSchema(6).use { legacy ->
+            insertPendingSession(legacy)
+            legacy.execSQL(
+                "INSERT INTO session_items (id, session_id, exercise_id, reps_completed, average_accuracy, series_data) " +
+                    "VALUES ('item-1', 'pending-session', 'exercise-1', 10, 0.9, NULL), " +
+                    "('item-2', 'pending-session', 'exercise-2', 4, NULL, NULL)"
+            )
+        }
+
+        val upgraded = openWithRoom()
+        val accuracyByItem = upgraded.sessionDao().getItemsForSession("pending-session").associate { it.id to it.averageAccuracy }
+        val migratedSession = upgraded.sessionDao().getPendingSessions().single()
+        val score = migratedSession.score
+        assertEquals(null, migratedSession.calibrationJson)
+
+        val migratedItem = upgraded.sessionDao().getItemsForSession("pending-session").first { it.id == "item-1" }
+        assertEquals(null, migratedItem.symmetryScore)
+        assertEquals(null, migratedItem.averageHoldSeconds)
+        assertEquals(null, migratedItem.snapshotReference)
+        assertEquals(null, migratedItem.snapshotKey)
+        assertEquals(90f, accuracyByItem.getValue("item-1")!!, 0.001f)
+        assertEquals(null, accuracyByItem.getValue("item-2"))
+        assertEquals(80f, score, 0.001f)
+    }
+
     private fun insertPendingSession(db: SQLiteDatabase) {
         db.execSQL(
             "INSERT INTO sessions (id, routine_id, start_time, end_time, duration_seconds, score, sync_status, synced_at, created_at) " +

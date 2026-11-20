@@ -4,14 +4,19 @@ import com.symma.app.core.network.SymmaApiService
 import com.symma.app.data.local.dao.SessionDao
 import com.symma.app.data.local.entity.SessionEntity
 import com.symma.app.data.local.entity.SessionItemEntity
-import com.symma.app.data.remote.dto.session.SessionItemRequest
+import com.symma.app.data.remote.snapshot.SnapshotUploader
+import com.symma.app.domain.model.ExerciseResult
+import com.symma.app.domain.repository.LocalSnapshotStore
 import com.symma.app.domain.model.RetryableSyncException
+import com.symma.app.data.local.calibration.calibrationFromStoredJson
+import com.symma.app.domain.model.CalibrationBaseline
 import com.symma.app.domain.model.SyncStatus
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.runBlocking
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
@@ -26,12 +31,16 @@ class SessionRepositoryImplTest {
     private lateinit var sessionDao: SessionDao
     private lateinit var apiService: SymmaApiService
     private lateinit var repository: SessionRepositoryImpl
+    private lateinit var snapshotStore: LocalSnapshotStore
+    private lateinit var snapshotUploader: SnapshotUploader
 
     @Before
     fun setup() {
         sessionDao = mockk(relaxed = true)
         apiService = mockk()
-        repository = SessionRepositoryImpl(sessionDao, apiService)
+        snapshotStore = mockk(relaxed = true)
+        snapshotUploader = mockk()
+        repository = SessionRepositoryImpl(sessionDao, apiService, snapshotStore, snapshotUploader)
     }
 
     @Test
@@ -39,7 +48,7 @@ class SessionRepositoryImplTest {
         coEvery { sessionDao.insertSessionWithItems(any(), any()) } just Runs
 
         val items = listOf(
-            SessionItemRequest(
+            ExerciseResult(
                 exerciseId = "exercise-1",
                 repsCompleted = 10,
                 averageAccuracy = 85f
@@ -53,13 +62,17 @@ class SessionRepositoryImplTest {
             endTime = 2000L,
             durationSeconds = 1,
             score = 85f,
-            items = items
+            items = items,
+            calibration = CalibrationBaseline(mouthSmileMax = 0.6f, capturedAtMillis = 1_000L)
         )
 
         assertTrue(result.isSuccess)
         coVerify {
             sessionDao.insertSessionWithItems(
-                match { it.id == "session-123" && it.syncStatus == SyncStatus.PENDING.name && it.routineId == "routine-123" },
+                match {
+                    it.id == "session-123" && it.syncStatus == SyncStatus.PENDING.name && it.routineId == "routine-123" &&
+                        calibrationFromStoredJson(it.calibrationJson)?.mouthSmileMax == 0.6f
+                },
                 match { it.size == 1 }
             )
         }
@@ -80,7 +93,7 @@ class SessionRepositoryImplTest {
     }
 
     @Test
-    fun `syncSession marks SYNCED on 409 response`() = runBlocking {
+    fun `syncSession keeps the session in ERROR on 409 because the routine is no longer accepting sessions`() = runBlocking {
         val sessionEntity = createSessionEntity("session-123", SyncStatus.PENDING.name)
         coEvery { sessionDao.getPendingSessions() } returns listOf(sessionEntity)
         coEvery { sessionDao.getItemsForSession("session-123") } returns emptyList()
@@ -89,8 +102,9 @@ class SessionRepositoryImplTest {
 
         val result = repository.syncSession("session-123")
 
-        assertTrue(result.isSuccess)
-        coVerify { sessionDao.updateSyncStatus("session-123", SyncStatus.SYNCED.name, any()) }
+        assertTrue(result.isFailure)
+        coVerify { sessionDao.updateSyncStatus("session-123", SyncStatus.ERROR.name, null) }
+        coVerify(exactly = 0) { sessionDao.updateSyncStatus("session-123", SyncStatus.SYNCED.name, any()) }
     }
 
     @Test
@@ -187,5 +201,93 @@ class SessionRepositoryImplTest {
             syncedAt = null,
             createdAt = System.currentTimeMillis()
         )
+    }
+
+    // ==================== Best-attempt snapshots ====================
+
+    private val pendingSession = SessionEntity(
+        id = "session-1", routineId = "routine-1", startTime = 1L, endTime = 2L, durationSeconds = 1, syncStatus = "PENDING"
+    )
+    private val itemWithSnapshot = SessionItemEntity(
+        id = "item-1", sessionId = "session-1", exerciseId = "exercise-1", repsCompleted = 3, snapshotReference = "best.jpg.enc"
+    )
+
+    @Test
+    fun `the snapshot is uploaded before the session and its key is sent with the item`() = runBlocking {
+        val sent = slot<com.symma.app.data.remote.dto.session.CreateSessionRequest>()
+        coEvery { sessionDao.getPendingSessions() } returns listOf(pendingSession)
+        coEvery { sessionDao.getItemsForSession("session-1") } returnsMany listOf(
+            listOf(itemWithSnapshot),
+            listOf(itemWithSnapshot.copy(snapshotReference = null, snapshotKey = "sessions/session-1/exercise-1.jpg"))
+        )
+        coEvery { snapshotStore.read("best.jpg.enc") } returns byteArrayOf(1, 2, 3)
+        coEvery { snapshotUploader.upload("session-1", "exercise-1", any()) } returns "sessions/session-1/exercise-1.jpg"
+        coEvery { apiService.createSession(capture(sent)) } returns Response.success(Unit)
+
+        val result = repository.syncSession("session-1")
+
+        assertTrue(result.isSuccess)
+        assertEquals("sessions/session-1/exercise-1.jpg", sent.captured.items.single().snapshotKey)
+        coVerify { sessionDao.markSnapshotUploaded("item-1", "sessions/session-1/exercise-1.jpg") }
+        coVerify { snapshotStore.delete("best.jpg.enc") }
+    }
+
+    @Test
+    fun `a failed snapshot upload never stops the session from syncing`() = runBlocking {
+        val sent = slot<com.symma.app.data.remote.dto.session.CreateSessionRequest>()
+        coEvery { sessionDao.getPendingSessions() } returns listOf(pendingSession)
+        coEvery { sessionDao.getItemsForSession("session-1") } returns listOf(itemWithSnapshot)
+        coEvery { snapshotStore.read("best.jpg.enc") } returns byteArrayOf(1, 2, 3)
+        coEvery { snapshotUploader.upload(any(), any(), any()) } throws IOException("storage unavailable")
+        coEvery { apiService.createSession(capture(sent)) } returns Response.success(Unit)
+
+        val result = repository.syncSession("session-1")
+
+        assertTrue(result.isSuccess)
+        assertEquals(null, sent.captured.items.single().snapshotKey)
+        coVerify { sessionDao.updateSyncStatus("session-1", SyncStatus.SYNCED.name, any()) }
+    }
+
+    @Test
+    fun `an image that could not be uploaded is deleted once its session is on the server`() = runBlocking {
+        coEvery { sessionDao.getPendingSessions() } returns listOf(pendingSession)
+        coEvery { sessionDao.getItemsForSession("session-1") } returns listOf(itemWithSnapshot)
+        coEvery { snapshotStore.read(any()) } returns byteArrayOf(1)
+        coEvery { snapshotUploader.upload(any(), any(), any()) } throws IOException("storage unavailable")
+        coEvery { apiService.createSession(any()) } returns Response.success(Unit)
+
+        repository.syncSession("session-1")
+
+        coVerify { snapshotStore.delete("best.jpg.enc") }
+        coVerify { sessionDao.clearSnapshotReferences("session-1") }
+    }
+
+    @Test
+    fun `an image is kept for the next attempt while its session is still pending`() = runBlocking {
+        coEvery { sessionDao.getPendingSessions() } returns listOf(pendingSession)
+        coEvery { sessionDao.getItemsForSession("session-1") } returns listOf(itemWithSnapshot)
+        coEvery { snapshotStore.read(any()) } returns byteArrayOf(1)
+        coEvery { snapshotUploader.upload(any(), any(), any()) } throws IOException("offline")
+        coEvery { apiService.createSession(any()) } throws IOException("offline")
+
+        repository.syncSession("session-1")
+
+        coVerify(exactly = 0) { snapshotStore.delete(any()) }
+        coVerify(exactly = 0) { sessionDao.clearSnapshotReferences(any()) }
+    }
+
+    @Test
+    fun `orphan snapshots older than a day are purged and referenced ones are kept`() = runBlocking {
+        coEvery { sessionDao.getSnapshotReferences() } returns listOf("kept.jpg.enc")
+        val before = System.currentTimeMillis()
+
+        repository.discardOrphanSnapshots()
+
+        coVerify {
+            snapshotStore.deleteUnreferencedOlderThan(
+                setOf("kept.jpg.enc"),
+                match { cutoff -> cutoff <= before - 24 * 60 * 60 * 1000L + 1_000 && cutoff >= before - 24 * 60 * 60 * 1000L - 1_000 }
+            )
+        }
     }
 }

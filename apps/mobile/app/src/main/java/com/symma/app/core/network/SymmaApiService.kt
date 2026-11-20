@@ -3,6 +3,8 @@ package com.symma.app.core.network
 import com.symma.app.data.remote.dto.auth.LoginRequestDto
 import com.symma.app.data.remote.dto.auth.LoginResponseDto
 import com.symma.app.data.remote.dto.routine.RoutineDto
+import com.symma.app.data.remote.dto.snapshot.SnapshotUploadUrlRequest
+import com.symma.app.data.remote.dto.snapshot.SnapshotUploadUrlResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -24,4 +26,9 @@ interface SymmaApiService {
     suspend fun createSession(
         @Body request: com.symma.app.data.remote.dto.session.CreateSessionRequest
     ): Response<Unit>
+
+    @POST("api/v1/mobile/snapshots/upload-url")
+    suspend fun requestSnapshotUploadUrl(
+        @Body request: SnapshotUploadUrlRequest
+    ): Response<SnapshotUploadUrlResponse>
 }

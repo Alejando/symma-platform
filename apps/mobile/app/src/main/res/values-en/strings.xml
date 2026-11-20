@@ -78,7 +78,9 @@
     <string name="calib_dist_ok">Hold the position for 1 second</string>
     <string name="calib_neutral_capture">Relax your face and look straight ahead</string>
     <string name="calib_step_smile">Smile wide!</string>
-    <string name="calib_step_brow_raise">Raise your eyebrows!</string>
+    <string name="calib_step_surprise">Make a surprised face: raise your eyebrows!</string>
+    <string name="calib_retry_step">We could not detect the gesture clearly. Let\'s repeat this step.</string>
+    <string name="calib_step_counter">Step %1$d of %2$d</string>
     <string name="calib_step_kiss">Pucker your lips!</string>
     <string name="calib_step_jaw_open">Open your mouth!</string>
     <string name="calib_step_eyes_closed">Close your eyes tight!</string>
@@ -152,6 +154,9 @@
     <string name="summary_exercise_reps">%1$d repetitions</string>
     <string name="summary_exercise_accuracy">Accuracy: %1$d%%</string>
     <string name="summary_exercise_accuracy_unavailable">Accuracy: no data</string>
+    <string name="summary_exercise_symmetry">Left-right symmetry: %1$d%%</string>
+    <string name="summary_exercise_symmetry_unavailable">Left-right symmetry: no data</string>
+    <string name="summary_exercise_hold">Average hold: %1$.1f s</string>
     <string name="summary_finish">Finish</string>
 
     <!-- Enums -->
@@ -179,4 +184,15 @@
     <string name="enum_mobile_module_smile">Smile</string>
     <string name="enum_mobile_module_kiss">Kiss</string>
     <string name="enum_mobile_module_unknown">Unknown</string>
+    <string name="unlock_title">Confirm it\'s you</string>
+    <string name="unlock_device_explanation">Your therapy data is protected. Use your fingerprint, your face or your phone\'s screen lock.</string>
+    <string name="unlock_button">Unlock</string>
+    <string name="unlock_prompt_title">Unlock Symma</string>
+    <string name="unlock_prompt_subtitle">Confirm your identity to see your data</string>
+    <string name="unlock_access_code_explanation">Your phone has no screen lock. Enter your access code to continue.</string>
+    <plurals name="unlock_wrong_access_code">
+        <item quantity="one">Wrong code. %1$d attempt left.</item>
+        <item quantity="other">Wrong code. %1$d attempts left.</item>
+    </plurals>
+    <string name="unlock_set_up_screen_lock">Set up a screen lock</string>
 </resources>

@@ -52,4 +52,19 @@ class NetworkModuleTest {
 
         assertTrue(ConnectionSpec.CLEARTEXT in client.connectionSpecs)
     }
+
+    @Test
+    fun `the snapshot upload client carries no API token and logs nothing`() {
+        val client = NetworkModule.createSnapshotUploadClient(isDebugBuild = true)
+
+        assertTrue(client.interceptors.isEmpty())
+        assertTrue(client.networkInterceptors.isEmpty())
+    }
+
+    @Test
+    fun `the release snapshot upload client only allows modern TLS`() {
+        val client = NetworkModule.createSnapshotUploadClient(isDebugBuild = false)
+
+        assertEquals(listOf(ConnectionSpec.MODERN_TLS), client.connectionSpecs)
+    }
 }

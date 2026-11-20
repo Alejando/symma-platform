@@ -45,7 +45,7 @@ class SummaryViewModelTest {
     fun `summary lists reps and accuracy per exercise once the session is stored`() = runTest {
         val viewModel = createViewModel()
         val results = listOf(
-            SessionExerciseResult("ex-1", "Smile", repsCompleted = 10, averageAccuracy = 0.874f),
+            SessionExerciseResult("ex-1", "Smile", repsCompleted = 10, averageAccuracy = 87.4f),
             SessionExerciseResult("ex-2", "Brows", repsCompleted = 0, averageAccuracy = null)
         )
 
@@ -59,9 +59,10 @@ class SummaryViewModelTest {
     }
 
     @Test
-    fun `accuracy is shown as a rounded percentage`() {
-        assertEquals(87, SessionExerciseResult("ex-1", "Smile", 10, 0.874f).accuracyPercent())
-        assertEquals(100, SessionExerciseResult("ex-1", "Smile", 10, 1.2f).accuracyPercent())
+    fun `accuracy stored on 0 to 100 is shown rounded without rescaling`() {
+        assertEquals(87, SessionExerciseResult("ex-1", "Smile", 10, 87.4f).accuracyPercent())
+        assertEquals(1, SessionExerciseResult("ex-1", "Smile", 10, 0.874f).accuracyPercent())
+        assertEquals(100, SessionExerciseResult("ex-1", "Smile", 10, 120f).accuracyPercent())
         assertNull(SessionExerciseResult("ex-1", "Smile", 10, null).accuracyPercent())
     }
 }

@@ -21,19 +21,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
-/**
- * A visual quality bar that indicates symmetry score.
- * - Green: >= 80%
- * - Yellow: 50% - 79%
- * - Red: < 50%
- */
+/** Progress of the current gesture toward its calibrated target: green from 80 %, yellow from 50 %, red below. */
 @Composable
-fun QualityBar(
-    score: Float,
+fun GestureProgressBar(
+    percent: Float,
     modifier: Modifier = Modifier
 ) {
-    // Normalize score to 0.0 - 1.0 for the progress bar
-    val normalizedProgress = (score / 100f).coerceIn(0f, 100f)
+    val normalizedProgress = (percent / 100f).coerceIn(0f, 1f)
     
     val animatedProgress by animateFloatAsState(
         targetValue = normalizedProgress,
@@ -41,11 +35,10 @@ fun QualityBar(
         label = "ProgressAnimation"
     )
 
-    // Determine color based on original score (0-100)
     val targetColor = when {
-        score >= 80f -> Color(0xFF4CAF50) // Green
-        score >= 50f -> Color(0xFFFFC107) // Yellow
-        else -> Color(0xFFF44336)         // Red
+        percent >= 80f -> Color(0xFF4CAF50)
+        percent >= 50f -> Color(0xFFFFC107)
+        else -> Color(0xFFF44336)
     }
 
     val animatedColor by animateColorAsState(
@@ -67,10 +60,10 @@ fun QualityBar(
 
 @Preview
 @Composable
-fun PreviewQualityBar() {
+fun PreviewGestureProgressBar() {
     Column {
-        QualityBar(score = 90f) // Green
-        QualityBar(score = 65f) // Yellow
-        QualityBar(score = 30f) // Red
+        GestureProgressBar(percent = 90f)
+        GestureProgressBar(percent = 65f)
+        GestureProgressBar(percent = 30f)
     }
 }

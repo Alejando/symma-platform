@@ -33,8 +33,8 @@ const val CALIBRATION_THRESHOLD_SMILE = 0.20f
 const val CALIBRATION_THRESHOLD_JAW_OPEN = 0.20f
 const val CALIBRATION_THRESHOLD_KISS = 0.20f
 
-/** Minimum valid stable samples required before a calibration step can finalize. */
-const val CALIBRATION_MIN_VALID_SAMPLES = 30
+/** Half a second of valid frames at 30 fps; a three-second window with fewer is captured again. */
+const val CALIBRATION_MIN_VALID_SAMPLES = 15
 
 object CalibrationUtils {
 

@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.symma.app.core.sync.SessionSyncScheduler
 import com.symma.app.domain.model.LoginFailure
 import com.symma.app.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,7 +18,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val sessionSyncScheduler: SessionSyncScheduler
 ) : ViewModel() {
 
     var state by mutableStateOf(LoginState())
@@ -53,6 +55,7 @@ class AuthViewModel @Inject constructor(
             state = state.copy(isLoading = false)
             
             result.onSuccess {
+                sessionSyncScheduler.syncNow()
                 _uiEvent.send(LoginUiEvent.NavigateToHome)
             }.onFailure { failure ->
                 state = state.copy(pin = "", errorMessageRes = errorMessageFor(failure))

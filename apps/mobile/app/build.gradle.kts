@@ -85,6 +85,8 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.security.crypto)
+    implementation(libs.sqlcipher.android)
+    implementation(libs.androidx.biometric)
     
     // Hilt
     implementation(libs.hilt.android)

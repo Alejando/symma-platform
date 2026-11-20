@@ -181,6 +181,28 @@ fun CalibrationScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
                 
+                if (uiState.isRetryingStep) {
+                    Text(
+                        text = stringResource(R.string.calib_retry_step),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color(0xFFFF9800),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                if (uiState.phase == CalibrationPhase.NEUTRAL_CAPTURE || uiState.phase == CalibrationPhase.ACTIVE_CAPTURE) {
+                    Text(
+                        text = stringResource(R.string.calib_step_counter, uiState.currentStepNumber, uiState.totalSteps),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
                 // Gesture intensity warning (only during active capture)
                 if (uiState.phase == CalibrationPhase.ACTIVE_CAPTURE && 
                     uiState.isHeadStable && 
@@ -538,7 +560,7 @@ fun getInstructionText(phase: CalibrationPhase, step: CalibrationStep, distanceS
         CalibrationPhase.NEUTRAL_CAPTURE -> stringResource(R.string.calib_neutral_capture)
         CalibrationPhase.ACTIVE_CAPTURE -> when (step) {
             CalibrationStep.Smile -> stringResource(R.string.calib_step_smile)
-            CalibrationStep.BrowRaise -> stringResource(R.string.calib_step_brow_raise)
+            CalibrationStep.Surprise -> stringResource(R.string.calib_step_surprise)
             CalibrationStep.Kiss -> stringResource(R.string.calib_step_kiss)
             CalibrationStep.JawOpen -> stringResource(R.string.calib_step_jaw_open)
             CalibrationStep.EyesClosed -> stringResource(R.string.calib_step_eyes_closed)

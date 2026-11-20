@@ -1,6 +1,7 @@
 package com.symma.app.data.repository
 
 import com.symma.app.core.network.SymmaApiService
+import com.symma.app.core.security.OfflinePinVerifier
 import com.symma.app.core.security.TokenManager
 import com.symma.app.data.remote.dto.auth.LoginRequestDto
 import com.symma.app.domain.model.LoginFailure
@@ -15,7 +16,8 @@ import javax.inject.Singleton
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
     private val api: SymmaApiService,
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    private val offlinePinVerifier: OfflinePinVerifier
 ) : AuthRepository {
 
     override suspend fun login(accessCode: String): Result<Unit> {
@@ -23,6 +25,7 @@ class AuthRepositoryImpl @Inject constructor(
             try {
                 val response = api.loginPatient(LoginRequestDto(accessCode = accessCode))
                 tokenManager.saveToken(response.accessToken)
+                offlinePinVerifier.remember(accessCode)
                 Result.success(Unit)
             } catch (e: HttpException) {
                 Result.failure(loginFailureFor(e.code()))

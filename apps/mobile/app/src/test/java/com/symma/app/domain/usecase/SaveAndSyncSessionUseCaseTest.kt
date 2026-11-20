@@ -1,7 +1,7 @@
 package com.symma.app.domain.usecase
 
-import androidx.work.WorkManager
-import com.symma.app.data.remote.dto.session.SessionItemRequest
+import com.symma.app.core.sync.SessionSyncScheduler
+import com.symma.app.domain.model.ExerciseResult
 import com.symma.app.domain.repository.SessionRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -17,20 +17,20 @@ import org.junit.Test
 class SaveAndSyncSessionUseCaseTest {
 
     private lateinit var sessionRepository: SessionRepository
-    private lateinit var workManager: WorkManager
+    private lateinit var sessionSyncScheduler: SessionSyncScheduler
     private lateinit var useCase: SaveAndSyncSessionUseCase
 
     @Before
     fun setup() {
         sessionRepository = mockk(relaxed = true)
-        workManager = mockk(relaxed = true)
-        useCase = SaveAndSyncSessionUseCase(sessionRepository, workManager)
+        sessionSyncScheduler = mockk(relaxed = true)
+        useCase = SaveAndSyncSessionUseCase(sessionRepository, sessionSyncScheduler)
     }
 
     @Test
     fun `invoke saves session before attempting sync`() = runBlocking {
         val sessionId = "session-123"
-        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any()) } returns Result.success(sessionId)
+        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any(), any()) } returns Result.success(sessionId)
         coEvery { sessionRepository.syncSession(sessionId) } returns Result.success(Unit)
 
         val result = useCase(
@@ -40,20 +40,21 @@ class SaveAndSyncSessionUseCaseTest {
             endTime = 2000L,
             durationSeconds = 1,
             score = 85f,
-            items = emptyList()
+            items = emptyList(),
+            calibration = null
         )
 
         assertTrue(result.isSuccess)
         assertEquals(sessionId, result.getOrNull())
         coVerify(ordering = io.mockk.Ordering.ORDERED) {
-            sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any())
+            sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any(), any())
         }
     }
 
     @Test
     fun `invoke returns local session id immediately after save`() = runBlocking {
         val sessionId = "session-456"
-        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any()) } returns Result.success(sessionId)
+        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any(), any()) } returns Result.success(sessionId)
 
         val result = useCase(
             sessionId = sessionId,
@@ -63,12 +64,13 @@ class SaveAndSyncSessionUseCaseTest {
             durationSeconds = 1,
             score = 85f,
             items = listOf(
-                SessionItemRequest(
+                ExerciseResult(
                     exerciseId = "exercise-1",
                     repsCompleted = 10,
                     averageAccuracy = 85f
                 )
-            )
+            ),
+            calibration = null
         )
 
         assertTrue(result.isSuccess)
@@ -76,8 +78,8 @@ class SaveAndSyncSessionUseCaseTest {
     }
 
     @Test
-    fun `invoke enqueues WorkManager with CONNECTED constraint`() = runBlocking {
-        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any()) } returns Result.success("session-123")
+    fun `invoke schedules the sync worker`() = runBlocking {
+        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any(), any()) } returns Result.success("session-123")
 
         useCase(
             sessionId = "session-123",
@@ -86,15 +88,34 @@ class SaveAndSyncSessionUseCaseTest {
             endTime = 2000L,
             durationSeconds = 1,
             score = 85f,
-            items = emptyList()
+            items = emptyList(),
+            calibration = null
         )
 
-        verify { workManager.enqueueUniqueWork(any(), any(), any<androidx.work.OneTimeWorkRequest>()) }
+        verify { sessionSyncScheduler.enqueue() }
+    }
+
+    @Test
+    fun `invoke leaves every upload attempt to the worker`() = runBlocking {
+        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any(), any()) } returns Result.success("session-123")
+
+        useCase(
+            sessionId = "session-123",
+            routineId = "routine-1",
+            startTime = 1000L,
+            endTime = 2000L,
+            durationSeconds = 1,
+            score = 85f,
+            items = emptyList(),
+            calibration = null
+        )
+
+        coVerify(exactly = 0) { sessionRepository.syncSession(any()) }
     }
 
     @Test
     fun `invoke returns failure when save fails`() = runBlocking {
-        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any()) } returns Result.failure(Exception("Save failed"))
+        coEvery { sessionRepository.saveSession(any(), any(), any(), any(), any(), any(), any(), any()) } returns Result.failure(Exception("Save failed"))
 
         val result = useCase(
             sessionId = "session-123",
@@ -103,7 +124,8 @@ class SaveAndSyncSessionUseCaseTest {
             endTime = 2000L,
             durationSeconds = 1,
             score = 85f,
-            items = emptyList()
+            items = emptyList(),
+            calibration = null
         )
 
         assertTrue(result.isFailure)

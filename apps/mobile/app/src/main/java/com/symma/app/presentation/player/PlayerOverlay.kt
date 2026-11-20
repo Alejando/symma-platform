@@ -7,7 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import com.symma.app.presentation.components.feedback.QualityBar
+import com.symma.app.presentation.components.feedback.GestureProgressBar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun PlayerOverlay(
     state: PlayerUiState,
-    symmetryScore: Float,
+    gestureProgress: Float,
     isMeshVisible: Boolean,
     showMeshPoints: Boolean,
     onToggleMesh: () -> Unit,
@@ -95,7 +95,7 @@ fun PlayerOverlay(
                 is PlayerUiState.Exercise -> {
                     ExerciseView(
                         state = targetState,
-                        symmetryScore = symmetryScore,
+                        gestureProgress = gestureProgress,
                         onPause = onPause,
                         onResume = onResume,
                         onSkip = onSkip
@@ -119,7 +119,7 @@ fun PlayerOverlay(
 @Composable
 private fun ExerciseView(
     state: PlayerUiState.Exercise,
-    symmetryScore: Float,
+    gestureProgress: Float,
     onPause: () -> Unit,
     onResume: () -> Unit,
     onSkip: () -> Unit
@@ -129,16 +129,16 @@ private fun ExerciseView(
         state.awaitingRelease -> stringResource(R.string.player_feedback_release)
         state.isIsometric -> when {
             state.isTargetReached -> stringResource(R.string.player_feedback_hold)
-            symmetryScore >= 0.8f -> stringResource(R.string.player_feedback_almost_there)
-            symmetryScore >= 0.5f -> stringResource(R.string.player_feedback_keep_going)
-            symmetryScore > 0f -> stringResource(R.string.player_feedback_try_harder)
+            gestureProgress >= 0.8f -> stringResource(R.string.player_feedback_almost_there)
+            gestureProgress >= 0.5f -> stringResource(R.string.player_feedback_keep_going)
+            gestureProgress > 0f -> stringResource(R.string.player_feedback_try_harder)
             else -> stringResource(R.string.player_feedback_get_in_position)
         }
         else -> when {
             state.isTargetReached -> stringResource(R.string.player_feedback_nice)
-            symmetryScore >= 0.8f -> stringResource(R.string.player_feedback_almost)
-            symmetryScore >= 0.5f -> stringResource(R.string.player_feedback_keep_going)
-            symmetryScore > 0f -> stringResource(R.string.player_feedback_go)
+            gestureProgress >= 0.8f -> stringResource(R.string.player_feedback_almost)
+            gestureProgress >= 0.5f -> stringResource(R.string.player_feedback_keep_going)
+            gestureProgress > 0f -> stringResource(R.string.player_feedback_go)
             else -> stringResource(R.string.player_feedback_get_in_position)
         }
     }
@@ -146,8 +146,8 @@ private fun ExerciseView(
     val feedbackColor = when {
         state.awaitingRelease -> Color(0xFFFFC107) // Amber — release required
         state.isTargetReached -> Color.Green
-        symmetryScore >= 0.8f -> Color(0xFFFFC107)
-        symmetryScore >= 0.5f -> Color(0xFFFFC107)
+        gestureProgress >= 0.8f -> Color(0xFFFFC107)
+        gestureProgress >= 0.5f -> Color(0xFFFFC107)
         else -> Color.White
     }
 
@@ -186,8 +186,8 @@ private fun ExerciseView(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            QualityBar(
-                score = symmetryScore * 100f,
+            GestureProgressBar(
+                percent = gestureProgress * 100f,
                 modifier = Modifier.padding(horizontal = 32.dp)
             )
             

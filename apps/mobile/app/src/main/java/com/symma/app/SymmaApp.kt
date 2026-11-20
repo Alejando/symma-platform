@@ -3,9 +3,7 @@ package com.symma.app
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import androidx.work.ExistingWorkPolicy
-import androidx.work.WorkManager
-import com.symma.app.core.sync.SyncSessionsWorker
+import com.symma.app.core.sync.SessionSyncScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -15,6 +13,9 @@ class SymmaApp : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    lateinit var sessionSyncScheduler: SessionSyncScheduler
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
@@ -22,16 +23,6 @@ class SymmaApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
-        
-        // Enqueue sync worker on app startup to handle any pending sessions
-        enqueueSyncWorkerOnStartup()
-    }
-
-    private fun enqueueSyncWorkerOnStartup() {
-        WorkManager.getInstance(this).enqueueUniqueWork(
-            SyncSessionsWorker.WORK_NAME,
-            ExistingWorkPolicy.KEEP,
-            SyncSessionsWorker.buildRequest()
-        )
+        sessionSyncScheduler.enqueue()
     }
 }

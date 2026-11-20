@@ -78,7 +78,9 @@
     <string name="calib_dist_ok">Mantén la posición 1 segundo</string>
     <string name="calib_neutral_capture">Relaja tu rostro y mira al frente</string>
     <string name="calib_step_smile">¡Sonríe ampliamente!</string>
-    <string name="calib_step_brow_raise">¡Levanta las cejas!</string>
+    <string name="calib_step_surprise">¡Pon cara de sorpresa: levanta las cejas!</string>
+    <string name="calib_retry_step">No detectamos el gesto con claridad. Repitamos este paso.</string>
+    <string name="calib_step_counter">Paso %1$d de %2$d</string>
     <string name="calib_step_kiss">¡Haz un beso!</string>
     <string name="calib_step_jaw_open">¡Abre la boca!</string>
     <string name="calib_step_eyes_closed">¡Cierra los ojos fuerte!</string>
@@ -152,6 +154,9 @@
     <string name="summary_exercise_reps">%1$d repeticiones</string>
     <string name="summary_exercise_accuracy">Precisión: %1$d%%</string>
     <string name="summary_exercise_accuracy_unavailable">Precisión: sin datos</string>
+    <string name="summary_exercise_symmetry">Simetría izquierda-derecha: %1$d%%</string>
+    <string name="summary_exercise_symmetry_unavailable">Simetría izquierda-derecha: sin datos</string>
+    <string name="summary_exercise_hold">Sostén promedio: %1$.1f s</string>
     <string name="summary_finish">Finalizar</string>
 
     <!-- Enums -->
@@ -179,4 +184,16 @@
     <string name="enum_mobile_module_smile">Sonrisa</string>
     <string name="enum_mobile_module_kiss">Beso</string>
     <string name="enum_mobile_module_unknown">Desconocido</string>
+    <string name="unlock_title">Confirma que eres tú</string>
+    <string name="unlock_device_explanation">Tus datos de terapia están protegidos. Usa tu huella, tu rostro o el bloqueo de pantalla de tu teléfono.</string>
+    <string name="unlock_button">Desbloquear</string>
+    <string name="unlock_prompt_title">Desbloquear Symma</string>
+    <string name="unlock_prompt_subtitle">Confirma tu identidad para ver tus datos</string>
+    <string name="unlock_access_code_explanation">Tu teléfono no tiene bloqueo de pantalla. Ingresa tu código de acceso para continuar.</string>
+    <plurals name="unlock_wrong_access_code">
+        <item quantity="one">Código incorrecto. Te queda %1$d intento.</item>
+        <item quantity="many">Código incorrecto. Te quedan %1$d intentos.</item>
+        <item quantity="other">Código incorrecto. Te quedan %1$d intentos.</item>
+    </plurals>
+    <string name="unlock_set_up_screen_lock">Configurar bloqueo de pantalla</string>
 </resources>

@@ -8,9 +8,8 @@ const val CALIBRATION_MAX_HEAD_ROTATION_DEGREES = 10f
 
 data class HeadPose(val yawDegrees: Float, val pitchDegrees: Float) {
 
-    fun isRotatedFrom(reference: HeadPose, maxDegrees: Float = CALIBRATION_MAX_HEAD_ROTATION_DEGREES): Boolean =
-        abs(yawDegrees - reference.yawDegrees) > maxDegrees ||
-            abs(pitchDegrees - reference.pitchDegrees) > maxDegrees
+    fun isTurnedAwayFromCamera(maxDegrees: Float = CALIBRATION_MAX_HEAD_ROTATION_DEGREES): Boolean =
+        abs(yawDegrees) > maxDegrees || abs(pitchDegrees) > maxDegrees
 
     companion object {
         private const val MATRIX_SIZE = 16

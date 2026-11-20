@@ -1,6 +1,7 @@
 package com.symma.app.domain.repository
 
-import com.symma.app.data.remote.dto.session.SessionItemRequest
+import com.symma.app.domain.model.CalibrationBaseline
+import com.symma.app.domain.model.ExerciseResult
 import com.symma.app.domain.model.Session
 import com.symma.app.domain.model.SessionExerciseResult
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +21,7 @@ interface SessionRepository {
      * @param durationSeconds Total duration of the session in seconds
      * @param score Overall session score
      * @param items List of session item results
+     * @param calibration Calibration the session was scored with, sent along with it
      * @return Result containing the local session ID
      */
     suspend fun saveSession(
@@ -29,7 +31,8 @@ interface SessionRepository {
         endTime: Long,
         durationSeconds: Int,
         score: Float,
-        items: List<SessionItemRequest>
+        items: List<ExerciseResult>,
+        calibration: CalibrationBaseline?
     ): Result<String>
 
     /**
@@ -38,7 +41,8 @@ interface SessionRepository {
     suspend fun getPendingSessions(): List<Session>
 
     /**
-     * Attempts to sync a session to the server.
+     * Attempts to sync a session to the server. Snapshots are uploaded first when possible; a
+     * snapshot that cannot be uploaded never prevents the session from being sent.
      * 
      * @param sessionId ID of the session to sync
      * @return Result indicating success or failure
@@ -59,6 +63,9 @@ interface SessionRepository {
      * Moves every session in ERROR back to PENDING so it is sent again.
      */
     suspend fun requeueFailedSessions()
+
+    /** Deletes stored snapshots that no session item refers to, such as those of a session never saved. */
+    suspend fun discardOrphanSnapshots()
 
     /**
      * Emits the per-exercise results of a session as soon as they are stored.

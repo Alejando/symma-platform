@@ -4,5 +4,7 @@ data class SessionExerciseResult(
     val exerciseId: String,
     val exerciseName: String?,
     val repsCompleted: Int,
-    val averageAccuracy: Float?
+    val averageAccuracy: Float?,
+    val symmetryScore: Float? = null,
+    val averageHoldSeconds: Float? = null
 )

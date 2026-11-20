@@ -158,6 +158,43 @@ class SessionDaoTest {
         assertEquals(0, items.size)
     }
 
+    @Test
+    fun `snapshot references follow the upload of each image`() = runBlocking {
+        sessionDao.insertSessionWithItems(
+            createSessionEntity("session-1", "PENDING"),
+            listOf(
+                createSessionItemEntity("item-1", "session-1", "exercise-1").copy(snapshotReference = "a.jpg.enc"),
+                createSessionItemEntity("item-2", "session-1", "exercise-2").copy(snapshotReference = "b.jpg.enc"),
+                createSessionItemEntity("item-3", "session-1", "exercise-3")
+            )
+        )
+
+        sessionDao.markSnapshotUploaded("item-1", "sessions/session-1/exercise-1.jpg")
+
+        val items = sessionDao.getItemsForSession("session-1").associateBy { it.id }
+        assertEquals("sessions/session-1/exercise-1.jpg", items.getValue("item-1").snapshotKey)
+        assertNull(items.getValue("item-1").snapshotReference)
+        assertEquals(listOf("b.jpg.enc"), sessionDao.getSnapshotReferences())
+
+        sessionDao.clearSnapshotReferences("session-1")
+
+        assertTrue(sessionDao.getSnapshotReferences().isEmpty())
+        assertEquals("sessions/session-1/exercise-1.jpg", sessionDao.getItemsForSession("session-1").first { it.id == "item-1" }.snapshotKey)
+    }
+
+    @Test
+    fun `results observed by the summary include symmetry and hold`() = runBlocking {
+        sessionDao.insertSessionWithItems(
+            createSessionEntity("session-1", "PENDING"),
+            listOf(createSessionItemEntity("item-1", "session-1", "exercise-1").copy(symmetryScore = 88f, averageHoldSeconds = 2.5f))
+        )
+
+        val row = sessionDao.observeItemsWithExerciseName("session-1").first().single()
+
+        assertEquals(88f, row.symmetryScore)
+        assertEquals(2.5f, row.averageHoldSeconds)
+    }
+
     private fun createSessionEntity(id: String, syncStatus: String): SessionEntity {
         return SessionEntity(
             id = id,

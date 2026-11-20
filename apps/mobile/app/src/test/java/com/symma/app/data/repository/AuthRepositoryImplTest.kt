@@ -1,6 +1,7 @@
 package com.symma.app.data.repository
 
 import com.symma.app.core.network.SymmaApiService
+import com.symma.app.core.security.OfflinePinVerifier
 import com.symma.app.core.security.TokenManager
 import com.symma.app.data.remote.dto.auth.LoginResponseDto
 import com.symma.app.domain.model.LoginFailure
@@ -20,7 +21,8 @@ class AuthRepositoryImplTest {
 
     private val api = mockk<SymmaApiService>()
     private val tokenManager = mockk<TokenManager>(relaxed = true)
-    private val repository = AuthRepositoryImpl(api, tokenManager)
+    private val offlinePinVerifier = mockk<OfflinePinVerifier>(relaxed = true)
+    private val repository = AuthRepositoryImpl(api, tokenManager, offlinePinVerifier)
 
     private fun httpError(statusCode: Int) = HttpException(Response.error<Any>(statusCode, "error".toResponseBody()))
 
@@ -32,6 +34,24 @@ class AuthRepositoryImplTest {
 
         assertTrue(result.isSuccess)
         verify { tokenManager.saveToken("jwt") }
+    }
+
+    @Test
+    fun `successful login remembers the access code for unlocking offline`() = runBlocking {
+        coEvery { api.loginPatient(any()) } returns mockk<LoginResponseDto> { every { accessToken } returns "jwt" }
+
+        repository.login("123456")
+
+        verify { offlinePinVerifier.remember("123456") }
+    }
+
+    @Test
+    fun `a rejected login does not replace the remembered access code`() = runBlocking {
+        coEvery { api.loginPatient(any()) } throws httpError(401)
+
+        repository.login("654321")
+
+        verify(exactly = 0) { offlinePinVerifier.remember(any()) }
     }
 
     @Test

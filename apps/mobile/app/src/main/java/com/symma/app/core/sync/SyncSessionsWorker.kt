@@ -30,6 +30,7 @@ class SyncSessionsWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         if (isFreshRun()) {
             sessionRepository.requeueFailedSessions()
+            sessionRepository.discardOrphanSnapshots()
         }
 
         val pendingSessions = sessionRepository.getPendingSessions()
@@ -38,12 +39,12 @@ class SyncSessionsWorker @AssistedInject constructor(
         val sessionsToRetry = pendingSessions.filter { session -> needsRetry(session) }
         return when {
             sessionsToRetry.isEmpty() -> Result.success()
-            hasRetriesLeft() -> {
-                Log.d(TAG, "${sessionsToRetry.size} sessions will retry (attempt $runAttemptCount)")
+            hasAttemptsLeft() -> {
+                Log.d(TAG, "${sessionsToRetry.size} sessions will retry (attempt ${currentAttempt()} of $MAX_ATTEMPTS)")
                 Result.retry()
             }
             else -> {
-                Log.w(TAG, "Giving up on ${sessionsToRetry.size} sessions after $MAX_RETRIES retries")
+                Log.w(TAG, "Giving up on ${sessionsToRetry.size} sessions after $MAX_ATTEMPTS attempts")
                 sessionsToRetry.forEach { session -> sessionRepository.markError(session.id) }
                 Result.failure()
             }
@@ -53,7 +54,9 @@ class SyncSessionsWorker @AssistedInject constructor(
     /** Sessions in ERROR get a new chance on every sync run that is not itself a retry. */
     private fun isFreshRun() = runAttemptCount == 0
 
-    private fun hasRetriesLeft() = runAttemptCount < MAX_RETRIES
+    private fun currentAttempt() = runAttemptCount + 1
+
+    private fun hasAttemptsLeft() = currentAttempt() < MAX_ATTEMPTS
 
     private suspend fun needsRetry(session: Session): Boolean {
         val failure = try {
@@ -69,7 +72,7 @@ class SyncSessionsWorker @AssistedInject constructor(
 
     companion object {
         const val WORK_NAME = "sync_sessions_work"
-        const val MAX_RETRIES = 3
+        const val MAX_ATTEMPTS = 3
         const val BACKOFF_DELAY = 30L
         val BACKOFF_DELAY_UNIT = TimeUnit.SECONDS
 

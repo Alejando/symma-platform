@@ -174,10 +174,24 @@ private fun ExerciseResultRow(result: SessionExerciseResult) {
                     ?: stringResource(R.string.summary_exercise_accuracy_unavailable),
                 style = MaterialTheme.typography.bodyMedium
             )
+            Text(
+                text = result.symmetryPercent()
+                    ?.let { stringResource(R.string.summary_exercise_symmetry, it) }
+                    ?: stringResource(R.string.summary_exercise_symmetry_unavailable),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            result.averageHoldSeconds?.let { holdSeconds ->
+                Text(
+                    text = stringResource(R.string.summary_exercise_hold, holdSeconds),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
     }
 }
 
-/** averageAccuracy is stored on a 0-1 scale. */
-internal fun SessionExerciseResult.accuracyPercent(): Int? =
-    averageAccuracy?.let { (it * 100).roundToInt().coerceIn(0, 100) }
+internal fun SessionExerciseResult.accuracyPercent(): Int? = averageAccuracy?.toDisplayPercent()
+
+internal fun SessionExerciseResult.symmetryPercent(): Int? = symmetryScore?.toDisplayPercent()
+
+private fun Float.toDisplayPercent(): Int = roundToInt().coerceIn(0, 100)

@@ -10,7 +10,9 @@ data class CalibrationBaseline(
     val eyesWideMax: Float = 0.5f,
 
     // Neutral Offsets (Tare values from resting face)
-    val neutralOffsets: Map<String, Float> = emptyMap()
+    val neutralOffsets: Map<String, Float> = emptyMap(),
+
+    val capturedAtMillis: Long? = null
 ) {
     companion object {
         const val KEY_JAW_OPEN = "jawOpen"
@@ -19,9 +21,21 @@ data class CalibrationBaseline(
         const val KEY_KISS = "kiss"
         const val KEY_EYES_CLOSED = "eyesClosed"
         const val KEY_EYES_WIDE = "eyesWide"
+
+        val GESTURE_KEYS = listOf(KEY_JAW_OPEN, KEY_SMILE, KEY_BROW_RAISE, KEY_KISS, KEY_EYES_CLOSED, KEY_EYES_WIDE)
     }
 
     fun getNeutralOffset(key: String): Float = neutralOffsets[key] ?: 0f
+
+    fun gestureMax(key: String): Float? = when (key) {
+        KEY_JAW_OPEN -> mouthOpenMax
+        KEY_SMILE -> mouthSmileMax
+        KEY_BROW_RAISE -> browRaiseMax
+        KEY_KISS -> duckFaceMax
+        KEY_EYES_CLOSED -> eyesClosedMax
+        KEY_EYES_WIDE -> eyesWideMax
+        else -> null
+    }
 
     fun withGestureMax(key: String, max: Float): CalibrationBaseline = when (key) {
         KEY_JAW_OPEN -> copy(mouthOpenMax = max)

@@ -41,12 +41,18 @@ class HeadPoseTest {
     }
 
     @Test
-    fun `rotation above ten degrees from the reference counts as rotated`() {
-        val reference = HeadPose(yawDegrees = 2f, pitchDegrees = 20f)
+    fun `yaw or pitch above ten degrees from the camera axis counts as turned away`() {
+        assertTrue(HeadPose(yawDegrees = 10.5f, pitchDegrees = 0f).isTurnedAwayFromCamera())
+        assertTrue(HeadPose(yawDegrees = -12f, pitchDegrees = 0f).isTurnedAwayFromCamera())
+        assertTrue(HeadPose(yawDegrees = 0f, pitchDegrees = 11f).isTurnedAwayFromCamera())
+        assertTrue(HeadPose(yawDegrees = 0f, pitchDegrees = -11f).isTurnedAwayFromCamera())
+    }
 
-        assertTrue(HeadPose(yawDegrees = 12.5f, pitchDegrees = 20f).isRotatedFrom(reference))
-        assertTrue(HeadPose(yawDegrees = 2f, pitchDegrees = 9f).isRotatedFrom(reference))
-        assertFalse(HeadPose(yawDegrees = 11f, pitchDegrees = 28f).isRotatedFrom(reference))
+    @Test
+    fun `pose within ten degrees of the camera axis faces the camera`() {
+        assertFalse(HeadPose(yawDegrees = 0f, pitchDegrees = 0f).isTurnedAwayFromCamera())
+        assertFalse(HeadPose(yawDegrees = 10f, pitchDegrees = -10f).isTurnedAwayFromCamera())
+        assertFalse(HeadPose(yawDegrees = -9.5f, pitchDegrees = 9.5f).isTurnedAwayFromCamera())
     }
 
     @Test

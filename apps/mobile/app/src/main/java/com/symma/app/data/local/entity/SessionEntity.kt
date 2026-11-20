@@ -36,5 +36,8 @@ data class SessionEntity(
     val syncedAt: Long? = null,
 
     @ColumnInfo(name = "created_at")
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+
+    @ColumnInfo(name = "calibration")
+    val calibrationJson: String? = null
 )
